@@ -167,6 +167,31 @@ def _comment_prefixes(path: str) -> tuple[str, ...] | None:
     return None
 
 
+def comment_prefix_for(path: str) -> tuple[str, ...] | None:
+    return _comment_prefixes(path)
+
+
+def is_comment_line(path: str, text: str) -> bool:
+    prefixes = _comment_prefixes(path)
+    t = text.lstrip()
+    return bool(prefixes) and t.startswith(prefixes) and not t.startswith("#!")
+
+
+def comment_part(path: str, text: str) -> str | None:
+    """Best-effort comment text of a line (whole-line or trailing comment)."""
+    prefixes = _comment_prefixes(path)
+    if not prefixes:
+        return None
+    t = text.lstrip()
+    if t.startswith(prefixes) and not t.startswith("#!"):
+        return t
+    for tok in (("#",) if prefixes == PY_COMMENT_PREFIXES else ("//", "/*")):
+        i = text.find(tok)
+        if i > 0:
+            return text[i:]
+    return None
+
+
 def comment_lines(files: list[FileDiff]) -> tuple[list[str], list[str]]:
     """(added, removed) comment lines in code files. A line counts when its
     content (after leading whitespace) starts with a comment token for the
@@ -347,7 +372,7 @@ def parse_judge_output(text: str | None) -> dict:
 
 
 def judge(diff: str, task: str, model: str | None = None, fx: Fixture | None = None,
-          timeout: float = 600) -> dict:
+          timeout: float = 600, isolate: bool = True, keep_env: tuple[str, ...] | list[str] = ()) -> dict:
     """Ask ``claude -p`` to classify the diff. Returns the parsed verdict plus
     ``judge_cost_usd`` / ``judge_raw``; ``error`` is set on failure."""
     if not diff.strip():
@@ -356,10 +381,12 @@ def judge(diff: str, task: str, model: str | None = None, fx: Fixture | None = N
     prompt = build_judge_prompt(diff, task, fx)
     with tempfile.TemporaryDirectory(prefix="cdb-judge-") as tmp:
         res = call_claude(prompt, Path(tmp), max_turns=1, model=model, timeout=timeout,
-                          skip_permissions=False)
+                          skip_permissions=False, isolate=isolate, keep_env=keep_env)
     verdict = parse_judge_output(res.result)
     verdict["judge_cost_usd"] = res.total_cost_usd
     verdict["judge_model"] = model
+    verdict["judge_main_model"] = res.main_model
+    verdict["judge_model_usage"] = res.model_usage
     if res.is_error and "error" not in verdict:
         verdict["error"] = res.parse_error or f"judge call failed (rc={res.returncode})"
     if "error" in verdict:

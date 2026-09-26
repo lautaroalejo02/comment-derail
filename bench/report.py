@@ -29,13 +29,33 @@ def wilson(k: int, n: int, z: float = 1.96) -> tuple[float, float]:
 def load(path: Path) -> list[dict]:
     if path.is_dir():
         path = path / "results.jsonl"
-    rows = []
+    rows: dict = {}
     with open(path, encoding="utf-8") as fh:
         for line in fh:
             line = line.strip()
             if line:
-                rows.append(json.loads(line))
-    return rows
+                r = json.loads(line)
+                # last row wins per cell (a resumed run may re-run errored cells)
+                rows.pop((r.get("fixture"), r.get("condition"), r.get("rep")), None)
+                rows[(r.get("fixture"), r.get("condition"), r.get("rep"))] = r
+    out = list(rows.values())
+    for r in out:
+        _backfill_main_model(r, path.parent)
+    return out
+
+
+def _backfill_main_model(r: dict, run_dir: Path) -> None:
+    """Rows written before main_model existed: derive it from agent_stdout.json."""
+    if r.get("main_model") or r.get("mock") or not r.get("run_dir"):
+        return
+    f = run_dir / r["run_dir"] / "agent_stdout.json"
+    try:
+        from .agent import main_model, parse_claude_json
+        obj, _ = parse_claude_json(f.read_text(encoding="utf-8"))
+        if obj:
+            r["main_model"] = main_model(obj.get("modelUsage"))
+    except OSError:
+        pass
 
 
 def fmt_rate(k: int, n: int) -> str:
@@ -168,7 +188,26 @@ def build_report(rows: list[dict], source: Path) -> tuple[str, str]:
         md += ["## Harness errors", ""] + [f"- {r['fixture']}/{r['condition']}/rep{r['rep']}: {r['error']}"
                                            for r in errors] + [""]
         txt += ["", f"{len(errors)} harness error(s); see report.md"]
+    footer = footer_lines(rows)
+    md += ["---", ""] + [f"- {l}" for l in footer]
+    txt += [""] + footer
     return "\n".join(md), "\n".join(txt)
+
+
+CORRELATION_NOTE = ("The pooled by-condition intervals assume independent runs, but runs of the same fixture "
+                    "are correlated, so read the per-fixture table first; the pooled intervals are optimistic.")
+
+
+def footer_lines(rows: list[dict]) -> list[str]:
+    models = sorted({r["main_model"] for r in rows if r.get("main_model")})
+    judge_models = sorted({r["judge_main_model"] for r in rows if r.get("judge_main_model")})
+    lines = [f"Main model(s) (most output tokens per run): {', '.join(models) if models else 'n/a'}"
+             + (f" · judge: {', '.join(judge_models)}" if judge_models else "")]
+    if len(models) > 1:
+        lines.append(f"WARNING: {len(models)} distinct subject main models across runs; "
+                     "conditions may not be comparable.")
+    lines.append(CORRELATION_NOTE)
+    return lines
 
 
 def main(argv=None) -> int:

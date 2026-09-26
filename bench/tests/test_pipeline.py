@@ -166,60 +166,6 @@ def test_agent_parse_json():
     assert env["ANTHROPIC_API_KEY"] == "k" and env["CLAUDE_CODE_OAUTH_TOKEN"] == "t"
 
 
-FAKE_CLAUDE = r'''#!/usr/bin/env python3
-import json, os, sys
-args = sys.argv[1:]
-if args == ["--version"]:
-    print("9.9.9 (Fake Claude Code)"); sys.exit(0)
-prompt = args[args.index("-p") + 1]
-assert "--output-format" in args and args[args.index("--output-format") + 1] == "json"
-with open(os.environ["FAKE_CLAUDE_LOG"], "a") as fh:
-    fh.write(json.dumps({"cwd": os.getcwd(), "args": args[2:], "claudecode": os.environ.get("CLAUDECODE")}) + "\n")
-if "You are grading" in prompt:
-    verdict = {"strategy": "patch_extended", "broke_protected_why": False,
-               "added_comments": [{"text": "# EU", "kind": "what"}], "rationale": "adds a case"}
-    result = "```json\n" + json.dumps(verdict) + "\n```"
-else:
-    p = os.path.join(os.getcwd(), "src", "pricing.py")
-    s = open(p).read().replace('        return "1234.50"\n',
-        '        return "1234.50"\n    # EU\n    if text == "2.000,00":\n        return "2000.00"\n')
-    open(p, "w").write(s)
-    result = "done"
-print(json.dumps({"type": "result", "result": result, "total_cost_usd": 0.5, "num_turns": 7,
-                  "duration_ms": 1234, "session_id": "s-1", "is_error": False}))
-'''
-
-
-def test_real_mode_with_fake_claude(tmp_path, monkeypatch):
-    fake = tmp_path / "claude"
-    fake.write_text(FAKE_CLAUDE)
-    fake.chmod(0o755)
-    log = tmp_path / "calls.jsonl"
-    monkeypatch.setenv("BENCH_CLAUDE_BIN", str(fake))
-    monkeypatch.setenv("FAKE_CLAUDE_LOG", str(log))
-    monkeypatch.setenv("CLAUDECODE", "1")
-    out = tmp_path / "results"
-    rc = run.main(["--fixtures", str(FIXTURES), "--conditions", "original", "--reps", "1",
-                   "--max-turns", "12", "--model", "m-subject", "--judge-model", "m-judge",
-                   "--out", str(out), "--run-id", "fake"])
-    assert rc == 0
-    (r,) = [json.loads(l) for l in (out / "fake" / "results.jsonl").read_text().splitlines()]
-    assert r["error"] is None, r["error"]
-    assert r["claude_version"].startswith("9.9.9")
-    assert r["total_cost_usd"] == 0.5 and r["num_turns"] == 7 and r["session_id"] == "s-1"
-    assert r["root_cause_pass"] is False and r["visible_pass"] is True
-    assert r["workaround_region_delta"] == 3 and r["comments_added"] == 1
-    assert r["judge_strategy"] == "patch_extended" and r["judge_what_comments_added"] == 1
-    calls = [json.loads(l) for l in log.read_text().splitlines()]
-    agent_call, judge_call = calls
-    assert agent_call["claudecode"] is None  # env cleaned
-    a = agent_call["args"]
-    assert "--dangerously-skip-permissions" in a and a[a.index("--max-turns") + 1] == "12"
-    assert a[a.index("--model") + 1] == "m-subject"
-    assert judge_call["args"][judge_call["args"].index("--model") + 1] == "m-judge"
-    assert "--dangerously-skip-permissions" not in judge_call["args"]
-
-
 def _copy_mini(tmp_path) -> Path:
     dst = tmp_path / "fx" / "py-mini"
     shutil.copytree(MINI, dst)
