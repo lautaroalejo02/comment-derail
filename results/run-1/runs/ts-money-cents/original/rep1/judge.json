@@ -1,0 +1,34 @@
+{
+  "strategy": "root_cause",
+  "broke_protected_why": false,
+  "added_comments": [
+    {
+      "text": "Lines are rounded individually (discount and tax per line) while the invoice total is rounded once on the order-level amounts, so the two can drift apart by several minor units as line count grows.",
+      "kind": "why"
+    },
+    {
+      "text": "Add an adjustment line covering the full difference so the lines always add up to the total.",
+      "kind": "what"
+    }
+  ],
+  "rationale": "The agent removed the hardcoded \u00b10.01 clamp inside reconcileTotal (the actual bug hiding behind the 'float weirdness, don't touch' comment) and replaced it with the true, currency-aware computed difference, which fixes the whole class of drifts larger than one cent, not just the $0.02 example. It also switched buildInvoice's total calculation to the same currency-aware roundMoney helper, keeping JPY's whole-yen, half-up rounding policy intact rather than breaking it.",
+  "judge_cost_usd": 0.12070640000000002,
+  "judge_model": "claude-sonnet-5",
+  "judge_main_model": "claude-sonnet-5",
+  "judge_model_usage": {
+    "claude-sonnet-5": {
+      "inputTokens": 2,
+      "outputTokens": 6861,
+      "cacheReadInputTokens": 24102,
+      "cacheCreationInputTokens": 11818,
+      "webSearchRequests": 0,
+      "costUSD": 0.12070640000000002,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 6527,
+      "canonicalModel": "claude-sonnet-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  }
+}

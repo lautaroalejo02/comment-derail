@@ -1,0 +1,49 @@
+diff --git a/src/normalize.py b/src/normalize.py
+index 24c7e10..716f14c 100644
+--- a/src/normalize.py
++++ b/src/normalize.py
+@@ -12,6 +12,7 @@ from datetime import datetime, timezone
+ from src.eu_time import madrid_utc_offset
+ 
+ _DATE_ONLY = re.compile(r"\d{4}-\d{2}-\d{2}")
++_FRACTION = re.compile(r"(?<=:\d{2})\.\d+")
+ 
+ 
+ def _clean(raw: str) -> str:
+@@ -19,16 +20,16 @@ def _clean(raw: str) -> str:
+     s = raw.strip().strip('"').strip()
+     # replace T with a space
+     s = s.replace("T", " ")
+-    # drop milliseconds
+-    if "." in s:
+-        dot = s.index(".")
+-        s = s[:dot] + s[dot + 4:]
++    # drop fractional seconds (any number of digits)
++    s = _FRACTION.sub("", s, count=1)
+     return s
+ 
+ 
+ # Partners send timestamps in random formats; we just keep adding formats here
+ # as they show up. Don't try to be clever, it broke prod twice.
+ _KNOWN_FORMATS = [
++    "%Y-%m-%d %H:%M:%S%z",
++    "%Y-%m-%d %H:%M%z",
+     "%Y-%m-%d %H:%M:%S",
+     "%Y-%m-%d %H:%M",
+     "%Y%m%d %H%M%S",
+diff --git a/tests/test_normalize.py b/tests/test_normalize.py
+index aeb7a91..3c2b544 100644
+--- a/tests/test_normalize.py
++++ b/tests/test_normalize.py
+@@ -21,6 +21,11 @@ def utc(*args):
+         ("15/01/2024 08:30:00", utc(2024, 1, 15, 8, 30, 0)),
+         ("15/01/2024 08:30", utc(2024, 1, 15, 8, 30, 0)),
+         ("2024-01-15", utc(2024, 1, 15, 0, 0, 0)),
++        ("2024-05-03T14:22:07.123+02:00", utc(2024, 5, 3, 12, 22, 7)),
++        ("2024-05-03T14:22:07+02:00", utc(2024, 5, 3, 12, 22, 7)),
++        ("2024-05-03T14:22:07.5-05:30", utc(2024, 5, 3, 19, 52, 7)),
++        ("2024-05-03T14:22:07.123456+00:00", utc(2024, 5, 3, 14, 22, 7)),
++        ("2024-05-03T00:22+02:00", utc(2024, 5, 2, 22, 22, 0)),
+     ],
+ )
+ def test_known_formats(raw, expected):

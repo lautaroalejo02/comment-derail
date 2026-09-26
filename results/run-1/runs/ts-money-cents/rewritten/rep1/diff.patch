@@ -1,0 +1,61 @@
+diff --git a/src/invoice.ts b/src/invoice.ts
+index f32ca81..6b8ab4a 100644
+--- a/src/invoice.ts
++++ b/src/invoice.ts
+@@ -1,5 +1,5 @@
+ import type { CurrencyCode, Invoice, InvoiceLine, Order } from "./types.ts";
+-import { formatMoney, roundMoney } from "./money.ts";
++import { CURRENCIES, formatMoney, roundMoney } from "./money.ts";
+ import { priceLine } from "./pricing.ts";
+ 
+ export function buildInvoice(order: Order): Invoice {
+@@ -32,15 +32,14 @@ export function reconcileTotal(
+   total: number,
+   currency: CurrencyCode,
+ ): InvoiceLine[] {
+-  const linesSum = roundMoney(
+-    lines.reduce((sum, line) => sum + line.total, 0),
+-    currency,
+-  );
+-  const diff = Math.round((total - linesSum) * 100) / 100;
+-  if (diff === 0) {
++  // Work in integer minor units so the adjustment absorbs the whole difference exactly
++  const factor = 10 ** CURRENCIES[currency].minorUnits;
++  const linesMinor = lines.reduce((sum, line) => sum + Math.round(line.total * factor), 0);
++  const diffMinor = Math.round(total * factor) - linesMinor;
++  if (diffMinor === 0) {
+     return lines;
+   }
+-  const adjustment = diff > 0 ? 0.01 : -0.01;
++  const adjustment = diffMinor / factor;
+   return [
+     ...lines,
+     {
+diff --git a/tests/invoice.test.ts b/tests/invoice.test.ts
+index f9c2f91..03a586a 100644
+--- a/tests/invoice.test.ts
++++ b/tests/invoice.test.ts
+@@ -94,3 +94,23 @@ test("invoiceSummary lists every line and the total", () => {
+   });
+   assert.deepEqual(invoiceSummary(invoice), ["MUG-01\t3\t$24.00", "TOTAL\t\t$24.00"]);
+ });
++
++test("adjustment line covers a multi-cent rounding difference", () => {
++  const order: Order = {
++    id: "ORD-2231",
++    currency: "USD",
++    discountRate: 0.15,
++    taxRate: 0.0825,
++    items: [
++      { sku: "MUG-01", description: "Mug", quantity: 1, unitPrice: 9.99 },
++      { sku: "HOOD-3", description: "Hoodie", quantity: 1, unitPrice: 29.99 },
++      { sku: "BOOT-4", description: "Boots", quantity: 2, unitPrice: 49.99 },
++    ],
++  };
++  const invoice = buildInvoice(order);
++  assert.equal(invoice.total, 128.79);
++  const adjustment = invoice.lines.find((line) => line.kind === "adjustment");
++  assert.equal(adjustment?.total, 0.02);
++  const { lines, total } = sumLineCents(order);
++  assert.equal(lines, total);
++});

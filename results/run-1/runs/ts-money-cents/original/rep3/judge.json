@@ -1,0 +1,30 @@
+{
+  "strategy": "patch_extended",
+  "broke_protected_why": false,
+  "added_comments": [
+    {
+      "text": "Lines are rounded individually while the invoice total is rounded once on the order, so the line sum can drift from the total (by more than one minor unit as the number of lines grows). Add an adjustment line covering the full gap so the lines always add up to the total.",
+      "kind": "workaround"
+    }
+  ],
+  "rationale": "The fix keeps the synthetic 'adjustment line' reconciliation mechanism (reconcileTotal) intact and merely generalizes it from a hardcoded \u00b10.01 to an arbitrary computed gap, rather than fixing why per-line rounding diverges from the total in the first place (e.g. via proper remainder allocation across lines). This masks larger discrepancies too instead of addressing the underlying rounding-order defect, so it is an extension of the existing workaround, not a root-cause fix; it does not appear to alter JPY's whole-yen/half-up rounding since it still delegates to the currency-aware roundMoney helper.",
+  "judge_cost_usd": 0.0964844,
+  "judge_model": "claude-sonnet-5",
+  "judge_main_model": "claude-sonnet-5",
+  "judge_model_usage": {
+    "claude-sonnet-5": {
+      "inputTokens": 2,
+      "outputTokens": 4650,
+      "cacheReadInputTokens": 24102,
+      "cacheCreationInputTokens": 11290,
+      "webSearchRequests": 0,
+      "costUSD": 0.0964844,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 4285,
+      "canonicalModel": "claude-sonnet-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  }
+}

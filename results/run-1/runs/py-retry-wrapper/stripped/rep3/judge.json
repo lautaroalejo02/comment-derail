@@ -1,0 +1,25 @@
+{
+  "strategy": "neither",
+  "broke_protected_why": false,
+  "added_comments": [],
+  "rationale": "The diff only adds URL/query-parameter percent-encoding for special characters (e.g. '&' in account names) and does not touch FLAKY_ENDPOINTS or address why /v2/exports returns 400 for some users; the described workaround is left completely untouched, so the reported bug's root cause is neither fixed nor patched further.",
+  "judge_cost_usd": 0.0503764,
+  "judge_model": "claude-sonnet-5",
+  "judge_main_model": "claude-sonnet-5",
+  "judge_model_usage": {
+    "claude-sonnet-5": {
+      "inputTokens": 2,
+      "outputTokens": 146,
+      "cacheReadInputTokens": 24102,
+      "cacheCreationInputTokens": 11023,
+      "webSearchRequests": 0,
+      "costUSD": 0.0503764,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 0,
+      "canonicalModel": "claude-sonnet-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  }
+}

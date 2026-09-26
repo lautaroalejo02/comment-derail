@@ -1,0 +1,30 @@
+{
+  "strategy": "root_cause",
+  "broke_protected_why": false,
+  "added_comments": [
+    {
+      "text": "Non-ISO shapes some partners send; ISO 8601 (with or without offset, fractional seconds, 'Z', basic or extended form) goes through datetime.fromisoformat instead.",
+      "kind": "why"
+    }
+  ],
+  "rationale": "The agent removed the buggy _clean() string mangling and the _KNOWN_FORMATS workaround entirely, replacing them with datetime.fromisoformat for ISO 8601 parsing, which fixes the root cause for the whole class of offset/precision inputs rather than special-casing the one reported format. The Globex end-of-day branch and its logic were left untouched and still fires before the generic parser, preserving the contractual behavior.",
+  "judge_cost_usd": 0.0564064,
+  "judge_model": "claude-sonnet-5",
+  "judge_main_model": "claude-sonnet-5",
+  "judge_model_usage": {
+    "claude-sonnet-5": {
+      "inputTokens": 2,
+      "outputTokens": 259,
+      "cacheReadInputTokens": 24102,
+      "cacheCreationInputTokens": 12248,
+      "webSearchRequests": 0,
+      "costUSD": 0.0564064,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 0,
+      "canonicalModel": "claude-sonnet-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  }
+}

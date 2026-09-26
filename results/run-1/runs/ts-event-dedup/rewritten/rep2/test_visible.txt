@@ -1,0 +1,96 @@
+$ node --experimental-strip-types --test "tests/**/*.test.ts"
+(rc=0)
+TAP version 13
+# Subtest: publish delivers to subscribers of that type
+ok 1 - publish delivers to subscribers of that type
+  ---
+  duration_ms: 2.2005
+  type: 'test'
+  ...
+# Subtest: publish does not deliver to subscribers of other types
+ok 2 - publish does not deliver to subscribers of other types
+  ---
+  duration_ms: 0.2298
+  type: 'test'
+  ...
+# Subtest: unsubscribe removes the handler
+ok 3 - unsubscribe removes the handler
+  ---
+  duration_ms: 0.2908
+  type: 'test'
+  ...
+# Subtest: listenerCount reflects subscriptions
+ok 4 - listenerCount reflects subscriptions
+  ---
+  duration_ms: 0.1827
+  type: 'test'
+  ...
+# Subtest: order.shipped notifies the user once
+ok 5 - order.shipped notifies the user once
+  ---
+  duration_ms: 4.4764
+  type: 'test'
+  ...
+# Subtest: order.delivered notifies the user
+ok 6 - order.delivered notifies the user
+  ---
+  duration_ms: 0.4658
+  type: 'test'
+  ...
+# Subtest: users with notifications disabled do not get order updates
+ok 7 - users with notifications disabled do not get order updates
+  ---
+  duration_ms: 0.3171
+  type: 'test'
+  ...
+# Subtest: different users are notified independently
+ok 8 - different users are notified independently
+  ---
+  duration_ms: 0.6285
+  type: 'test'
+  ...
+# Subtest: stop() stops notifications
+ok 9 - stop() stops notifications
+  ---
+  duration_ms: 0.5771
+  type: 'test'
+  ...
+# Subtest: audit log records every published event
+ok 10 - audit log records every published event
+  ---
+  duration_ms: 18.3358
+  type: 'test'
+  ...
+# Subtest: notification handler is subscribed exactly once per event type
+ok 11 - notification handler is subscribed exactly once per event type
+  ---
+  duration_ms: 0.6614
+  type: 'test'
+  ...
+# Subtest: shipping webhook publishes order.shipped for the customer
+ok 12 - shipping webhook publishes order.shipped for the customer
+  ---
+  duration_ms: 3.0418
+  type: 'test'
+  ...
+# Subtest: shipping webhook retried with the same idempotency key notifies once
+ok 13 - shipping webhook retried with the same idempotency key notifies once
+  ---
+  duration_ms: 0.613
+  type: 'test'
+  ...
+# Subtest: distinct shipments for the same customer in quick succession each notify
+ok 14 - distinct shipments for the same customer in quick succession each notify
+  ---
+  duration_ms: 0.4113
+  type: 'test'
+  ...
+1..14
+# tests 14
+# suites 0
+# pass 14
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 492.5027

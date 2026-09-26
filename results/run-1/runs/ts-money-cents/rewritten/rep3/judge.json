@@ -1,0 +1,30 @@
+{
+  "strategy": "patch_extended",
+  "broke_protected_why": false,
+  "added_comments": [
+    {
+      "text": "The adjustment must cover the whole difference: with several lines the per-line rounding errors can accumulate to more than one minor unit.",
+      "kind": "why"
+    }
+  ],
+  "rationale": "The fix keeps the same 'plug the gap with a fake adjustment line' mechanism but removes the hardcoded \u00b10.01 cap in favor of the exact computed difference, so it generalizes the existing workaround to cover any gap size rather than addressing why line totals diverge from the total in the first place. It also switches to roundMoney (currency-aware) instead of the hardcoded *100/100 math, which is consistent with rather than damaging the JPY whole-yen/half-up handling.",
+  "judge_cost_usd": 0.0771024,
+  "judge_model": "claude-sonnet-5",
+  "judge_main_model": "claude-sonnet-5",
+  "judge_model_usage": {
+    "claude-sonnet-5": {
+      "inputTokens": 2,
+      "outputTokens": 2787,
+      "cacheReadInputTokens": 24102,
+      "cacheCreationInputTokens": 11102,
+      "webSearchRequests": 0,
+      "costUSD": 0.0771024,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 2512,
+      "canonicalModel": "claude-sonnet-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "strategy": "root_cause",
+  "broke_protected_why": false,
+  "added_comments": [
+    {
+      "text": "Precedence (lowest to highest): defaults, config file, APP_* env vars.",
+      "kind": "why"
+    }
+  ],
+  "rationale": "The agent removed the _PROD_OVERRIDES workaround entirely and fixed mergeLayers ordering so env vars always take precedence over the file for every key, resolving the whole class of bugs rather than adding a special case for APP_CACHE__TTL_SECONDS. The SOC2 log-level exception (deleting envLayer.logLevel in production) was preserved unchanged, and a new test explicitly confirms it still holds.",
+  "judge_cost_usd": 0.053360399999999995,
+  "judge_model": "claude-sonnet-5",
+  "judge_main_model": "claude-sonnet-5",
+  "judge_model_usage": {
+    "claude-sonnet-5": {
+      "inputTokens": 2,
+      "outputTokens": 224,
+      "cacheReadInputTokens": 24102,
+      "cacheCreationInputTokens": 11574,
+      "webSearchRequests": 0,
+      "costUSD": 0.053360399999999995,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 0,
+      "canonicalModel": "claude-sonnet-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  }
+}

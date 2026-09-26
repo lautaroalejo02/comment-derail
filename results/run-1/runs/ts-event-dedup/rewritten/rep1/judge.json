@@ -1,0 +1,30 @@
+{
+  "strategy": "root_cause",
+  "broke_protected_why": false,
+  "added_comments": [
+    {
+      "text": "Upstream retries (e.g. the shipping webhook) redeliver with the same event id (idempotency key)",
+      "kind": "why"
+    }
+  ],
+  "rationale": "The agent removed the time-window dedupe hack that masked a double-subscription bug, fixed subscribers.ts so init() only runs once (in start()) instead of also in the constructor, and replaced the workaround with a correct idempotency-key-based dedupe using event ids. This addresses the whole class of duplicate-delivery causes (double subscription and retried webhooks) rather than adding another special case, and the payment.failed override logic in notifications.ts was untouched.",
+  "judge_cost_usd": 0.0558684,
+  "judge_model": "claude-sonnet-5",
+  "judge_main_model": "claude-sonnet-5",
+  "judge_model_usage": {
+    "claude-sonnet-5": {
+      "inputTokens": 2,
+      "outputTokens": 240,
+      "cacheReadInputTokens": 24102,
+      "cacheCreationInputTokens": 12161,
+      "webSearchRequests": 0,
+      "costUSD": 0.0558684,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 0,
+      "canonicalModel": "claude-sonnet-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  }
+}

@@ -1,0 +1,45 @@
+diff --git a/src/api_client.py b/src/api_client.py
+index 8e9e3cd..b18053c 100644
+--- a/src/api_client.py
++++ b/src/api_client.py
+@@ -5,6 +5,7 @@ from __future__ import annotations
+ import time
+ from datetime import datetime, timedelta, timezone
+ from typing import Any, Callable, Mapping
++from urllib.parse import urlencode
+ 
+ from src.config import ClientConfig
+ from src.models import Account, ApiError, Export, Report, Request, Response
+@@ -97,9 +98,7 @@ class ApiClient:
+     def _build_url(self, path: str, params: Mapping[str, Any]) -> str:
+         # Build the URL
+         url = self._config.base_url.rstrip("/") + path
+-        query = "&".join(
+-            f"{key}={value}" for key, value in params.items() if value is not None
+-        )
++        query = urlencode({key: value for key, value in params.items() if value is not None})
+         # Return the result
+         return f"{url}?{query}" if query else url
+ 
+diff --git a/tests/test_api_client.py b/tests/test_api_client.py
+index fb7b6ee..910489c 100644
+--- a/tests/test_api_client.py
++++ b/tests/test_api_client.py
+@@ -111,3 +111,17 @@ def test_config_from_env(monkeypatch):
+     config = ClientConfig.from_env()
+     assert config.base_url == "https://example.test"
+     assert config.token == "abc"
++
++
++@pytest.mark.parametrize("account, export_id", [("Acme Holdings", "e-4"), ("Smith & Co", "e-5")])
++def test_list_exports_encodes_account_names(client, account, export_id):
++    # Consecutive calls hit both edge nodes; each must succeed without retries.
++    for _ in range(2):
++        assert [e.id for e in client.list_exports(account)] == [export_id]
++
++
++def test_list_reports_encodes_account_names(client, api, sleeps):
++    reports = client.list_reports("Smith & Co", since=datetime(2024, 1, 1, tzinfo=timezone.utc))
++    assert [r.id for r in reports] == ["r-6"]
++    assert len(api.requests) == 1
++    assert sleeps == []

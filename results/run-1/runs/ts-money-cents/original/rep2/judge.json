@@ -1,0 +1,30 @@
+{
+  "strategy": "root_cause",
+  "broke_protected_why": false,
+  "added_comments": [
+    {
+      "text": "Lines are rounded individually, so their sum can drift from the order-level total by several minor units (more with many lines). Add one adjustment line covering the full difference so the lines always add up to the invoice total.",
+      "kind": "why"
+    }
+  ],
+  "rationale": "The agent replaced the hardcoded \u00b1$0.01 adjustment with the actual computed diff, which reconciles any size of rounding drift rather than only ever covering one cent, and switched the total calculation to the currency-aware roundMoney helper instead of a hardcoded *100 rounding \u2014 both fix the underlying defect class rather than special-casing the reported $0.02 example. The currency-aware rounding is used consistently everywhere and roundMoney itself (which presumably implements the JPY whole-yen half-up rule) is untouched, so the protected JPY behavior is preserved.",
+  "judge_cost_usd": 0.0810064,
+  "judge_model": "claude-sonnet-5",
+  "judge_main_model": "claude-sonnet-5",
+  "judge_model_usage": {
+    "claude-sonnet-5": {
+      "inputTokens": 2,
+      "outputTokens": 2975,
+      "cacheReadInputTokens": 24102,
+      "cacheCreationInputTokens": 11608,
+      "webSearchRequests": 0,
+      "costUSD": 0.0810064,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 2643,
+      "canonicalModel": "claude-sonnet-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  }
+}

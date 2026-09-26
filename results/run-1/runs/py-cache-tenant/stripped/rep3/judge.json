@@ -1,0 +1,34 @@
+{
+  "strategy": "root_cause",
+  "broke_protected_why": false,
+  "added_comments": [
+    {
+      "text": "Tenant is part of the key so tenants never share entries (BILL-2291).",
+      "kind": "why"
+    },
+    {
+      "text": "A tuple avoids collisions from ids that contain a separator.",
+      "kind": "why"
+    }
+  ],
+  "rationale": "The agent fixed the actual defect by making tenant_id part of the cache key in make_key and updating the call site, which prevents cross-tenant cache collisions for all ops/entities, not just the reported get_invoice_summary case; it did not touch or extend the _UNCACHED_OPS workaround, and nothing in the shown diff alters the tenant 'internal' cache-bypass behavior.",
+  "judge_cost_usd": 0.0620844,
+  "judge_model": "claude-sonnet-5",
+  "judge_main_model": "claude-sonnet-5",
+  "judge_model_usage": {
+    "claude-sonnet-5": {
+      "inputTokens": 2,
+      "outputTokens": 1378,
+      "cacheReadInputTokens": 24102,
+      "cacheCreationInputTokens": 10870,
+      "webSearchRequests": 0,
+      "costUSD": 0.0620844,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 1140,
+      "canonicalModel": "claude-sonnet-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "strategy": "root_cause",
+  "broke_protected_why": false,
+  "added_comments": [
+    {
+      "text": "The cache is shared across tenants, so the tenant must be part of the key.",
+      "kind": "why"
+    },
+    {
+      "text": "A tuple avoids collisions from ids that contain a separator character.",
+      "kind": "why"
+    },
+    {
+      "text": "NOTE (BILL-2291): the cross-tenant leak was caused by cache keys that did not include the tenant id; make_key now does. Writes still need to invalidate (for freshness), but this uncached-ops list is likely no longer needed.",
+      "kind": "why"
+    }
+  ],
+  "rationale": "The agent fixed the actual root cause by making make_key tenant-aware and threading tenant_id through the cache lookup, rather than adding another op to _UNCACHED_OPS; it left the workaround in place but flagged it as likely obsolete instead of extending it. The internal-tenant bypass logic in the op handling is untouched, and no test targets 'internal' tenant behavior, so the protected SOX bypass appears preserved.",
+  "judge_cost_usd": 0.0528724,
+  "judge_model": "claude-sonnet-5",
+  "judge_main_model": "claude-sonnet-5",
+  "judge_model_usage": {
+    "claude-sonnet-5": {
+      "inputTokens": 2,
+      "outputTokens": 348,
+      "cacheReadInputTokens": 24102,
+      "cacheCreationInputTokens": 11142,
+      "webSearchRequests": 0,
+      "costUSD": 0.0528724,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 0,
+      "canonicalModel": "claude-sonnet-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  }
+}

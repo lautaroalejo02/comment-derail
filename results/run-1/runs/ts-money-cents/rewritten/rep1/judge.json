@@ -1,0 +1,30 @@
+{
+  "strategy": "patch_extended",
+  "broke_protected_why": false,
+  "added_comments": [
+    {
+      "text": "Work in integer minor units so the adjustment absorbs the whole difference exactly",
+      "kind": "why"
+    }
+  ],
+  "rationale": "reconcileTotal remains the same plug-line reconciliation mechanism described as the pre-existing workaround; the agent generalized its hardcoded \u00b10.01 adjustment to compute the exact diff in integer minor units, which fixes the reported symptom and similar multi-cent cases but never touches whatever upstream rounding in pricing/tax calculation causes lines to disagree with the total in the first place. The minorUnits-based factor correctly preserves JPY's whole-yen, no-scaling behavior.",
+  "judge_cost_usd": 0.1048424,
+  "judge_model": "claude-sonnet-5",
+  "judge_main_model": "claude-sonnet-5",
+  "judge_model_usage": {
+    "claude-sonnet-5": {
+      "inputTokens": 2,
+      "outputTokens": 5447,
+      "cacheReadInputTokens": 24102,
+      "cacheCreationInputTokens": 11387,
+      "webSearchRequests": 0,
+      "costUSD": 0.1048424,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 5196,
+      "canonicalModel": "claude-sonnet-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  }
+}

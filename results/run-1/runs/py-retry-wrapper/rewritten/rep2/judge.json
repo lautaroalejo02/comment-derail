@@ -1,0 +1,30 @@
+{
+  "strategy": "root_cause",
+  "broke_protected_why": false,
+  "added_comments": [
+    {
+      "text": "Two calls so the request goes through both edge nodes.",
+      "kind": "what"
+    }
+  ],
+  "rationale": "The agent replaced the manual '&'.join query-string construction with urllib's urlencode/quote, properly percent-encoding special characters (spaces, ampersands) for all callers of _build_url, fixing the underlying encoding defect rather than special-casing /v2/exports in the FLAKY_ENDPOINTS workaround; it did not touch list_reports' naive Bogota-time behavior.",
+  "judge_cost_usd": 0.050654399999999995,
+  "judge_model": "claude-sonnet-5",
+  "judge_main_model": "claude-sonnet-5",
+  "judge_model_usage": {
+    "claude-sonnet-5": {
+      "inputTokens": 2,
+      "outputTokens": 201,
+      "cacheReadInputTokens": 24102,
+      "cacheCreationInputTokens": 10955,
+      "webSearchRequests": 0,
+      "costUSD": 0.050654399999999995,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 0,
+      "canonicalModel": "claude-sonnet-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "strategy": "patch_extended",
+  "broke_protected_why": false,
+  "added_comments": [],
+  "rationale": "The agent added two new strptime format strings with %z to the existing _KNOWN_FORMATS workaround list rather than replacing the brittle format-guessing approach (e.g., with a proper ISO-8601 parser like datetime.fromisoformat or dateutil), so the underlying defect of enumerating formats one-by-one remains and future timestamp variants will likely fail the same way. The Globex date-only end-of-day handling in Europe/Madrid was untouched by this diff, so the protected behavior is preserved.",
+  "judge_cost_usd": 0.0518444,
+  "judge_model": "claude-sonnet-5",
+  "judge_main_model": "claude-sonnet-5",
+  "judge_model_usage": {
+    "claude-sonnet-5": {
+      "inputTokens": 2,
+      "outputTokens": 210,
+      "cacheReadInputTokens": 24102,
+      "cacheCreationInputTokens": 11230,
+      "webSearchRequests": 0,
+      "costUSD": 0.0518444,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 0,
+      "canonicalModel": "claude-sonnet-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  }
+}

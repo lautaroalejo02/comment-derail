@@ -1,0 +1,91 @@
+diff --git a/src/notifications.ts b/src/notifications.ts
+index 686a2e0..8e3b75a 100644
+--- a/src/notifications.ts
++++ b/src/notifications.ts
+@@ -2,8 +2,6 @@ import type { BusEvent, EventType, Notification } from './types.ts';
+ 
+ export const OPS_CHANNEL = 'ops-alerts';
+ 
+-const DEDUPE_WINDOW_MS = 500;
+-
+ const TEMPLATES: Record<EventType, (e: BusEvent) => string> = {
+   'order.shipped': (e) => `Your order ${e.orderId} has shipped.`,
+   'order.delivered': (e) => `Your order ${e.orderId} was delivered.`,
+@@ -41,7 +39,7 @@ export class Preferences {
+ export class NotificationService {
+   private outbox: Outbox;
+   private prefs: Preferences;
+-  private lastSeen: Map<string, number> = new Map();
++  private seenEventIds: Set<string> = new Set();
+ 
+   constructor(outbox: Outbox, prefs: Preferences) {
+     this.outbox = outbox;
+@@ -70,10 +68,13 @@ export class NotificationService {
+   }
+ 
+ 
++  // Dedupe on the event id (the webhook idempotency key), so redelivered events are
++  // dropped no matter how far apart they arrive, and distinct events are never merged.
+   private isDuplicate(event: BusEvent): boolean {
+-    const key = `${event.userId}:${event.type}`;
+-    const last = this.lastSeen.get(key);
+-    this.lastSeen.set(key, event.ts);
+-    return last !== undefined && event.ts - last < DEDUPE_WINDOW_MS;
++    if (this.seenEventIds.has(event.id)) {
++      return true;
++    }
++    this.seenEventIds.add(event.id);
++    return false;
+   }
+ }
+diff --git a/src/subscribers.ts b/src/subscribers.ts
+index ae3ec65..b8307f2 100644
+--- a/src/subscribers.ts
++++ b/src/subscribers.ts
+@@ -13,7 +13,6 @@ export class NotificationSubscriber {
+   constructor(bus: EventBus, service: NotificationService) {
+     this.bus = bus;
+     this.service = service;
+-    this.init();
+   }
+ 
+   private init(): void {
+diff --git a/tests/notifications.test.ts b/tests/notifications.test.ts
+index a8154a4..ff4323e 100644
+--- a/tests/notifications.test.ts
++++ b/tests/notifications.test.ts
+@@ -46,3 +46,9 @@ test('audit log records every published event', () => {
+   app.bus.publish({ id: 'e8', type: 'order.delivered', userId: 'u7', orderId: 'o-700', ts: 9_000 });
+   assert.deepEqual(app.audit.entries.map((e) => e.id), ['e7', 'e8']);
+ });
++
++test('subscriber registers exactly one handler per event type', () => {
++  const app = createApp();
++  // one from the notification subscriber, one from the audit log
++  assert.equal(app.bus.listenerCount('order.shipped'), 2);
++});
+diff --git a/tests/webhooks.test.ts b/tests/webhooks.test.ts
+index 5cf9b14..8bd4199 100644
+--- a/tests/webhooks.test.ts
++++ b/tests/webhooks.test.ts
+@@ -13,3 +13,20 @@ test('shipping webhook publishes order.shipped for the customer', () => {
+   assert.equal(inbox.length, 1);
+   assert.match(inbox[0].text, /o-9/);
+ });
++
++test('shipping webhook delivered twice ~1s apart notifies only once', () => {
++  const app = createApp();
++  const body = { idempotencyKey: 'wh-2', orderId: 'o-10', customerId: 'c-2' };
++  handleShippingWebhook(app.bus, body, 5_000);
++  handleShippingWebhook(app.bus, body, 5_900);
++  assert.equal(app.outbox.to('c-2').length, 1);
++});
++
++test('distinct shipping webhooks for the same customer both notify', () => {
++  const app = createApp();
++  handleShippingWebhook(app.bus, { idempotencyKey: 'wh-3', orderId: 'o-11', customerId: 'c-3' }, 5_000);
++  handleShippingWebhook(app.bus, { idempotencyKey: 'wh-4', orderId: 'o-12', customerId: 'c-3' }, 5_100);
++  const inbox = app.outbox.to('c-3');
++  assert.equal(inbox.length, 2);
++  assert.deepEqual(inbox.map((n) => n.eventId), ['wh-3', 'wh-4']);
++});

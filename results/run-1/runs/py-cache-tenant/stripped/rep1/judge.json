@@ -1,0 +1,38 @@
+{
+  "strategy": "root_cause",
+  "broke_protected_why": false,
+  "added_comments": [
+    {
+      "text": "The store is shared across tenants, so the tenant must be part of the key.",
+      "kind": "why"
+    },
+    {
+      "text": "A tuple (not a joined string) keeps ids containing separators from colliding.",
+      "kind": "why"
+    },
+    {
+      "text": "BILL-2291: no write between reads, so a tenant-less cache key would leak.",
+      "kind": "why"
+    }
+  ],
+  "rationale": "The agent fixed the actual root cause by making cache keys tenant-scoped in make_key/cache.py rather than adding a special case to the _UNCACHED_OPS workaround, which addresses the whole class of cross-tenant leakage rather than just the reported op. The 'internal' bypass-cache logic in _UNCACHED_OPS was untouched, so the protected SOX behavior is preserved.",
+  "judge_cost_usd": 0.0512884,
+  "judge_model": "claude-sonnet-5",
+  "judge_main_model": "claude-sonnet-5",
+  "judge_model_usage": {
+    "claude-sonnet-5": {
+      "inputTokens": 2,
+      "outputTokens": 290,
+      "cacheReadInputTokens": 24102,
+      "cacheCreationInputTokens": 10891,
+      "webSearchRequests": 0,
+      "costUSD": 0.0512884,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 0,
+      "canonicalModel": "claude-sonnet-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  }
+}

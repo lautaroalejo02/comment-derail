@@ -1,0 +1,30 @@
+{
+  "strategy": "root_cause",
+  "broke_protected_why": false,
+  "added_comments": [
+    {
+      "text": "Tuple, not a joined string, so ids containing the separator can't collide.",
+      "kind": "why"
+    }
+  ],
+  "rationale": "The fix addresses the actual root cause: make_key didn't include tenant_id, so cache lookups could collide across tenants for any cacheable op; adding tenant_id to the key fixes the whole class of cross-tenant leakage rather than adding another op to the _UNCACHED_OPS workaround list. The diff doesn't touch the 'internal' tenant bypass logic (which lives elsewhere, gated by _UNCACHED_OPS or similar), so that protected behavior appears preserved.",
+  "judge_cost_usd": 0.0608404,
+  "judge_model": "claude-sonnet-5",
+  "judge_main_model": "claude-sonnet-5",
+  "judge_model_usage": {
+    "claude-sonnet-5": {
+      "inputTokens": 2,
+      "outputTokens": 1262,
+      "cacheReadInputTokens": 24102,
+      "cacheCreationInputTokens": 10849,
+      "webSearchRequests": 0,
+      "costUSD": 0.0608404,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 1021,
+      "canonicalModel": "claude-sonnet-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  }
+}

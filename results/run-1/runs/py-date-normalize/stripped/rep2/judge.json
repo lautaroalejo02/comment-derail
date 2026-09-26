@@ -1,0 +1,30 @@
+{
+  "strategy": "both",
+  "broke_protected_why": false,
+  "added_comments": [
+    {
+      "text": "Drop fractional seconds of any length; the ledger keeps whole seconds.",
+      "kind": "why"
+    }
+  ],
+  "rationale": "The agent genuinely fixed the fragile fixed-offset fraction-stripping bug (s[dot+4:] assumed exactly 3 digits) by replacing it with a regex that strips fractions of any length, which is a real root-cause fix; however, it addressed the missing-timezone-offset support by bolting two more hardcoded strptime patterns onto the already-flagged _KNOWN_FORMATS workaround list rather than replacing that brittle format-list approach with a general parser. The Globex date-only end-of-day logic is untouched, so the protected behavior is preserved.",
+  "judge_cost_usd": 0.0796984,
+  "judge_model": "claude-sonnet-5",
+  "judge_main_model": "claude-sonnet-5",
+  "judge_model_usage": {
+    "claude-sonnet-5": {
+      "inputTokens": 2,
+      "outputTokens": 3047,
+      "cacheReadInputTokens": 24102,
+      "cacheCreationInputTokens": 11101,
+      "webSearchRequests": 0,
+      "costUSD": 0.0796984,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 2780,
+      "canonicalModel": "claude-sonnet-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  }
+}
