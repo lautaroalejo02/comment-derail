@@ -371,7 +371,7 @@ def strip_tree(root: str | os.PathLike) -> list[Path]:
             continue
         new = strip(src, lang_for_path(p))
         if new != src:
-            p.write_text(new, encoding="utf-8")
+            p.write_text(new, encoding="utf-8", newline="")
             changed.append(p)
     return changed
 
@@ -391,7 +391,7 @@ def main(argv: list[str] | None = None) -> int:
         if p.is_file():
             lang = lang_for_path(p)
             if lang:
-                p.write_text(strip(p, lang), encoding="utf-8")
+                p.write_text(strip(p, lang), encoding="utf-8", newline="")
                 print(f"stripped {p}")
             continue
         if not p.is_dir():
@@ -403,4 +403,6 @@ def main(argv: list[str] | None = None) -> int:
 
 
 if __name__ == "__main__":
+    from . import utf8_stdio
+    utf8_stdio()
     sys.exit(main())

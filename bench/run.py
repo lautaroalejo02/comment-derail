@@ -107,8 +107,8 @@ def run_one(fx: Fixture, condition: str, rep: int, args, run_dir: Path, meta: di
         ar = run_agent(ws, fx.task, max_turns=args.max_turns, model=args.model,
                        timeout=args.agent_timeout, mock=args.mock, fixture=fx, condition=condition,
                        isolate=args.isolate_config, keep_env=args.keep_env)
-        (rdir / "agent_stdout.json").write_text(ar.stdout or "", encoding="utf-8")
-        (rdir / "agent_stderr.txt").write_text(ar.stderr or "", encoding="utf-8")
+        (rdir / "agent_stdout.json").write_text(ar.stdout or "", encoding="utf-8", newline="\n")
+        (rdir / "agent_stderr.txt").write_text(ar.stderr or "", encoding="utf-8", newline="\n")
         rec.update({
             "agent_result": (ar.result or "")[:4000] if isinstance(ar.result, str) else ar.result,
             "total_cost_usd": ar.total_cost_usd, "num_turns": ar.num_turns,
@@ -119,6 +119,10 @@ def run_one(fx: Fixture, condition: str, rep: int, args, run_dir: Path, meta: di
             "api_error_status": ar.api_error_status,
             "main_model": ar.main_model, "modelUsage": ar.model_usage,
         })
+        if ar.usage_limited:
+            rec["error_kind"] = "usage_limit"
+            rec["error"] = "usage limit reached"
+            return rec
         if ar.rate_limited:
             rec["rate_limited"] = True
             rec["error"] = "rate limited"
@@ -130,7 +134,7 @@ def run_one(fx: Fixture, condition: str, rep: int, args, run_dir: Path, meta: di
 
         # 4. diff (before hidden tests are copied) + final tree
         diff = git_diff(ws, baseline)
-        (rdir / "diff.patch").write_text(diff, encoding="utf-8")
+        (rdir / "diff.patch").write_text(diff, encoding="utf-8", newline="\n")
         if not args.no_save_tree:
             save_tree(ws, rdir / "final")
 
@@ -140,7 +144,7 @@ def run_one(fx: Fixture, condition: str, rep: int, args, run_dir: Path, meta: di
         # 5. visible tests
         vis = run_visible(fx, ws, timeout=args.test_timeout)
         (rdir / "test_visible.txt").write_text(f"$ {vis.cmd}\n(rc={vis.returncode})\n{vis.output}",
-                                               encoding="utf-8")
+                                               encoding="utf-8", newline="\n")
         rec["visible_pass"] = vis.ok
 
         # 6. hidden tests, per file
@@ -150,7 +154,7 @@ def run_one(fx: Fixture, condition: str, rep: int, args, run_dir: Path, meta: di
         rec["cleanup_pass"] = hr.passed("cleanup")  # None when the fixture has no cleanup tier
         rec["hidden_results"] = hr.per_file
         rec["full_suite_with_hidden_pass"] = hr.full.ok if hr.full else None
-        with open(rdir / "test_hidden.txt", "w", encoding="utf-8") as fh:
+        with open(rdir / "test_hidden.txt", "w", encoding="utf-8", newline="\n") as fh:
             for rel, out in hr.outputs.items():
                 fh.write(f"===== {rel} [{hr.kinds[rel]}] pass={hr.per_file[rel]}\n{out}\n")
             if hr.full:
@@ -163,11 +167,15 @@ def run_one(fx: Fixture, condition: str, rep: int, args, run_dir: Path, meta: di
             v = judge(diff, fx.task, model=args.judge_model, fx=fx, timeout=args.judge_timeout,
                       isolate=args.isolate_config, keep_env=args.keep_env)
             rec["judge"] = v
-            (rdir / "judge.json").write_text(json.dumps(v, indent=2), encoding="utf-8")
+            (rdir / "judge.json").write_text(json.dumps(v, indent=2), encoding="utf-8", newline="\n")
+            if v.get("error_kind") in ("usage_limit", "auth"):
+                # Mark the whole cell failed so the run stops and --resume re-runs it.
+                rec["error_kind"] = v["error_kind"]
+                rec["error"] = f"judge: {v.get('error')}"
         _flatten_judge(rec)
     except Exception as exc:  # keep going; record the failure
         rec["error"] = f"{exc.__class__.__name__}: {exc}"
-        (rdir / "harness_error.txt").write_text(traceback.format_exc(), encoding="utf-8")
+        (rdir / "harness_error.txt").write_text(traceback.format_exc(), encoding="utf-8", newline="\n")
         log(f"[run] ERROR {fx.id}/{condition}/rep{rep}: {rec['error']}")
     finally:
         if args.keep_workspaces:
@@ -272,7 +280,7 @@ def _prepare_resume(results_path: Path) -> set[tuple[str, str, int]]:
     if len(good) != len(rows):
         stamp = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%d-%H%M%S")
         shutil.copy2(results_path, results_path.with_name(f"results.jsonl.bak-{stamp}"))
-        with open(results_path, "w", encoding="utf-8") as fh:
+        with open(results_path, "w", encoding="utf-8", newline="\n") as fh:
             for r in good.values():
                 fh.write(json.dumps(r, default=str) + "\n")
     return set(good)
@@ -299,7 +307,7 @@ def main(argv=None) -> int:
         print(f"[run] {results_path} already exists; use --resume or another --run-id", file=sys.stderr)
         return 2
     run_dir.mkdir(parents=True, exist_ok=True)
-    _log_fh = open(run_dir / "run.log", "a", encoding="utf-8")
+    _log_fh = open(run_dir / "run.log", "a", encoding="utf-8", newline="\n")
     try:
         return _main(args, fixtures, errors, now, run_id, run_dir, results_path, meta_path, argv)
     finally:
@@ -339,7 +347,7 @@ def _main(args, fixtures, errors, now, run_id, run_dir, results_path, meta_path,
         resumes.append({k: meta[k] for k in ("timestamp", "claude_version", "model", "judge_model",
                                              "config_isolated", "credentials_copied", "argv")})
         meta = {**old, "resumes": resumes} if old else {**meta, "resumes": resumes}
-    meta_path.write_text(json.dumps(meta, indent=2), encoding="utf-8")
+    meta_path.write_text(json.dumps(meta, indent=2), encoding="utf-8", newline="\n")
     log(f"[run] {run_id}: claude={version} model={args.model} judge={meta.get('judge_model')} "
         f"isolated_config={_isolation_label(meta, args)} -> {run_dir}")
 
@@ -358,12 +366,13 @@ def _main(args, fixtures, errors, now, run_id, run_dir, results_path, meta_path,
 
     n_done = 0
     stop = threading.Event()
+    stop_kind: dict = {}
     main_models: set = set()
 
     def record(rec: dict) -> None:
         nonlocal n_done
         with _lock:
-            with open(results_path, "a", encoding="utf-8") as fh:
+            with open(results_path, "a", encoding="utf-8", newline="\n") as fh:
                 fh.write(json.dumps(rec, default=str) + "\n")
             n_done += 1
         if rec.get("main_model"):
@@ -374,7 +383,8 @@ def _main(args, fixtures, errors, now, run_id, run_dir, results_path, meta_path,
             f"judge={rec.get('judge_strategy')} model={rec.get('main_model')} "
             f"cost={rec.get('total_cost_usd')} retries={rec.get('retries')}"
             + (f" ERROR={rec['error']}" if rec.get("error") else ""))
-        if rec.get("error_kind") == "auth":
+        if rec.get("error_kind") in ("auth", "usage_limit"):
+            stop_kind.setdefault("kind", rec["error_kind"])
             stop.set()
 
     def guarded(fx, cond, k):
@@ -395,6 +405,11 @@ def _main(args, fixtures, errors, now, run_id, run_dir, results_path, meta_path,
                 rec = f.result()
                 if rec is not None:
                     record(rec)
+    if stop.is_set() and stop_kind.get("kind") == "usage_limit":
+        log("[run] STOPPED: usage limit reached (plan window or API credit); the limited cell "
+            "and the cells not started are not counted as done.")
+        log(f"[run] continue after the reset with --run-id {run_id} --resume")
+        return 4
     if stop.is_set():
         log(f"[run] FATAL: {AUTH_HINT}" if args.isolate_config else
             "[run] FATAL: the subject failed to authenticate; check `claude` login / ANTHROPIC_API_KEY.")
@@ -415,4 +430,6 @@ def _isolation_label(meta: dict, args) -> str:
 
 
 if __name__ == "__main__":
+    from . import utf8_stdio
+    utf8_stdio()
     sys.exit(main())

@@ -37,7 +37,7 @@ def check_python() -> tuple[bool, str]:
 def check_node() -> tuple[bool, str]:
     if not shutil.which("node"):
         return False, "node not on PATH"
-    out = subprocess.run(["node", "--version"], capture_output=True, text=True).stdout.strip()
+    out = subprocess.run(["node", "--version"], capture_output=True, text=True, encoding="utf-8", errors="replace").stdout.strip()
     vt = _version_tuple(out)
     return bool(vt) and vt[0] >= 22, out or "unknown"
 
@@ -117,10 +117,14 @@ def main(argv=None) -> int:
         if res.auth_failed and args.isolate_config:
             print("      authentication failed under config isolation: rerun with --no-isolate-config "
                   "(and pass it to bench.run too), or pass the needed auth variable with --keep-env VAR.")
+        elif res.usage_limited:
+            print("      usage limit reached (plan window or API credit): wait for the reset.")
         elif res.rate_limited:
             print("      rate limited / overloaded: wait and retry.")
     return 0 if ok_all else 1
 
 
 if __name__ == "__main__":
+    from . import utf8_stdio
+    utf8_stdio()
     sys.exit(main())

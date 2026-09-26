@@ -23,6 +23,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 import threading
 import time
@@ -114,7 +115,7 @@ def claude_config(isolate: bool = True):
             original_bytes = src.read_bytes()
             _write_private(tmp / _CREDS, original_bytes)
             info.credentials_copied = True
-        (tmp / "settings.json").write_text(json.dumps(ISOLATED_SETTINGS), encoding="utf-8")
+        (tmp / "settings.json").write_text(json.dumps(ISOLATED_SETTINGS), encoding="utf-8", newline="\n")
         yield {"CLAUDE_CONFIG_DIR": str(tmp)}, info
     finally:
         try:
@@ -138,7 +139,13 @@ def credentials_available() -> bool:
 # Error classification
 # --------------------------------------------------------------------------
 
-RATE_LIMIT_RX = re.compile(r"\b429\b|rate[ _-]?limit|overloaded|usage limit", re.IGNORECASE)
+RATE_LIMIT_RX = re.compile(r"\b429\b|rate[ _-]?limit|overloaded", re.IGNORECASE)
+# Plan usage windows (Pro/Max "usage limit reached", "you've hit your limit ·
+# resets 3pm") and exhausted API credit do not clear within a backoff of
+# minutes: the run stops instead and continues later with --resume.
+USAGE_LIMIT_RX = re.compile(r"usage limit|hit your (usage |weekly |session )?limit|limit reached|"
+                            r"limit will reset|resets? (at |in )?\d|credit balance is too low|"
+                            r"out of (extra )?(usage|credits)", re.IGNORECASE)
 AUTH_RX = re.compile(r"invalid api key|/login\b|not logged in|authentication[ _]?(error|failed)|"
                      r"\b401\b|unauthori[sz]ed|oauth token (has )?expired|"
                      r"could not resolve authentication|missing api key", re.IGNORECASE)
@@ -183,10 +190,18 @@ class AgentResult:
                          if x)
 
     @property
+    def usage_limited(self) -> bool:
+        """Plan/credit limit reached. Checked before rate_limited: such a call
+        is not retried with backoff."""
+        if not self.is_error or self.timed_out or self.mock:
+            return False
+        return bool(USAGE_LIMIT_RX.search(self._error_text()))
+
+    @property
     def rate_limited(self) -> bool:
         """Only failed calls are inspected: a successful answer that merely
         talks about rate limits (e.g. a retry fixture) is not a rate limit."""
-        if not self.is_error or self.timed_out or self.mock:
+        if not self.is_error or self.timed_out or self.mock or self.usage_limited:
             return False
         if str(self.api_error_status) in ("429", "529"):
             return True
@@ -207,17 +222,43 @@ class AgentResult:
         return d
 
 
+def claude_argv() -> list[str]:
+    """argv prefix that starts Claude Code without going through a shell.
+
+    ``BENCH_CLAUDE_BIN`` overrides the binary; a ``.py`` path runs under this
+    interpreter (used by the tests' fake claude, which cannot be executed
+    directly on Windows). On Windows an npm ``claude.cmd`` shim is replaced by
+    the ``claude.exe`` it launches: going through cmd.exe would cut the prompt
+    at its first newline and mangle ``%``, ``^`` and ``&``.
+    """
+    name = os.environ.get("BENCH_CLAUDE_BIN", "claude")
+    if name.endswith(".py"):
+        return [sys.executable, name]
+    found = shutil.which(name)
+    if found and found.lower().endswith((".cmd", ".bat")):
+        exe = Path(found).parent / "node_modules" / "@anthropic-ai" / "claude-code" / "bin" / "claude.exe"
+        if exe.is_file():
+            return [str(exe)]
+        raise RuntimeError(f"{found} is a cmd.exe shim, which cannot pass multi-line prompts safely; "
+                           f"set BENCH_CLAUDE_BIN to the claude executable it wraps")
+    return [found or name]
+
+
 def claude_bin() -> str:
-    return os.environ.get("BENCH_CLAUDE_BIN", "claude")
+    """Display form of :func:`claude_argv`."""
+    try:
+        return subprocess.list2cmdline(claude_argv())
+    except RuntimeError as exc:
+        return f"<unresolved: {exc}>"
 
 
 def claude_version() -> str:
     try:
-        p = subprocess.run([claude_bin(), "--version"], capture_output=True, text=True, timeout=30,
+        p = subprocess.run([*claude_argv(), "--version"], capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=30,
                            env=clean_env(keep=("CLAUDE_CONFIG_DIR",)), stdin=subprocess.DEVNULL)
         return (p.stdout or p.stderr).strip() or f"unknown (rc={p.returncode})"
-    except (OSError, subprocess.TimeoutExpired) as exc:
-        return f"unavailable ({exc.__class__.__name__})"
+    except (OSError, RuntimeError, subprocess.TimeoutExpired) as exc:
+        return f"unavailable ({exc.__class__.__name__}: {exc})"
 
 
 def parse_claude_json(stdout: str) -> tuple[dict | None, str | None]:
@@ -258,7 +299,7 @@ def parse_claude_json(stdout: str) -> tuple[dict | None, str | None]:
 
 def build_command(prompt: str, max_turns: int | None, model: str | None,
                   skip_permissions: bool = True, extra: list[str] | None = None) -> list[str]:
-    cmd = [claude_bin(), "-p", prompt, "--output-format", "json"]
+    cmd = [*claude_argv(), "-p", prompt, "--output-format", "json"]
     if skip_permissions:
         cmd.append("--dangerously-skip-permissions")
     if max_turns:
@@ -282,11 +323,15 @@ def call_claude(prompt: str, cwd: Path, max_turns: int | None, model: str | None
 
 
 def _call_claude(prompt, cwd, max_turns, model, timeout, skip_permissions, extra, env) -> AgentResult:
-    cmd = build_command(prompt, max_turns, model, skip_permissions, extra)
-    res = AgentResult(command=["<prompt>" if i == 2 else c for i, c in enumerate(cmd)])
+    try:
+        cmd = build_command(prompt, max_turns, model, skip_permissions, extra)
+    except RuntimeError as exc:
+        return AgentResult(returncode=-1, is_error=True, stderr=f"[harness] {exc}", parse_error=str(exc))
+    at = cmd.index("-p") + 1
+    res = AgentResult(command=["<prompt>" if i == at else c for i, c in enumerate(cmd)])
     t0 = time.monotonic()
     try:
-        p = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, timeout=timeout,
+        p = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=timeout,
                            env=env, stdin=subprocess.DEVNULL)
         res.returncode, res.stdout, res.stderr = p.returncode, p.stdout, p.stderr
     except subprocess.TimeoutExpired as exc:

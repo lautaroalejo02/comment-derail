@@ -109,7 +109,7 @@ class Fixture:
     def hidden_dest_path(self, hidden_file: Path) -> str:
         """Workspace-relative path where a hidden file lands."""
         rel = hidden_file.relative_to(self.hidden_dir)
-        return str(Path(self.hidden_dest) / rel)
+        return (Path(self.hidden_dest) / rel).as_posix()
 
     def validate_structure(self) -> list[str]:
         """Static checks (files/dirs present). Returns a list of problems."""

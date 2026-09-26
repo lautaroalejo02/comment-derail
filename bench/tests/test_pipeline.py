@@ -42,10 +42,10 @@ def test_validate_fixture_passes(mini, capsys):
 def test_validate_detects_code_change_in_rewritten(tmp_path):
     a, b = tmp_path / "a", tmp_path / "b"
     a.mkdir(), b.mkdir()
-    (a / "m.py").write_text("x = 1  # what\n\n# why\ny = 2\n")
-    (b / "m.py").write_text("x = 1\n# HACK(2024-01-01, #1): y — remove when z\ny = 2\n")
+    (a / "m.py").write_text("x = 1  # what\n\n# why\ny = 2\n", encoding="utf-8")
+    (b / "m.py").write_text("x = 1\n# HACK(2024-01-01, #1): y — remove when z\ny = 2\n", encoding="utf-8")
     assert validate_fixture.compare_stripped(a, b) == []
-    (b / "m.py").write_text("x = 1\ny = 3\n")
+    (b / "m.py").write_text("x = 1\ny = 3\n", encoding="utf-8")
     assert validate_fixture.compare_stripped(a, b)
 
 

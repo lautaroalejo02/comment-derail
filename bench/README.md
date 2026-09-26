@@ -35,7 +35,10 @@ python -m pytest bench/tests -q                  # harness tests (mock / fake-cl
 `--backoff 60,120,240` (rate-limit sleeps; its length = max retries) · `--agent-timeout S` (1800) ·
 `--judge-timeout S` · `--test-timeout S` · `--workdir DIR` · `--keep-workspaces` · `--no-save-tree`.
 `BENCH_CLAUDE_BIN` overrides the `claude` executable. Exit codes: 0 ok, 2 bad input / run exists without
-`--resume`, 3 stopped on an authentication failure.
+`--resume`, 3 stopped on an authentication failure, 4 stopped on a usage limit (plan window or API
+credit; not retried with backoff — continue after the reset with `--resume`). A `.py` path in
+`BENCH_CLAUDE_BIN` runs under the current interpreter. On Windows an npm `claude.cmd` shim is
+replaced by the `claude.exe` it wraps, because cmd.exe would cut multi-line prompts.
 
 ### Subject isolation
 

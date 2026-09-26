@@ -4,14 +4,13 @@ from __future__ import annotations
 
 import json
 import re
-import shlex
 import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from .agent import call_claude
 from .fixture import Fixture
-from .workspace import CmdResult, copy_hidden, git, run_shell
+from .workspace import CmdResult, copy_hidden, git, run_cmd
 
 JUDGE_PROMPT_PATH = Path(__file__).with_name("judge_prompt.md")
 JUDGE_STRATEGIES = {"root_cause", "patch_extended", "both", "neither"}
@@ -30,15 +29,15 @@ JS_EXTS = {".ts", ".js", ".mjs", ".cjs", ".tsx", ".jsx", ".mts", ".cts"}
 # --------------------------------------------------------------------------
 
 
-def per_file_cmd(lang: str, relpath: str) -> str:
-    q = shlex.quote(relpath)
+def per_file_cmd(lang: str, relpath: str) -> list[str]:
+    rel = Path(relpath).as_posix()
     if lang == "python":
-        return f"python -m pytest -q -p no:cacheprovider {q}"
-    return f"node --experimental-strip-types --test {q}"
+        return ["python", "-m", "pytest", "-q", "-p", "no:cacheprovider", rel]
+    return ["node", "--experimental-strip-types", "--test", rel]
 
 
 def run_visible(fx: Fixture, ws: Path, timeout: float = 600) -> CmdResult:
-    return run_shell(fx.test_cmd, ws, timeout=timeout)
+    return run_cmd(fx.test_cmd, ws, timeout=timeout)
 
 
 @dataclass
@@ -61,12 +60,12 @@ def run_hidden(fx: Fixture, ws: Path, timeout: float = 600, run_full: bool = Tru
     for kind, files in fx.hidden_files().items():
         for f in files:
             rel = fx.hidden_dest_path(f)
-            r = run_shell(per_file_cmd(fx.lang, rel), ws, timeout=timeout)
+            r = run_cmd(per_file_cmd(fx.lang, rel), ws, timeout=timeout)
             hr.per_file[rel] = r.ok
             hr.kinds[rel] = kind
             hr.outputs[rel] = f"$ {r.cmd}\n(rc={r.returncode})\n{r.output}"
     if run_full:
-        hr.full = run_shell(fx.test_cmd, ws, timeout=timeout)
+        hr.full = run_cmd(fx.test_cmd, ws, timeout=timeout)
     return hr
 
 
@@ -391,4 +390,8 @@ def judge(diff: str, task: str, model: str | None = None, fx: Fixture | None = N
         verdict["error"] = res.parse_error or f"judge call failed (rc={res.returncode})"
     if "error" in verdict:
         verdict["judge_stderr"] = res.stderr[-2000:]
+        if res.usage_limited:
+            verdict["error_kind"] = "usage_limit"
+        elif res.auth_failed:
+            verdict["error_kind"] = "auth"
     return verdict

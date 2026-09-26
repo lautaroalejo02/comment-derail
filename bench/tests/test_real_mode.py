@@ -36,6 +36,10 @@ open(counter, "w").write(str(n + 1))
 if mode == "auth":
     print(json.dumps({"type": "result", "is_error": True, "result": "Invalid API key · Please run /login"}))
     sys.exit(1)
+if mode == "usage" or (mode == "usage_judge" and "You are grading" in prompt):
+    print(json.dumps({"type": "result", "is_error": True,
+                      "result": "Claude AI usage limit reached|1790000000"}))
+    sys.exit(1)
 if mode == "ratelimit_always" or (mode == "ratelimit_once" and n == 0):
     print(json.dumps({"type": "result", "is_error": True, "api_error_status": 429,
                       "result": "API Error: 429 rate_limit_error"}))
@@ -44,6 +48,8 @@ usage = {"claude-small": {"outputTokens": 10, "costUSD": 0.01},
          "claude-big": {"outputTokens": 900, "costUSD": 0.4}}
 if prompt == "Reply with OK":
     result = "OK"
+elif prompt.startswith("ECHO:"):
+    result = prompt
 elif "You are grading" in prompt:
     verdict = {"strategy": "patch_extended", "broke_protected_why": False,
                "added_comments": [{"text": "# EU", "kind": "what"}], "rationale": "adds a case"}
@@ -62,8 +68,8 @@ print(json.dumps({"type": "result", "result": result, "total_cost_usd": 0.5, "nu
 
 @pytest.fixture
 def fake(tmp_path, monkeypatch):
-    exe = tmp_path / "claude"
-    exe.write_text(FAKE_CLAUDE)
+    exe = tmp_path / "claude.py"  # .py runs via sys.executable, so it works on Windows too
+    exe.write_text(FAKE_CLAUDE, encoding="utf-8")
     exe.chmod(0o755)
     log = tmp_path / "calls.jsonl"
     cfg = tmp_path / "userconfig"
@@ -111,7 +117,9 @@ def test_real_mode_isolated(fake):
     for c in (agent_call, judge_call):
         assert c["claudecode"] is None and c["effort"] is None  # env cleaned
         assert c["config_dir"] and c["config_dir"] != str(fake["cfg"])  # fresh config dir
-        assert c["creds"] == '{"token": "SECRET-TOKEN"}' and c["creds_mode"] == "0o600"
+        assert c["creds"] == '{"token": "SECRET-TOKEN"}'
+        if os.name == "posix":  # Windows has no mode bits; %TEMP% is per-user via ACLs
+            assert c["creds_mode"] == "0o600"
         assert json.loads(c["settings"]) == {"disableAllHooks": True}
         assert not os.path.exists(c["config_dir"])  # cleaned up
     assert agent_call["config_dir"] != judge_call["config_dir"]
@@ -151,7 +159,8 @@ def test_oauth_refresh_written_back(tmp_path, monkeypatch):
         assert info.credentials_copied
         Path(env["CLAUDE_CONFIG_DIR"], ".credentials.json").write_text("refreshed")
     assert (cfg / ".credentials.json").read_text() == "refreshed"
-    assert stat.S_IMODE((cfg / ".credentials.json").stat().st_mode) == 0o600
+    if os.name == "posix":
+        assert stat.S_IMODE((cfg / ".credentials.json").stat().st_mode) == 0o600
 
 
 def test_rate_limit_retry_then_success(fake, monkeypatch):
@@ -271,3 +280,64 @@ def test_main_model_and_error_classification():
     assert rl.rate_limited and not rl.auth_failed
     au = agent.AgentResult(result="Invalid API key · Please run /login", is_error=True)
     assert au.auth_failed
+    ul = agent.AgentResult(result="Claude AI usage limit reached|1790000000", is_error=True)
+    assert ul.usage_limited and not ul.rate_limited
+    ul2 = agent.AgentResult(result="You've hit your limit · resets 3pm", is_error=True)
+    assert ul2.usage_limited and not ul2.rate_limited
+    assert not agent.AgentResult(result="usage limit reached", is_error=False).usage_limited
+
+
+def test_usage_limit_stops_without_backoff(fake, monkeypatch):
+    monkeypatch.setenv("FAKE_MODE", "usage")
+    out = fake["tmp"] / "results"
+    rc = run.main(["--fixtures", str(FIXTURES), "--conditions", "original,stripped", "--reps", "2",
+                   "--out", str(out), "--run-id", "ul", "--no-judge", "--backoff", "999"])
+    assert rc == 4
+    rows = [json.loads(l) for l in (out / "ul" / "results.jsonl").read_text(encoding="utf-8").splitlines()]
+    assert len(rows) == 1 and rows[0]["error_kind"] == "usage_limit" and rows[0]["retries"] == 0
+    assert len(fake["calls"]()) == 1
+    assert "--resume" in (out / "ul" / "run.log").read_text(encoding="utf-8")
+    # after the reset, --resume re-runs the limited cell and the rest
+    monkeypatch.setenv("FAKE_MODE", "normal")
+    rc = run.main(["--fixtures", str(FIXTURES), "--conditions", "original,stripped", "--reps", "2",
+                   "--out", str(out), "--run-id", "ul", "--no-judge", "--resume"])
+    assert rc == 0
+    rows = [json.loads(l) for l in (out / "ul" / "results.jsonl").read_text(encoding="utf-8").splitlines()]
+    assert len(rows) == 4 and all(r["error"] is None for r in rows)
+
+
+def test_usage_limit_in_judge_stops_run(fake, monkeypatch):
+    monkeypatch.setenv("FAKE_MODE", "usage_judge")
+    rc, rdir, rows = _run(fake["tmp"], "--model", "m", "--judge-model", "j")
+    assert rc == 4
+    (r,) = rows
+    assert r["error_kind"] == "usage_limit" and r["error"].startswith("judge:")
+
+
+def test_claude_argv_resolves_npm_cmd_shim(tmp_path, monkeypatch):
+    shim = tmp_path / "claude.cmd"
+    shim.write_text("@echo off\n", encoding="utf-8")
+    exe = tmp_path / "node_modules" / "@anthropic-ai" / "claude-code" / "bin" / "claude.exe"
+    exe.parent.mkdir(parents=True)
+    exe.write_bytes(b"")
+    monkeypatch.setattr(agent.shutil, "which", lambda name: str(shim))
+    monkeypatch.setenv("BENCH_CLAUDE_BIN", "claude")
+    assert agent.claude_argv() == [str(exe)]
+    exe.unlink()
+    with pytest.raises(RuntimeError, match="cmd.exe shim"):
+        agent.claude_argv()
+
+
+def test_multiline_prompt_reaches_subprocess_intact(fake):
+    prompt = 'ECHO:line one\nline "two" with 100% & ^caret | <x>\nthree — ü'
+    res = agent.call_claude(prompt, fake["tmp"], max_turns=1, model=None, timeout=60)
+    assert res.result == prompt
+
+
+def test_to_argv_strips_shell_quotes_and_uses_this_python():
+    import sys
+    from bench.workspace import to_argv
+    assert to_argv('node --experimental-strip-types --test "tests/**/*.test.ts"') == \
+        ["node", "--experimental-strip-types", "--test", "tests/**/*.test.ts"]
+    assert to_argv("python -m pytest -q")[0] == sys.executable
+    assert to_argv(["node", "tests\a b.ts"]) == ["node", "tests\a b.ts"]

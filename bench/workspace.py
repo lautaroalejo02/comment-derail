@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import shlex
 import shutil
 import subprocess
 import sys
@@ -37,32 +38,41 @@ class CmdResult:
         return self.returncode == 0 and not self.timed_out
 
 
-_SHIM_DIR: str | None = None
-
-
 def test_env() -> dict:
     """Environment for running fixture test commands."""
-    global _SHIM_DIR
     env = dict(os.environ)
     env["PYTHONDONTWRITEBYTECODE"] = "1"
     env.setdefault("NODE_NO_WARNINGS", "1")
     env.pop("PYTEST_ADDOPTS", None)
     env.pop("PYTEST_CURRENT_TEST", None)
-    if shutil.which("python") is None:
-        # test_cmd says `python`; provide a shim pointing at this interpreter.
-        if _SHIM_DIR is None:
-            _SHIM_DIR = tempfile.mkdtemp(prefix="cdb-shim-")
-            os.symlink(sys.executable, os.path.join(_SHIM_DIR, "python"))
-        env["PATH"] = _SHIM_DIR + os.pathsep + env.get("PATH", "")
     return env
 
 
-def run_shell(cmd: str, cwd: Path, timeout: float = 600, env: dict | None = None) -> CmdResult:
+def to_argv(cmd: str | list[str]) -> list[str]:
+    """Turn a command into an argv list, run without a shell on every OS.
+
+    A string is split with POSIX rules (``"a b"`` groups, quotes are removed),
+    so fixture test_cmds and per-file commands behave the same under cmd.exe
+    and sh. A leading ``python`` is replaced with this interpreter, which also
+    covers systems where only ``python3`` / ``py`` is on PATH.
+    """
+    argv = shlex.split(cmd) if isinstance(cmd, str) else list(cmd)
+    if argv and argv[0] in ("python", "python3"):
+        argv[0] = sys.executable
+    return argv
+
+
+def run_cmd(cmd: str | list[str], cwd: Path, timeout: float = 600, env: dict | None = None) -> CmdResult:
+    argv = to_argv(cmd)
+    shown = cmd if isinstance(cmd, str) else subprocess.list2cmdline(argv)
     try:
-        p = subprocess.run(cmd, shell=True, cwd=cwd, capture_output=True, text=True,
+        p = subprocess.run(argv, cwd=cwd, capture_output=True, text=True,
+                           encoding="utf-8", errors="replace",
                            timeout=timeout, env=env if env is not None else test_env(),
                            stdin=subprocess.DEVNULL)
-        return CmdResult(cmd, p.returncode, p.stdout + p.stderr)
+        return CmdResult(shown, p.returncode, p.stdout + p.stderr)
+    except OSError as exc:
+        return CmdResult(shown, -1, f"[harness] cannot run {argv[0]!r}: {exc}")
     except subprocess.TimeoutExpired as exc:
         out = (exc.stdout or b"")
         err = (exc.stderr or b"")
@@ -71,6 +81,11 @@ def run_shell(cmd: str, cwd: Path, timeout: float = 600, env: dict | None = None
         if isinstance(err, bytes):
             err = err.decode("utf-8", "replace")
         return CmdResult(cmd, -9, out + err + f"\n[timeout after {timeout}s]", timed_out=True)
+
+
+# core.autocrlf=true (the Git for Windows default) would rewrite LF files as
+# CRLF on apply/checkout and turn every line into a diff line.
+_GIT = ["git", "-c", "core.autocrlf=false", "-c", "core.eol=lf"]
 
 
 def git(ws: Path, *args: str, check: bool = True, input: str | None = None) -> subprocess.CompletedProcess:
@@ -82,9 +97,8 @@ def git(ws: Path, *args: str, check: bool = True, input: str | None = None) -> s
         "GIT_COMMITTER_NAME": "bench", "GIT_COMMITTER_EMAIL": "bench@localhost",
         "GIT_CONFIG_NOSYSTEM": "1", "GIT_TERMINAL_PROMPT": "0",
     })
-    p = subprocess.run(["git", "-c", "core.autocrlf=false", "-c", "commit.gpgsign=false",
-                        "-c", "core.hooksPath=/dev/null", *args],
-                       cwd=ws, capture_output=True, text=True, env=env, input=input)
+    p = subprocess.run([*_GIT, "-c", "commit.gpgsign=false", "-c", "core.hooksPath=/dev/null", *args],
+                       cwd=ws, capture_output=True, text=True, encoding="utf-8", errors="replace", env=env, input=input)
     if check and p.returncode != 0:
         raise RuntimeError(f"git {' '.join(args)} failed in {ws}: {p.stderr.strip()}")
     return p
@@ -110,7 +124,7 @@ def git_diff(ws: Path, baseline: str) -> str:
     if not (ws / ".git").exists():
         return ""
     git(ws, "add", "-A", check=False)
-    return git(ws, "diff", "--cached", "--no-color", "--no-ext-diff", baseline, "--", check=False).stdout
+    return git(ws, "diff", "--cached", "--no-color", "--no-ext-diff", "--ignore-cr-at-eol", baseline, "--", check=False).stdout
 
 
 def remove_claude_config(ws: Path) -> list[str]:
@@ -161,26 +175,26 @@ def apply_patch(ws: Path, patch: Path) -> tuple[bool, str]:
     """Apply a patch with git apply, falling back to patch -p1."""
     patch = Path(patch).resolve()
     attempts = [
-        ["git", "apply", "--whitespace=nowarn", str(patch)],
-        ["git", "apply", "--whitespace=nowarn", "--recount", "-C1", str(patch)],
+        [*_GIT, "apply", "--whitespace=nowarn", str(patch)],
+        [*_GIT, "apply", "--whitespace=nowarn", "--recount", "-C1", str(patch)],
     ]
     log = []
     # Never let git discover an enclosing repository above the workspace.
-    env = dict(os.environ, GIT_CEILING_DIRECTORIES=str(Path(ws).resolve().parent))
+    env = dict(os.environ, GIT_CEILING_DIRECTORIES=str(Path(ws).resolve().parent), GIT_CONFIG_NOSYSTEM="1")
     for k in ("GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE"):
         env.pop(k, None)
     for cmd in attempts:
-        p = subprocess.run(cmd, cwd=ws, capture_output=True, text=True, env=env)
+        p = subprocess.run(cmd, cwd=ws, capture_output=True, text=True, encoding="utf-8", errors="replace", env=env)
         log.append(f"$ {' '.join(cmd)}\n{p.stdout}{p.stderr}")
         if p.returncode == 0:
             return True, "git apply"
     if shutil.which("patch"):
         dry = subprocess.run(["patch", "-p1", "--dry-run", "--batch", "--fuzz=2", "-i", str(patch)],
-                             cwd=ws, capture_output=True, text=True)
+                             cwd=ws, capture_output=True, text=True, encoding="utf-8", errors="replace")
         log.append(f"$ patch --dry-run\n{dry.stdout}{dry.stderr}")
         if dry.returncode == 0:
             p = subprocess.run(["patch", "-p1", "--batch", "--fuzz=2", "--no-backup-if-mismatch",
-                                "-i", str(patch)], cwd=ws, capture_output=True, text=True)
+                                "-i", str(patch)], cwd=ws, capture_output=True, text=True, encoding="utf-8", errors="replace")
             log.append(f"$ patch -p1\n{p.stdout}{p.stderr}")
             if p.returncode == 0:
                 return True, "patch -p1"
@@ -232,7 +246,7 @@ def apply_patch_for_condition(fx: Fixture, condition: str, ws: Path, patch: Path
                 from .strip_comments import lang_for_path
                 lang = lang_for_path(src)
                 text = src.read_text(encoding="utf-8")
-                dst.write_text(strip(text, lang) if lang else text, encoding="utf-8")
+                dst.write_text(strip(text, lang) if lang else text, encoding="utf-8", newline="")
             else:
                 shutil.copy2(src, dst)
     return True, "applied to original then transformed"

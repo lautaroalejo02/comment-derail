@@ -1,0 +1,3 @@
+# Fixtures, probe patches and diffs are byte-compared; never convert to CRLF
+# (Git for Windows ships core.autocrlf=true).
+* text=auto eol=lf
