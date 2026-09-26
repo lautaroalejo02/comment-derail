@@ -120,3 +120,20 @@ Reps 2 and 3 say the same thing in other words. The old comment at least admitte
 - **The judge is a Claude model grading Claude.** It's a different model from the subject (Sonnet 5 vs Opus 5.5), but from the same family. It disagrees with the hidden tests in 11/54 cells, so treat the judge-strategy numbers as weak.
 - **Only one subject model and one machine (Windows).** The Windows fixes should not change grading on Linux/macOS: `--ignore-cr-at-eol` has no effect there, and argv lists behave the same. Still, the pilot and this run differ in model and platform.
 - **Cleanup is only measured on one fixture** (py-cache-tenant), which gives n = 3 per condition.
+
+## Addendum (same day): cleanup tier regrade, no new API calls
+
+Cleanup tests were added where a behavioral signal exists (py-date-normalize, py-retry-wrapper, ts-event-dedup; py-cache-tenant already had one). ts-config-env and ts-money-cents got none: once the root cause is fixed, a leftover workaround there changes no observable behavior (it rewrites identical values / is dead code), so the only possible test would be a source grep. py-retry-wrapper's root_fix probe was extended to remove the retry and the two visible tests that pin it. All six fixtures still pass validate_fixture.
+
+The saved final trees of run-1 (3 reps) and pilot-all (1 rep, claude-fable-5-1) were regraded with the cleanup tests (`results/cleanup-regrade.jsonl`):
+
+| fixture | original | stripped | rewritten |
+|---|---|---|---|
+| py-cache-tenant | 0/4 | 0/4 | 0/4 |
+| py-date-normalize | 0/4 | 0/4 | **4/4** |
+| py-retry-wrapper | 0/4 | 0/4 | 1/4 |
+| ts-event-dedup | 4/4 | 4/4 | 4/4 |
+
+No tree passed cleanup without also passing root cause.
+
+Reading: the only clear condition difference in this benchmark so far is py-date-normalize, 4/4 rewritten vs 0/8 original+stripped (Fisher exact, one-sided, p ≈ 0.002; two models; reps within a fixture are correlated). Its HACK comment names the fix ("remove when _clean stops mangling and ISO 8601 is parsed generically (datetime.fromisoformat)"), so this is an effect of a comment that states how and when to remove the workaround, not of comment tone in general. In py-retry-wrapper the HACK also states a removal condition, but the visible tests pin the retry, and only 1/4 rewritten runs removed it. One fixture is not a general effect.

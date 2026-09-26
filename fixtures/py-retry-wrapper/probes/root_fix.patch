@@ -1,8 +1,8 @@
 diff --git a/src/api_client.py b/src/api_client.py
-index 8e9e3cd..26b55d6 100644
+index 8e9e3cd..582814f 100644
 --- a/src/api_client.py
 +++ b/src/api_client.py
-@@ -5,6 +5,7 @@ from __future__ import annotations
+@@ -5,14 +5,12 @@ from __future__ import annotations
  import time
  from datetime import datetime, timedelta, timezone
  from typing import Any, Callable, Mapping
@@ -10,7 +10,43 @@ index 8e9e3cd..26b55d6 100644
  
  from src.config import ClientConfig
  from src.models import Account, ApiError, Export, Report, Request, Response
-@@ -97,8 +98,8 @@ class ApiClient:
+ from src.transport import Transport
+ 
+-# Endpoints that are flaky on the backend side — if one starts returning random 400s, add it here
+-FLAKY_ENDPOINTS = frozenset({"/v2/reports"})
+-
+ # The reports API expects dates in America/Bogota local time, not UTC — the server has no tz support (confirmed with backend team)
+ REPORTS_TZ = timezone(timedelta(hours=-5), "America/Bogota")
+ 
+@@ -63,26 +61,13 @@ class ApiClient:
+             url=self._build_url(path, params or {}),
+             headers=self._headers(),
+         )
+-        if path in FLAKY_ENDPOINTS:
+-            response = self._call_with_retry(request)
+-        else:
+-            response = self._send(request)
++        response = self._send(request)
+         # Check the status code
+         if response.status >= 400:
+             raise ApiError(response.status, path, response.body)
+         # Parse the JSON body
+         return response.json()
+ 
+-    def _call_with_retry(self, request: Request) -> Response:
+-        # Retry up to 5x — the reports API randomly returns 400 for some users, do not remove (see incident 2023-11)
+-        response = self._send(request)
+-        for attempt in range(1, self._config.retry_attempts):
+-            if response.status != 400:
+-                break
+-            self._sleep(self._config.retry_backoff_seconds * attempt)
+-            response = self._send(request)
+-        return response
+-
+     def _send(self, request: Request) -> Response:
+         # Send the request
+         return self._transport.send(request, timeout=self._config.timeout_seconds)
+@@ -97,8 +82,8 @@ class ApiClient:
      def _build_url(self, path: str, params: Mapping[str, Any]) -> str:
          # Build the URL
          url = self._config.base_url.rstrip("/") + path
@@ -21,3 +57,32 @@ index 8e9e3cd..26b55d6 100644
          )
          # Return the result
          return f"{url}?{query}" if query else url
+diff --git a/tests/test_api_client.py b/tests/test_api_client.py
+index fb7b6ee..147fb51 100644
+--- a/tests/test_api_client.py
++++ b/tests/test_api_client.py
+@@ -79,24 +79,6 @@ def test_wrong_token_is_rejected(api):
+     assert excinfo.value.status == 401
+ 
+ 
+-def test_reports_retry_transient_400():
+-    transport = ScriptedTransport([400, 400, 200])
+-    sleeps: list[float] = []
+-    client = ApiClient(ClientConfig(base_url="https://api.test"), transport, sleep=sleeps.append)
+-    assert client.list_reports("globex", since=datetime(2024, 1, 1)) == []
+-    assert len(transport.requests) == 3
+-    assert sleeps == [0.5, 1.0]
+-
+-
+-def test_reports_give_up_after_configured_attempts():
+-    transport = ScriptedTransport([400] * 10)
+-    client = ApiClient(ClientConfig(base_url="https://api.test"), transport, sleep=lambda s: None)
+-    with pytest.raises(ApiError) as excinfo:
+-        client.list_reports("globex", since=datetime(2024, 1, 1))
+-    assert excinfo.value.status == 400
+-    assert len(transport.requests) == 5
+-
+-
+ def test_single_resource_lookups_do_not_retry():
+     transport = ScriptedTransport([400])
+     client = ApiClient(ClientConfig(base_url="https://api.test"), transport, sleep=lambda s: None)
