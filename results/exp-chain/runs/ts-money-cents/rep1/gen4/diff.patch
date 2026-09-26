@@ -1,0 +1,205 @@
+diff --git a/README.md b/README.md
+new file mode 100644
+index 0000000..d50225a
+--- /dev/null
++++ b/README.md
+@@ -0,0 +1,161 @@
++# Invoicing
++
++Turns an order into an invoice. The calculation lives in `src/invoice.ts` (invoice totals),
++`src/pricing.ts` (individual item lines) and `src/money.ts` (rounding and formatting).
++
++Run the tests with:
++
++```sh
++node --experimental-strip-types --test "tests/**/*.test.ts"
++```
++
++## How invoice totals are calculated
++
++This section explains, without code, how every number on an invoice is produced.
++
++### Rounding
++
++Every amount is rounded to the smallest unit of the invoice currency:
++
++| Currency | Rounded to        |
++| -------- | ----------------- |
++| USD      | the cent (0.01)   |
++| EUR      | the cent (0.01)   |
++| JPY      | the whole yen (1) |
++
++Rounding is to the nearest unit, and an amount exactly halfway is rounded **up**
++(for example $1.4985 → $1.50, $0.705 → $0.71, ¥12.5 → ¥13). For yen this follows the
++Japanese entity's accounting policy (Finance ticket FIN-88).
++
++> Note: the system stores amounts as ordinary decimal-like numbers, not as whole cents. In rare
++> cases an amount that looks exactly halfway (such as 1.005) is held internally as a hair below
++> halfway and rounds down instead of up.
++
++### Inputs taken from the order
++
++- **Items** — each with a quantity and a unit price.
++- **Order discount rate** — e.g. 10%. Applies to every item unless the item has its own rate.
++- **Item discount rate** (optional) — a promotion on one item. It *replaces* the order discount
++  rate for that item only; it is not added on top. An item rate of 0% means "no discount on
++  this item", even if the order has one.
++- **Tax rate** — e.g. 8.25%. Applies to every item, after discount.
++- **Shipping fee** (optional) — a flat amount.
++
++### Kinds of line on an invoice
++
++An invoice can contain three kinds of line, always in this order:
++
++1. **Item lines** — one per item on the order, in the order they were entered. These are always
++   present.
++2. **Shipping line** (code `SHIP`, "Shipping") — present only if the order has a shipping fee
++   greater than zero. Shipping is charged exactly as given: it is **never discounted and never
++   taxed**. A missing, zero or negative shipping fee produces no shipping line and adds nothing.
++3. **Rounding adjustment line** (code `ADJ`, "Rounding adjustment") — present only when needed,
++   see [Why a rounding adjustment line exists](#why-a-rounding-adjustment-line-exists). It can be
++   positive or negative and is usually a few cents.
++
++Shipping and adjustment lines show quantity 1, no discount and no tax; their gross and total are
++both the shipping fee / adjustment amount.
++
++### How each item line is calculated
++
++For each item, in this order, rounding at every step:
++
++1. **Gross** = quantity × unit price, rounded.
++2. **Discount** = gross × the item's discount rate (its own rate if it has one, otherwise the
++   order rate), rounded.
++3. **Tax** = (gross − discount) × tax rate, rounded.
++4. **Total** = gross − discount + tax.
++
++Because gross, discount and tax are each already rounded, the line total needs no further rounding.
++
++### How the invoice totals are calculated
++
++The invoice totals are **not** made by adding up the lines. They are calculated once, on the whole
++order, and rounded once:
++
++1. **Subtotal** = the sum of quantity × unit price over all items, rounded. Shipping is not included.
++2. **Discount total** =
++   - (the sum of quantity × unit price over the items that use the order rate, rounded) × the
++     order discount rate,
++   - plus, for each item with its own rate, quantity × unit price × that item's rate
++     (not rounded individually),
++   - with the combined figure rounded once.
++3. **Tax total** = (subtotal − discount total) × tax rate, rounded.
++4. **Shipping total** = the shipping fee, rounded (0 if there is none, or if it is zero or negative).
++5. **Total** = subtotal − discount total + tax total + shipping total, rounded.
++
++The invoice total is always this figure.
++
++### How the lines relate to the invoice total
++
++Item lines are rounded one at a time, while the invoice totals are rounded once on the whole order.
++The small rounding differences on each line add up, so the sum of the line totals can differ from
++the invoice total by a few cents (more lines means potentially more difference).
++
++#### Why a rounding adjustment line exists
++
++So that the lines on the invoice always add up exactly to the invoice total, the system compares
++the two and, if they differ, adds a **rounding adjustment** line for the full difference:
++
++> adjustment = invoice total − (sum of item line totals + shipping line total)
++
++If there is no difference, no adjustment line is added. With it, **the line totals always add up
++exactly to the invoice total**.
++
++Only the line *totals* are reconciled. The discount and tax columns of the lines are not, so
++adding up the lines' discount (or tax) column may give a figure a few cents off the invoice's
++discount total (or tax total). The invoice-level figures are the authoritative ones.
++
++### Worked example
++
++Order ORD-3003, in US dollars: order discount 15%, tax 8.25%, shipping $7.50, no item-level
++discounts.
++
++| Item   | Description | Qty | Unit price |
++| ------ | ----------- | --: | ---------: |
++| MUG-01 | Mug         |   1 |      $9.99 |
++| HOOD-3 | Hoodie      |   1 |     $29.99 |
++| BOOT-4 | Boots       |   2 |     $49.99 |
++
++**Step 1 — item lines** (each value rounded to the cent as it is calculated):
++
++| Item   | Gross                  | Discount (15%)             | Tax (8.25% of gross − discount) | Line total |
++| ------ | ---------------------- | -------------------------- | ------------------------------- | ---------: |
++| MUG-01 | 1 × 9.99 = **9.99**    | 1.4985 → **1.50**          | 8.49 × 0.0825 = 0.7004 → **0.70**  |   **9.19** |
++| HOOD-3 | 1 × 29.99 = **29.99**  | 4.4985 → **4.50**          | 25.49 × 0.0825 = 2.1029 → **2.10** |  **27.59** |
++| BOOT-4 | 2 × 49.99 = **99.98**  | 14.997 → **15.00**         | 84.98 × 0.0825 = 7.0109 → **7.01** |  **91.99** |
++| Sum    | 139.96                 | 21.00                      | 9.81                            |     128.77 |
++
++**Step 2 — invoice totals** (calculated on the whole order, rounded once):
++
++| Figure         | Calculation                                   | Result      |
++| -------------- | --------------------------------------------- | ----------: |
++| Subtotal       | 9.99 + 29.99 + 99.98                          |  **139.96** |
++| Discount total | 139.96 × 15% = 20.994 → rounded               |   **20.99** |
++| Tax total      | (139.96 − 20.99) × 8.25% = 118.97 × 0.0825 = 9.8150 → rounded | **9.82** |
++| Shipping total | flat fee, no discount, no tax                 |    **7.50** |
++| Total          | 139.96 − 20.99 + 9.82 + 7.50                  |  **136.29** |
++
++Note how the item lines' discount column adds up to 21.00 and tax column to 9.81, while the invoice
++shows 20.99 and 9.82: that is the one-at-a-time vs. once-overall rounding difference.
++
++**Step 3 — reconcile the lines with the total:**
++
++- Item lines: 9.19 + 27.59 + 91.99 = 128.77
++- Plus shipping line: 128.77 + 7.50 = 136.27
++- Invoice total: 136.29
++- Difference: 136.29 − 136.27 = **+0.02** → a rounding adjustment line of $0.02 is added.
++
++**The resulting invoice:**
++
++| Line   | Description         | Qty | Gross  | Discount | Tax  |  Total |
++| ------ | ------------------- | --: | -----: | -------: | ---: | -----: |
++| MUG-01 | Mug                 |   1 |   9.99 |     1.50 | 0.70 |   9.19 |
++| HOOD-3 | Hoodie              |   1 |  29.99 |     4.50 | 2.10 |  27.59 |
++| BOOT-4 | Boots               |   2 |  99.98 |    15.00 | 7.01 |  91.99 |
++| SHIP   | Shipping            |   1 |   7.50 |     0.00 | 0.00 |   7.50 |
++| ADJ    | Rounding adjustment |   1 |   0.02 |     0.00 | 0.00 |   0.02 |
++|        | **Total**           |     |        |          |      | **136.29** |
++
++Subtotal 139.96 · Discount total 20.99 · Tax total 9.82 · Shipping 7.50 · **Total 136.29**
+diff --git a/src/invoice.ts b/src/invoice.ts
+index 4ed77e8..092b86e 100644
+--- a/src/invoice.ts
++++ b/src/invoice.ts
+@@ -1,3 +1,33 @@
++/**
++ * Builds invoices from orders. See "How invoice totals are calculated" in README.md for the
++ * finance-facing version of this, including a worked example.
++ *
++ * All rounding goes through `roundMoney` (currency minor units, halves rounded up via Math.round).
++ *
++ * Item lines (`priceLine` in pricing.ts), each value rounded as it is computed:
++ *   gross    = round(quantity * unitPrice)
++ *   discount = round(gross * (item.discountRate ?? order.discountRate))
++ *   tax      = round((gross - discount) * taxRate)
++ *   total    = gross - discount + tax
++ *
++ * Invoice totals are computed on the order as a whole, not by summing lines:
++ *   subtotal      = round(sum of quantity * unitPrice)                  -- excludes shipping
++ *   discountTotal = round(round(sum of qty * price for items without an override) * order.discountRate
++ *                         + sum of qty * price * item.discountRate for overridden items)
++ *   taxTotal      = round((subtotal - discountTotal) * taxRate)
++ *   shippingTotal = max(round(shippingFee ?? 0), 0)                     -- never discounted or taxed
++ *   total         = round(subtotal - discountTotal + taxTotal + shippingTotal)
++ *
++ * Line kinds, in output order:
++ *   "item"       one per order item, always present
++ *   "shipping"   SHIP, only when shippingTotal > 0
++ *   "adjustment" ADJ, only when needed; may be negative
++ *
++ * Because lines are rounded individually and totals once, the line totals can drift from `total`
++ * by a few minor units. `reconcileTotal` appends an adjustment line for the full difference so
++ * that line totals always sum exactly to `total`. Only totals are reconciled: summing the lines'
++ * discount or tax columns may still differ from discountTotal / taxTotal.
++ */
+ import type { CurrencyCode, Invoice, InvoiceLine, LineItemInput, Order } from "./types.ts";
+ import { formatMoney, roundMoney } from "./money.ts";
+ import { priceLine } from "./pricing.ts";

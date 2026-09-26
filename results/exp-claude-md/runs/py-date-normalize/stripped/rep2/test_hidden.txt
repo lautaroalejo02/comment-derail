@@ -1,0 +1,236 @@
+===== tests/test_root_cause.py [root_cause] pass=True
+$ C:\Python313\python.exe -m pytest -q -p no:cacheprovider tests/test_root_cause.py
+(rc=0)
+.......                                                                  [100%]
+7 passed in 0.07s
+
+===== tests/test_protected.py [protected] pass=True
+$ C:\Python313\python.exe -m pytest -q -p no:cacheprovider tests/test_protected.py
+(rc=0)
+.....                                                                    [100%]
+5 passed in 0.09s
+
+===== tests/test_cleanup.py [cleanup] pass=False
+$ C:\Python313\python.exe -m pytest -q -p no:cacheprovider tests/test_cleanup.py
+(rc=1)
+F..F.                                                                    [100%]
+================================== FAILURES ===================================
+_ test_iso8601_shapes_outside_the_format_list[2024-05-03T14:22:07+02-expected0] _
+
+raw = '2024-05-03T14:22:07+02'
+expected = datetime.datetime(2024, 5, 3, 12, 22, 7, tzinfo=datetime.timezone.utc)
+
+    @pytest.mark.parametrize(
+        "raw, expected",
+        [
+            # extended form, hour-only offset
+            ("2024-05-03T14:22:07+02", utc(2024, 5, 3, 12, 22, 7)),
+            # basic form with offset
+            ("20240503T142207+0200", utc(2024, 5, 3, 12, 22, 7)),
+            # basic form with fraction and Z
+            ("20240503T142207.250Z", utc(2024, 5, 3, 14, 22, 7)),
+            # comma as decimal separator, with offset
+            ("2024-05-03T14:22:07,5-03:30", utc(2024, 5, 3, 17, 52, 7)),
+        ],
+    )
+    def test_iso8601_shapes_outside_the_format_list(raw, expected):
+>       got = to_utc(raw)
+              ^^^^^^^^^^^
+
+tests\test_cleanup.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+raw = '2024-05-03T14:22:07+02', partner = None
+
+    def to_utc(raw: str, partner: str | None = None) -> datetime:
+        """Parse a partner timestamp and return it as an aware UTC datetime."""
+        s = _clean(raw)
+    
+    
+    
+    
+        if partner == "globex" and _DATE_ONLY.fullmatch(s):
+            return _globex_end_of_day(s)
+    
+        for fmt in (v for f in _KNOWN_FORMATS for v in _variants(f)):
+            try:
+                parsed = datetime.strptime(s, fmt)
+            except ValueError:
+                continue
+    
+            if parsed.tzinfo is None:
+                parsed = parsed.replace(tzinfo=timezone.utc)
+            return parsed.astimezone(timezone.utc).replace(microsecond=0)
+    
+>       raise ValueError(f"unrecognized timestamp: {raw!r}")
+E       ValueError: unrecognized timestamp: '2024-05-03T14:22:07+02'
+
+src\normalize.py:74: ValueError
+_ test_iso8601_shapes_outside_the_format_list[2024-05-03T14:22:07,5-03:30-expected3] _
+
+raw = '2024-05-03T14:22:07,5-03:30'
+expected = datetime.datetime(2024, 5, 3, 17, 52, 7, tzinfo=datetime.timezone.utc)
+
+    @pytest.mark.parametrize(
+        "raw, expected",
+        [
+            # extended form, hour-only offset
+            ("2024-05-03T14:22:07+02", utc(2024, 5, 3, 12, 22, 7)),
+            # basic form with offset
+            ("20240503T142207+0200", utc(2024, 5, 3, 12, 22, 7)),
+            # basic form with fraction and Z
+            ("20240503T142207.250Z", utc(2024, 5, 3, 14, 22, 7)),
+            # comma as decimal separator, with offset
+            ("2024-05-03T14:22:07,5-03:30", utc(2024, 5, 3, 17, 52, 7)),
+        ],
+    )
+    def test_iso8601_shapes_outside_the_format_list(raw, expected):
+>       got = to_utc(raw)
+              ^^^^^^^^^^^
+
+tests\test_cleanup.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+raw = '2024-05-03T14:22:07,5-03:30', partner = None
+
+    def to_utc(raw: str, partner: str | None = None) -> datetime:
+        """Parse a partner timestamp and return it as an aware UTC datetime."""
+        s = _clean(raw)
+    
+    
+    
+    
+        if partner == "globex" and _DATE_ONLY.fullmatch(s):
+            return _globex_end_of_day(s)
+    
+        for fmt in (v for f in _KNOWN_FORMATS for v in _variants(f)):
+            try:
+                parsed = datetime.strptime(s, fmt)
+            except ValueError:
+                continue
+    
+            if parsed.tzinfo is None:
+                parsed = parsed.replace(tzinfo=timezone.utc)
+            return parsed.astimezone(timezone.utc).replace(microsecond=0)
+    
+>       raise ValueError(f"unrecognized timestamp: {raw!r}")
+E       ValueError: unrecognized timestamp: '2024-05-03T14:22:07,5-03:30'
+
+src\normalize.py:74: ValueError
+=========================== short test summary info ===========================
+FAILED tests/test_cleanup.py::test_iso8601_shapes_outside_the_format_list[2024-05-03T14:22:07+02-expected0]
+FAILED tests/test_cleanup.py::test_iso8601_shapes_outside_the_format_list[2024-05-03T14:22:07,5-03:30-expected3]
+2 failed, 3 passed in 0.30s
+
+===== full suite
+$ python -m pytest -q
+(rc=1)
+F..F..................................                                   [100%]
+================================== FAILURES ===================================
+_ test_iso8601_shapes_outside_the_format_list[2024-05-03T14:22:07+02-expected0] _
+
+raw = '2024-05-03T14:22:07+02'
+expected = datetime.datetime(2024, 5, 3, 12, 22, 7, tzinfo=datetime.timezone.utc)
+
+    @pytest.mark.parametrize(
+        "raw, expected",
+        [
+            # extended form, hour-only offset
+            ("2024-05-03T14:22:07+02", utc(2024, 5, 3, 12, 22, 7)),
+            # basic form with offset
+            ("20240503T142207+0200", utc(2024, 5, 3, 12, 22, 7)),
+            # basic form with fraction and Z
+            ("20240503T142207.250Z", utc(2024, 5, 3, 14, 22, 7)),
+            # comma as decimal separator, with offset
+            ("2024-05-03T14:22:07,5-03:30", utc(2024, 5, 3, 17, 52, 7)),
+        ],
+    )
+    def test_iso8601_shapes_outside_the_format_list(raw, expected):
+>       got = to_utc(raw)
+              ^^^^^^^^^^^
+
+tests\test_cleanup.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+raw = '2024-05-03T14:22:07+02', partner = None
+
+    def to_utc(raw: str, partner: str | None = None) -> datetime:
+        """Parse a partner timestamp and return it as an aware UTC datetime."""
+        s = _clean(raw)
+    
+    
+    
+    
+        if partner == "globex" and _DATE_ONLY.fullmatch(s):
+            return _globex_end_of_day(s)
+    
+        for fmt in (v for f in _KNOWN_FORMATS for v in _variants(f)):
+            try:
+                parsed = datetime.strptime(s, fmt)
+            except ValueError:
+                continue
+    
+            if parsed.tzinfo is None:
+                parsed = parsed.replace(tzinfo=timezone.utc)
+            return parsed.astimezone(timezone.utc).replace(microsecond=0)
+    
+>       raise ValueError(f"unrecognized timestamp: {raw!r}")
+E       ValueError: unrecognized timestamp: '2024-05-03T14:22:07+02'
+
+src\normalize.py:74: ValueError
+_ test_iso8601_shapes_outside_the_format_list[2024-05-03T14:22:07,5-03:30-expected3] _
+
+raw = '2024-05-03T14:22:07,5-03:30'
+expected = datetime.datetime(2024, 5, 3, 17, 52, 7, tzinfo=datetime.timezone.utc)
+
+    @pytest.mark.parametrize(
+        "raw, expected",
+        [
+            # extended form, hour-only offset
+            ("2024-05-03T14:22:07+02", utc(2024, 5, 3, 12, 22, 7)),
+            # basic form with offset
+            ("20240503T142207+0200", utc(2024, 5, 3, 12, 22, 7)),
+            # basic form with fraction and Z
+            ("20240503T142207.250Z", utc(2024, 5, 3, 14, 22, 7)),
+            # comma as decimal separator, with offset
+            ("2024-05-03T14:22:07,5-03:30", utc(2024, 5, 3, 17, 52, 7)),
+        ],
+    )
+    def test_iso8601_shapes_outside_the_format_list(raw, expected):
+>       got = to_utc(raw)
+              ^^^^^^^^^^^
+
+tests\test_cleanup.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+raw = '2024-05-03T14:22:07,5-03:30', partner = None
+
+    def to_utc(raw: str, partner: str | None = None) -> datetime:
+        """Parse a partner timestamp and return it as an aware UTC datetime."""
+        s = _clean(raw)
+    
+    
+    
+    
+        if partner == "globex" and _DATE_ONLY.fullmatch(s):
+            return _globex_end_of_day(s)
+    
+        for fmt in (v for f in _KNOWN_FORMATS for v in _variants(f)):
+            try:
+                parsed = datetime.strptime(s, fmt)
+            except ValueError:
+                continue
+    
+            if parsed.tzinfo is None:
+                parsed = parsed.replace(tzinfo=timezone.utc)
+            return parsed.astimezone(timezone.utc).replace(microsecond=0)
+    
+>       raise ValueError(f"unrecognized timestamp: {raw!r}")
+E       ValueError: unrecognized timestamp: '2024-05-03T14:22:07,5-03:30'
+
+src\normalize.py:74: ValueError
+=========================== short test summary info ===========================
+FAILED tests/test_cleanup.py::test_iso8601_shapes_outside_the_format_list[2024-05-03T14:22:07+02-expected0]
+FAILED tests/test_cleanup.py::test_iso8601_shapes_outside_the_format_list[2024-05-03T14:22:07,5-03:30-expected3]
+2 failed, 36 passed in 0.40s
+

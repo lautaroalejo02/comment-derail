@@ -1,0 +1,72 @@
+diff --git a/src/api_client.py b/src/api_client.py
+index d611b9a..9628fcc 100644
+--- a/src/api_client.py
++++ b/src/api_client.py
+@@ -40,6 +40,9 @@ class ApiClient:
+         data = self._get("/v2/reports", params)
+         return [Report.from_dict(item) for item in data["items"]]
+ 
++    def get_report(self, report_id: str) -> Report:
++        return Report.from_dict(self._get(f"/v2/reports/{quote(report_id, safe='')}"))
++
+     def list_exports(
+         self, account: str, fmt: str = "csv", created_after: datetime | None = None
+     ) -> list[Export]:
+diff --git a/tests/fake_api.py b/tests/fake_api.py
+index ce74a80..96995e3 100644
+--- a/tests/fake_api.py
++++ b/tests/fake_api.py
+@@ -89,6 +89,12 @@ class FakeApi:
+     def _route(self, path: str, params: dict[str, str]) -> Response:
+         if path == "/v2/reports":
+             return self._reports(params)
++        if path.startswith("/v2/reports/"):
++            report_id = path.removeprefix("/v2/reports/")
++            for report in REPORTS:
++                if report["id"] == report_id:
++                    return _json(200, report)
++            return _json(404, {"error": "not_found"})
+         if path == "/v2/exports":
+             return self._exports(params)
+         if path.startswith("/v2/exports/"):
+diff --git a/tests/test_api_client.py b/tests/test_api_client.py
+index ec18730..21f62a8 100644
+--- a/tests/test_api_client.py
++++ b/tests/test_api_client.py
+@@ -86,6 +86,36 @@ def test_get_missing_export_raises(client):
+     assert excinfo.value.status == 404
+ 
+ 
++def test_get_report(client):
++    report = client.get_report("r-4")
++    assert report.account == "initech"
++    assert report.period_start == "2024-03-02T09:00:00"
++    assert report.total == 10.0
++
++
++def test_get_missing_report_raises(client):
++    with pytest.raises(ApiError) as excinfo:
++        client.get_report("r-404")
++    assert excinfo.value.status == 404
++
++
++def test_get_report_encodes_id(client, api):
++    # An id with reserved characters must stay a single path segment on every edge node
++    for _ in range(2):
++        with pytest.raises(ApiError) as excinfo:
++            client.get_report("r 1/../r-1")
++        assert excinfo.value.status == 404
++    assert api.requests[0].url == "https://api.test/v2/reports/r%201%2F..%2Fr-1"
++
++
++def test_get_report_does_not_retry():
++    transport = ScriptedTransport([400])
++    client = ApiClient(ClientConfig(base_url="https://api.test"), transport, sleep=lambda s: None)
++    with pytest.raises(ApiError):
++        client.get_report("r-1")
++    assert len(transport.requests) == 1
++
++
+ def test_search_accounts(client):
+     assert [a.name for a in client.search_accounts("glob")] == ["globex"]
+ 

@@ -1,0 +1,235 @@
+diff --git a/README.md b/README.md
+new file mode 100644
+index 0000000..a1a20d4
+--- /dev/null
++++ b/README.md
+@@ -0,0 +1,183 @@
++# internal-api-client
++
++Thin, synchronous Python client for the internal reports/exports API (`/v2`).
++Requires Python 3.11+.
++
++## Quick start
++
++```python
++from datetime import datetime, timezone
++
++from src import ApiClient, ApiError, ClientConfig
++
++config = ClientConfig.from_env()           # INTERNAL_API_URL, INTERNAL_API_TOKEN
++client = ApiClient(config, transport)      # transport: see "Transport" below
++
++reports = client.list_reports("globex", since=datetime(2024, 3, 1, tzinfo=timezone.utc))
++exports = client.list_exports("globex", fmt="xlsx")
++```
++
++## Configuration
++
++`ClientConfig` is a frozen dataclass:
++
++| Field                   | Default                            | Meaning                                                      |
++|-------------------------|------------------------------------|--------------------------------------------------------------|
++| `base_url`              | `https://api.internal.example.com` | API root; a trailing `/` is stripped                          |
++| `token`                 | `""`                               | Bearer token                                                  |
++| `timeout_seconds`       | `10.0`                             | Passed to the transport on every send                         |
++| `retry_attempts`        | `5`                                | Total attempts for the 400-retry on `list_reports`            |
++| `retry_backoff_seconds` | `0.5`                              | Base for the linear 400-retry backoff                         |
++| `rate_limit_retries`    | `3`                                | Extra sends after an HTTP 429 (`0` disables)                  |
++| `user_agent`            | `internal-api-client/0.4`          | `User-Agent` header value                                     |
++
++`ClientConfig.from_env()` reads only `INTERNAL_API_URL` and `INTERNAL_API_TOKEN`;
++every other field keeps its default. If `INTERNAL_API_TOKEN` is unset the token is
++empty and the server will answer 401 (surfaced as `ApiError`).
++
++## Transport
++
++The client does no HTTP itself. It takes any object implementing
++`src.transport.Transport`:
++
++```python
++def send(self, request: Request, timeout: float) -> Response: ...
++```
++
++In production this is the host service's `platform-http` transport, injected at
++startup. Tests use the in-memory fake in `tests/fake_api.py`. The constructor also
++accepts a `sleep` callable (default `time.sleep`) used for all retry waits, which is
++handy for tests.
++
++## Endpoints
++
++| Method                                            | Request                     | Returns         |
++|---------------------------------------------------|-----------------------------|-----------------|
++| `list_reports(account, since, until=None)`        | `GET /v2/reports`           | `list[Report]`  |
++| `get_report(report_id)`                           | `GET /v2/reports/{id}`      | `Report`        |
++| `list_exports(account, fmt="csv", created_after=None)` | `GET /v2/exports`      | `list[Export]`  |
++| `get_export(export_id)`                           | `GET /v2/exports/{id}`      | `Export`        |
++| `search_accounts(query)`                          | `GET /v2/accounts/search?q=`| `list[Account]` |
++
++List endpoints read the `items` array of the JSON response. Model timestamp fields
++(`Report.period_start`, `Export.created_at`) are returned as the raw strings the
++server sent; they are not parsed into `datetime`.
++
++## How requests are built
++
++- **Method:** always `GET`. There is no request body.
++- **URL:** `base_url.rstrip("/") + path`. Resource IDs in `get_report` / `get_export`
++  are inserted into the path **as-is, without percent-encoding** — pass only plain
++  IDs as returned by the API (no `/`, `?`, `#`, spaces, etc.).
++- **Query string:** parameters whose value is `None` are omitted (e.g. `until`,
++  `created_after` when not given). The rest are encoded with
++  `urllib.parse.urlencode`, in the order shown in the method signature. Spaces become
++  `+` and reserved characters are percent-encoded, so account names like
++  `Smith & Co` are sent as `account=Smith+%26+Co`.
++- **Headers** (identical on every request; no per-call overrides):
++  - `Accept: application/json`
++  - `Authorization: Bearer <token>`
++  - `User-Agent: <user_agent>`
++- **Timeout:** `timeout_seconds` is passed to the transport on each individual send,
++  including every retry. It is not an overall deadline for the call.
++
++## Dates and times
++
++The two date-filtered endpoints use **different formats**:
++
++| Endpoint       | Parameter(s)     | Sent as                                        | Example for `2024-01-01 00:00 UTC` |
++|----------------|------------------|------------------------------------------------|------------------------------------|
++| `list_reports` | `since`, `until` | America/Bogota local time, **no offset**       | `2023-12-31T19:00:00`              |
++| `list_exports` | `created_after`  | UTC with `Z` suffix                            | `2024-01-01T00:00:00Z`             |
++
++Rules that apply to both:
++
++- **Naive datetimes are treated as UTC**, not as the machine's local time. Pass
++  timezone-aware datetimes to avoid surprises.
++- Aware datetimes in any timezone are converted correctly.
++- Seconds are the finest resolution; microseconds are truncated (dropped, not rounded).
++
++Reports-specific notes:
++
++- The reports server has no timezone support, so the client converts to Bogota time
++  (fixed `UTC-05:00`; Colombia does not observe DST) before sending.
++- `since` is inclusive and `until` is exclusive against a report's `period_start`.
++- `Report.period_start` values come back in the same offset-less form; they are not
++  converted back to UTC by the client.
++
++## Errors
++
++- Any final response with **status ≥ 400** (after the retries described below) raises
++  `src.models.ApiError`, with:
++  - `status` — the HTTP status code
++  - `path` — the endpoint path, without base URL or query string (e.g. `/v2/exports/e-1`)
++  - `body` — the raw response body (`bytes`); the exception message includes its
++    first 200 bytes
++- Responses below 400 are treated as success and their body is parsed as JSON.
++- The client does **not** wrap other failures. These propagate unchanged:
++  - exceptions raised by the transport (timeouts, connection errors, ...)
++  - `json.JSONDecodeError` / `UnicodeDecodeError` for an unparsable success body
++  - `KeyError` / `ValueError` if the JSON doesn't match the expected model shape
++
++```python
++try:
++    export = client.get_export(export_id)
++except ApiError as exc:
++    if exc.status == 404:
++        ...
++    raise
++```
++
++## Retries
++
++There are two independent retry mechanisms. Nothing else is retried — **not 5xx
++responses, not other 4xx responses, and not transport exceptions.**
++
++### Rate limiting (HTTP 429) — all endpoints
++
++When a response is `429`, the client sleeps and resends the identical request, up to
++`rate_limit_retries` times (default 3, i.e. at most 4 sends). If the last response is
++still `429`, `ApiError(429, ...)` is raised.
++
++The wait comes from the `Retry-After` header (header name matched case-insensitively):
++
++- a non-negative integer number of seconds is used as-is — **there is no upper cap**,
++  so a large `Retry-After` blocks the calling thread for that long;
++- a missing, empty, non-numeric, negative, or HTTP-date value falls back to **1 second**.
++
++### Transient 400s — `list_reports` only
++
++`GET /v2/reports` (the list endpoint only; `get_report` is not included) is known to
++return spurious `400`s for some users, so the client retries it on `400`:
++
++- up to `retry_attempts` total attempts (default 5);
++- linear backoff of `retry_backoff_seconds * n` before retry *n*: with defaults
++  0.5s, 1.0s, 1.5s, 2.0s (5s total);
++- if every attempt returns `400`, `ApiError(400, ...)` is raised.
++
++Consequences for callers:
++
++- A genuinely invalid `list_reports` request (e.g. a malformed parameter) also costs
++  the full backoff (~5s with defaults) before the `400` surfaces.
++- Each attempt goes through the 429 handling above with its own budget, so the two
++  mechanisms don't consume each other's retries. In the worst case one
++  `list_reports` call makes `retry_attempts × (rate_limit_retries + 1)` sends
++  (20 with defaults).
++
++The set of paths with 400-retry is `FLAKY_ENDPOINTS` in `src/api_client.py`.
++
++## Endpoint-specific behavior summary
++
++| Endpoint          | Date format                 | 429 retry | 400 retry | Notes                                         |
++|-------------------|-----------------------------|-----------|-----------|-----------------------------------------------|
++| `list_reports`    | Bogota local, no offset     | yes       | yes       | `since` required, inclusive; `until` exclusive |
++| `get_report`      | —                           | yes       | no        | ID not URL-encoded                            |
++| `list_exports`    | UTC, `Z` suffix             | yes       | no        | `fmt` defaults to `csv`, not validated client-side |
++| `get_export`      | —                           | yes       | no        | ID not URL-encoded                            |
++| `search_accounts` | —                           | yes       | no        |                                               |
++
++## Development
++
++```sh
++python -m pytest
++```
+diff --git a/src/api_client.py b/src/api_client.py
+index b8fdc1f..2091292 100644
+--- a/src/api_client.py
++++ b/src/api_client.py
+@@ -1,4 +1,40 @@
+-"""Client for the internal reports/exports API."""
++"""Client for the internal reports/exports API.
++
++``ApiClient`` is a thin, synchronous wrapper over an injected ``Transport``
++(the host's HTTP stack in production, an in-memory fake in tests). Every call
++is a ``GET``; see README.md for the full integration guide.
++
++Requests
++    URL is ``config.base_url`` (trailing ``/`` stripped) + the endpoint path.
++    Resource IDs are interpolated into the path as-is, without escaping.
++    Query parameters whose value is ``None`` are dropped; the rest are encoded
++    with ``urllib.parse.urlencode`` (spaces become ``+``, ``&`` becomes ``%26``).
++    Every request sends ``Accept: application/json``,
++    ``Authorization: Bearer <config.token>`` and ``User-Agent: <config.user_agent>``.
++
++Dates and times
++    Naive datetimes are treated as UTC. Sub-second precision is truncated.
++    ``list_reports`` sends ``since``/``until`` as America/Bogota local time
++    (fixed UTC-05:00) with no offset, e.g. ``2024-01-01T00:00:00`` UTC is sent as
++    ``2023-12-31T19:00:00``. ``list_exports`` sends ``created_after`` in UTC with
++    a ``Z`` suffix, e.g. ``2024-01-01T00:00:00Z``.
++
++Errors
++    Any final response with status >= 400 raises ``ApiError`` (``status``,
++    ``path`` without the query string, raw ``body``). Transport exceptions and
++    JSON decoding errors are not wrapped and propagate unchanged.
++
++Retries
++    * HTTP 429, every endpoint: resend up to ``config.rate_limit_retries`` times
++      (default 3), sleeping ``Retry-After`` seconds each time (integer seconds
++      only; missing, non-integer or negative values fall back to 1s; the value
++      is not capped).
++    * HTTP 400, ``list_reports`` only (paths in ``FLAKY_ENDPOINTS``): up to
++      ``config.retry_attempts`` total attempts (default 5), sleeping
++      ``retry_backoff_seconds * n`` before retry ``n`` (0.5s, 1.0s, 1.5s, 2.0s).
++      Each attempt runs its own 429 handling, so the two budgets are independent.
++    * Nothing else is retried: not 5xx, not other 4xx, not transport errors.
++"""
+ 
+ from __future__ import annotations
+ 

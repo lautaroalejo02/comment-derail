@@ -1,0 +1,102 @@
+$ node --experimental-strip-types --test "tests/**/*.test.ts"
+(rc=0)
+TAP version 13
+# Subtest: publish delivers to subscribers of that type
+ok 1 - publish delivers to subscribers of that type
+  ---
+  duration_ms: 7.0053
+  type: 'test'
+  ...
+# Subtest: publish does not deliver to subscribers of other types
+ok 2 - publish does not deliver to subscribers of other types
+  ---
+  duration_ms: 0.5993
+  type: 'test'
+  ...
+# Subtest: unsubscribe removes the handler
+ok 3 - unsubscribe removes the handler
+  ---
+  duration_ms: 0.8248
+  type: 'test'
+  ...
+# Subtest: listenerCount reflects subscriptions
+ok 4 - listenerCount reflects subscriptions
+  ---
+  duration_ms: 0.5085
+  type: 'test'
+  ...
+# Subtest: order.shipped notifies the user once
+ok 5 - order.shipped notifies the user once
+  ---
+  duration_ms: 7.6049
+  type: 'test'
+  ...
+# Subtest: order.delivered notifies the user
+ok 6 - order.delivered notifies the user
+  ---
+  duration_ms: 1.3033
+  type: 'test'
+  ...
+# Subtest: users with notifications disabled do not get order updates
+ok 7 - users with notifications disabled do not get order updates
+  ---
+  duration_ms: 0.5034
+  type: 'test'
+  ...
+# Subtest: different users are notified independently
+ok 8 - different users are notified independently
+  ---
+  duration_ms: 0.4424
+  type: 'test'
+  ...
+# Subtest: stop() stops notifications
+ok 9 - stop() stops notifications
+  ---
+  duration_ms: 1.4876
+  type: 'test'
+  ...
+# Subtest: audit log records every published event
+ok 10 - audit log records every published event
+  ---
+  duration_ms: 2.4335
+  type: 'test'
+  ...
+# Subtest: each published event is handled exactly once
+ok 11 - each published event is handled exactly once
+  ---
+  duration_ms: 2.953
+  type: 'test'
+  ...
+# Subtest: distinct shipments for the same user close together are both notified
+ok 12 - distinct shipments for the same user close together are both notified
+  ---
+  duration_ms: 0.8905
+  type: 'test'
+  ...
+# Subtest: events published before start() are still handled, once
+ok 13 - events published before start() are still handled, once
+  ---
+  duration_ms: 1.457
+  type: 'test'
+  ...
+# Subtest: shipping webhook publishes order.shipped for the customer
+ok 14 - shipping webhook publishes order.shipped for the customer
+  ---
+  duration_ms: 4.598
+  type: 'test'
+  ...
+# Subtest: shipping webhook fired twice within a second notifies once
+ok 15 - shipping webhook fired twice within a second notifies once
+  ---
+  duration_ms: 0.8787
+  type: 'test'
+  ...
+1..15
+# tests 15
+# suites 0
+# pass 15
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 575.1664

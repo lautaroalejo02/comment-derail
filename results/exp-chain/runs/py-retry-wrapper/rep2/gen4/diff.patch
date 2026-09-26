@@ -1,0 +1,246 @@
+diff --git a/README.md b/README.md
+new file mode 100644
+index 0000000..f9ee05b
+--- /dev/null
++++ b/README.md
+@@ -0,0 +1,181 @@
++# internal-api-client
++
++Thin, synchronous Python client for the internal reports/exports API (`/v2`).
++Requires Python 3.11+.
++
++```python
++from src import ApiClient, ClientConfig, ApiError
++
++client = ApiClient(ClientConfig.from_env(), transport)  # transport: see below
++reports = client.list_reports("globex", since=datetime(2024, 3, 1, tzinfo=timezone.utc))
++```
++
++## Setup
++
++### Configuration
++
++`ClientConfig` (`src/config.py`) is a frozen dataclass:
++
++| Field                   | Default                            | Meaning |
++|-------------------------|------------------------------------|---------|
++| `base_url`              | `https://api.internal.example.com` | API root; a trailing `/` is ignored |
++| `token`                 | `""`                               | Sent as `Authorization: Bearer <token>` |
++| `timeout_seconds`       | `10.0`                             | Passed to the transport on every send |
++| `retry_attempts`        | `5`                                | Total attempts for `list_reports` when it gets HTTP 400 |
++| `retry_backoff_seconds` | `0.5`                              | Base delay for the 400 retry (linear backoff) |
++| `rate_limit_retries`    | `3`                                | Extra sends after HTTP 429, per attempt |
++| `user_agent`            | `internal-api-client/0.4`          | `User-Agent` header |
++
++`ClientConfig.from_env()` reads only `INTERNAL_API_URL` and `INTERNAL_API_TOKEN`;
++every other field keeps its default. If `INTERNAL_API_TOKEN` is unset the token
++is empty and the API will answer 401.
++
++### Transport
++
++The client does no networking itself. It takes any object implementing
++`Transport.send(request: Request, timeout: float) -> Response`
++(`src/transport.py`). In production the host service injects the
++`platform-http` transport; tests inject an in-memory fake (`tests/fake_api.py`).
++
++`ApiClient` also accepts a `sleep` callable (default `time.sleep`) used for all
++retry waits, which lets tests run without real delays.
++
++## Endpoints
++
++| Method | HTTP request | Returns |
++|--------|--------------|---------|
++| `list_reports(account, since, until=None)` | `GET /v2/reports?account=&since=&until=` | `list[Report]` |
++| `get_report(report_id)` | `GET /v2/reports/{report_id}` | `Report` |
++| `list_exports(account, fmt="csv", created_after=None)` | `GET /v2/exports?account=&format=&created_after=` | `list[Export]` |
++| `get_export(export_id)` | `GET /v2/exports/{export_id}` | `Export` |
++| `search_accounts(query)` | `GET /v2/accounts/search?q=` | `list[Account]` |
++
++List endpoints read the `items` array from the JSON body. All methods are
++`GET`; there are no write operations.
++
++## How requests are built
++
++- **URL**: `base_url.rstrip("/") + path`, plus `?query` only if there are
++  parameters.
++- **Query parameters**: parameters whose value is `None` are omitted (e.g.
++  `until`, `created_after` when not given). Anything else, including an empty
++  string, is sent. Values are fully percent-encoded: only `A-Z a-z 0-9 - . _ ~`
++  are left literal, so `Smith & Co` becomes `Smith%20%26%20Co` and spaces are
++  `%20` (never `+`). Callers should pass plain, unencoded strings.
++- **Path ids**:
++  - `get_report` percent-encodes the id as a single path segment, including
++    `/` (`"r 1/x"` → `/v2/reports/r%201%2Fx`).
++  - `get_export` does **not** encode the id; it is inserted into the path
++    verbatim. Only pass ids that are already URL-safe (the ids the API itself
++    returns, like `e-1`, are). An id with spaces or reserved characters
++    produces an invalid request target, and depending on which edge node
++    handles the request you get a 400 or a 404.
++- **Headers** (identical on every request):
++  - `Accept: application/json`
++  - `Authorization: Bearer <config.token>`
++  - `User-Agent: <config.user_agent>`
++
++The client does no client-side validation of values such as `fmt`; the server
++rejects unsupported formats (currently `csv`, `xlsx`, `json` are accepted)
++with a 400.
++
++## Dates and times
++
++The two endpoints that take datetimes use **different conventions**. Pass
++timezone-aware `datetime` objects; the client converts them for you.
++**Naive datetimes are treated as UTC**, not local time.
++
++| Endpoint | Parameter(s) | Sent as | Example for `2024-03-05 15:00 UTC` |
++|----------|--------------|---------|------------------------------------|
++| `list_reports` | `since`, `until` | America/Bogota local time (fixed UTC-05:00, no DST), no offset suffix | `2024-03-05T10:00:00` |
++| `list_exports` | `created_after` | UTC with `Z` suffix | `2024-03-05T15:00:00Z` |
++
++Notes:
++
++- The reports backend has no timezone support and interprets timestamps as
++  Bogota local time (confirmed with the backend team), which is why reports
++  are converted rather than sent as UTC.
++- `list_reports`: `since` is required and **inclusive**; `until` is optional
++  and **exclusive**.
++- `list_exports`: `created_after` is optional and **exclusive** (strictly
++  after).
++- Seconds precision only; microseconds are dropped.
++- Timestamps in responses are returned as the raw strings from the server,
++  not parsed: `Report.period_start` is Bogota local time without offset (e.g.
++  `2024-03-02T09:00:00`), `Export.created_at` is UTC with `Z` (e.g.
++  `2024-03-02T10:00:00Z`). Parse them accordingly before comparing across
++  endpoints.
++
++## Errors
++
++- Any final response with status `>= 400` (after the retries below) raises
++  `src.models.ApiError`, with:
++  - `status`: the HTTP status code
++  - `path`: the endpoint path (e.g. `/v2/exports/e-1`), without base URL or
++    query string
++  - `body`: the raw response body as `bytes`
++  - `str(err)`: `"<path> returned HTTP <status>: <first 200 bytes of body>"`
++- Common statuses: `401` bad/missing token, `404` unknown id, `400` missing
++  or malformed parameters, `429` rate limited (only once retries are
++  exhausted).
++- Not wrapped in `ApiError` (propagate as whatever the underlying code
++  raises):
++  - exceptions raised by the transport (timeouts, connection errors);
++  - `json.JSONDecodeError` / `UnicodeDecodeError` if a success response body
++    is not valid JSON;
++  - `KeyError` / `ValueError` if a success response is missing expected fields.
++- Statuses below 400 (including any 3xx the transport doesn't follow) are
++  treated as success and parsed as JSON.
++
++## Retries
++
++There are two independent retry mechanisms. All waits go through the injected
++`sleep` callable.
++
++### Rate limiting (HTTP 429) — all endpoints
++
++When the gateway answers 429, the client sleeps and resends the identical
++request, up to `rate_limit_retries` (default 3) extra times, so at most 4
++sends by default.
++
++- Wait time is taken from the `Retry-After` header (header name matched
++  case-insensitively), interpreted as whole seconds.
++- If `Retry-After` is missing, empty, not an integer (including HTTP-date
++  form), or negative, the client waits 1 second.
++- If the last response is still 429, `ApiError(status=429)` is raised.
++- `rate_limit_retries=0` disables this.
++
++### Transient HTTP 400 — `list_reports` only
++
++The `/v2/reports` list endpoint has a history of returning spurious 400s
++(incident 2023-11), so `list_reports` retries on 400:
++
++- Up to `retry_attempts` (default 5) attempts **in total**.
++- Linear backoff: sleeps `retry_backoff_seconds * n` before the n-th resend —
++  0.5, 1.0, 1.5, 2.0 seconds with defaults.
++- Each attempt includes its own 429 handling, so in the worst case a single
++  `list_reports` call can make `retry_attempts * (rate_limit_retries + 1)` =
++  20 sends and block for a long time.
++- If every attempt returns 400, `ApiError(status=400)` is raised. Note this
++  means a `list_reports` call that the server genuinely rejects with 400 only
++  fails after the full backoff (~5 s by default).
++- Only the exact path `/v2/reports` is retried; `get_report`
++  (`/v2/reports/{id}`) is not.
++
++### Not retried
++
++Everything else: other 4xx, all 5xx (including 502/503/504), and transport
++exceptions such as timeouts. Callers that want to retry those must do so
++themselves.
++
++## Testing
++
++```
++python -m pytest
++```
++
++Tests run against `tests/fake_api.py`, an in-memory fake that mimics
++production routing: requests alternate between two edge nodes, one of which
++re-quotes the request target through a legacy proxy, and the origin rejects
++invalid RFC 3986 targets with 400. This is why encoding tests issue each
++request more than once.
+diff --git a/src/api_client.py b/src/api_client.py
+index 16b2b35..dce7af0 100644
+--- a/src/api_client.py
++++ b/src/api_client.py
+@@ -1,4 +1,53 @@
+-"""Client for the internal reports/exports API."""
++"""Client for the internal reports/exports API.
++
++``ApiClient`` is a thin, synchronous wrapper over an injected ``Transport``
++(see ``src.transport``). Every public method issues a single logical ``GET``
++and returns parsed domain models from ``src.models``. See README.md for the
++longer version of these notes.
++
++Requests
++    * URL is ``config.base_url`` (trailing ``/`` stripped) + the endpoint path.
++    * Query parameters whose value is ``None`` are dropped; everything else,
++      including empty strings, is sent. Values are fully percent-encoded
++      (space -> ``%20``, ``&`` -> ``%26``, ``/`` -> ``%2F``; only
++      ``A-Z a-z 0-9 - . _ ~`` are left as-is).
++    * ``get_report`` percent-encodes the id as one path segment (``/`` included).
++      ``get_export`` inserts the id into the path *unencoded*, so only pass
++      ids that are already URL-safe.
++    * Every request sends ``Accept: application/json``,
++      ``Authorization: Bearer <config.token>`` and ``User-Agent:
++      <config.user_agent>``.
++
++Dates and times
++    * Naive ``datetime`` values are assumed to be UTC.
++    * ``list_reports`` sends ``since``/``until`` as America/Bogota local time
++      (fixed UTC-05:00) formatted ``YYYY-MM-DDTHH:MM:SS`` with no offset, because
++      the reports backend has no timezone support. ``since`` is inclusive,
++      ``until`` is exclusive.
++    * ``list_exports`` sends ``created_after`` as UTC,
++      ``YYYY-MM-DDTHH:MM:SSZ``.
++    * Timestamps in responses (``Report.period_start``, ``Export.created_at``)
++      are returned as the raw strings the server sent, in the same conventions.
++    * Sub-second precision is truncated.
++
++Errors
++    * Any final response with status >= 400 raises ``ApiError`` carrying
++      ``status``, ``path`` (endpoint path, without base URL or query) and the
++      raw ``body``; the message includes the first 200 bytes of the body.
++    * Transport exceptions (timeouts, connection errors) and JSON/shape errors
++      from a malformed success body are not wrapped; they propagate as-is.
++
++Retries
++    * Rate limits: on HTTP 429 from any endpoint the request is resent after
++      sleeping for the ``Retry-After`` header (whole seconds, case-insensitive
++      name; missing, non-integer or negative -> 1 second), up to
++      ``config.rate_limit_retries`` (default 3) extra times.
++    * Transient 400s: only ``list_reports`` (path exactly ``/v2/reports``) is
++      retried on HTTP 400, up to ``config.retry_attempts`` (default 5) attempts
++      in total, sleeping ``retry_backoff_seconds * n`` (0.5, 1.0, 1.5, 2.0 s by
++      default) before the n-th resend. Each attempt gets its own 429 handling.
++    * Nothing else (other 4xx, 5xx, transport errors) is retried.
++"""
+ 
+ from __future__ import annotations
+ 

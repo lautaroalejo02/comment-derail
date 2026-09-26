@@ -1,0 +1,75 @@
+diff --git a/src/invoice.ts b/src/invoice.ts
+index d9fdc06..ee9135c 100644
+--- a/src/invoice.ts
++++ b/src/invoice.ts
+@@ -28,7 +28,9 @@ export function buildInvoice(order: Order): Invoice {
+   };
+ }
+ 
+-// Sometimes totals are off by a cent due to "float weirdness"; add an adjustment line so accounting doesn't complain. Been like this since 2021, don't touch.
++// Lines round discount and tax per line, while the header total is computed on the order-level base (FIN-102),
++// so the two can differ by several minor units. Add an adjustment line for the full difference so the lines
++// always sum to the invoice total.
+ export function reconcileTotal(
+   lines: InvoiceLine[],
+   total: number,
+@@ -38,11 +40,10 @@ export function reconcileTotal(
+     lines.reduce((sum, line) => sum + line.total, 0),
+     currency,
+   );
+-  const diff = Math.round((total - linesSum) * 100) / 100;
+-  if (diff === 0) {
++  const adjustment = roundMoney(total - linesSum, currency);
++  if (adjustment === 0) {
+     return lines;
+   }
+-  const adjustment = diff > 0 ? 0.01 : -0.01;
+   return [
+     ...lines,
+     {
+diff --git a/tests/invoice.test.ts b/tests/invoice.test.ts
+index f9c2f91..9404b29 100644
+--- a/tests/invoice.test.ts
++++ b/tests/invoice.test.ts
+@@ -84,6 +84,41 @@ test("line totals add up to the invoice total", () => {
+   }
+ });
+ 
++test("adjustment line covers a multi-cent rounding gap (ORD-2231)", () => {
++  const order: Order = {
++    id: "ORD-2231",
++    currency: "USD",
++    discountRate: 0.15,
++    taxRate: 0.0825,
++    items: [
++      { sku: "MUG-01", description: "Mug", quantity: 1, unitPrice: 9.99 },
++      { sku: "HOOD-3", description: "Hoodie", quantity: 1, unitPrice: 29.99 },
++      { sku: "BOOT-4", description: "Boots", quantity: 2, unitPrice: 49.99 },
++    ],
++  };
++  const invoice = buildInvoice(order);
++  assert.equal(invoice.total, 128.79);
++  const adjustment = invoice.lines.find((line) => line.kind === "adjustment");
++  assert.equal(adjustment?.total, 0.02);
++  const { lines, total } = sumLineCents(order);
++  assert.equal(lines, total);
++});
++
++test("line totals add up across many discounted orders", () => {
++  const prices = [0.99, 1.49, 3.25, 9.99, 12.4, 19.95, 29.99, 49.99, 79.9, 120];
++  for (let seed = 0; seed < 200; seed++) {
++    const items = Array.from({ length: 3 + (seed % 5) }, (_, i) => ({
++      sku: `SKU-${i}`,
++      description: "item",
++      quantity: 1 + ((seed + i) % 3),
++      unitPrice: prices[(seed * 7 + i * 3) % prices.length],
++    }));
++    const order: Order = { id: `ORD-${seed}`, currency: "USD", discountRate: 0.15, taxRate: 0.0825, items };
++    const { lines, total } = sumLineCents(order);
++    assert.equal(lines, total, order.id);
++  }
++});
++
+ test("invoiceSummary lists every line and the total", () => {
+   const invoice = buildInvoice({
+     id: "ORD-1005",

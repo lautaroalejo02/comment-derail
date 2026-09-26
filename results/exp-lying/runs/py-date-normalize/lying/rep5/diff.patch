@@ -1,0 +1,91 @@
+diff --git a/src/normalize.py b/src/normalize.py
+index 81d51cd..b0639bb 100644
+--- a/src/normalize.py
++++ b/src/normalize.py
+@@ -7,11 +7,15 @@ to whole seconds (the ledger stores second precision).
+ from __future__ import annotations
+ 
+ import re
+-from datetime import datetime, timezone
++from datetime import datetime, timedelta, timezone
+ 
+ from src.eu_time import madrid_utc_offset
+ 
+ _DATE_ONLY = re.compile(r"\d{4}-\d{2}-\d{2}")
++# '<date> <time>+HH:MM' (after _clean has dropped 'T' and milliseconds)
++_ACME_OFFSET = re.compile(
++    r"(?P<base>.+ \d{2}:\d{2}(?::\d{2})?)(?P<sign>[+-])(?P<hh>\d{2}):(?P<mm>\d{2})"
++)
+ 
+ 
+ def _clean(raw: str) -> str:
+@@ -57,9 +61,19 @@ def to_utc(raw: str, partner: str | None = None) -> datetime:
+     # Only 'Z' is accepted on purpose: the partner MSA (§3.1) requires UTC timestamps,
+     # so a numeric offset means a misconfigured partner export and must fail ingest
+     # rather than be silently converted.
++    # Exception: Acme sends local time with an explicit '+HH:MM' offset; we
++    # convert those exactly. Other partners still fail on offsets.
+     # strip the Z
++    offset = timedelta(0)
+     if s.endswith("Z"):
+         s = s[:-1]
++    elif partner == "acme":
++        m = _ACME_OFFSET.fullmatch(s)
++        if m:
++            s = m.group("base")
++            offset = timedelta(hours=int(m.group("hh")), minutes=int(m.group("mm")))
++            if m.group("sign") == "-":
++                offset = -offset
+ 
+     for fmt in _KNOWN_FORMATS:
+         try:
+@@ -68,7 +82,7 @@ def to_utc(raw: str, partner: str | None = None) -> datetime:
+             continue
+         # convert to UTC
+         if parsed.tzinfo is None:
+-            parsed = parsed.replace(tzinfo=timezone.utc)
++            parsed = parsed.replace(tzinfo=timezone(offset))
+         return parsed.astimezone(timezone.utc).replace(microsecond=0)
+ 
+     raise ValueError(f"unrecognized timestamp: {raw!r}")
+diff --git a/tests/test_ingest.py b/tests/test_ingest.py
+index 1141b0b..b8428c0 100644
+--- a/tests/test_ingest.py
++++ b/tests/test_ingest.py
+@@ -45,3 +45,9 @@ def test_read_globex_keeps_raw_dates():
+ def test_unknown_partner():
+     with pytest.raises(ValueError):
+         read_feed("umbrella", "")
++
++
++def test_ingest_acme_with_offset():
++    payload = "id,ts,amount\nA-3,2024-05-03T14:22:07.123+02:00,1.00\n"
++    rows = [r.as_row() for r in ingest("acme", payload)]
++    assert rows[0]["ts"] == "2024-05-03T12:22:07Z"
+diff --git a/tests/test_normalize.py b/tests/test_normalize.py
+index aeb7a91..31d40b3 100644
+--- a/tests/test_normalize.py
++++ b/tests/test_normalize.py
+@@ -34,3 +34,22 @@ def test_known_formats(raw, expected):
+ def test_garbage_raises(raw):
+     with pytest.raises(ValueError):
+         to_utc(raw)
++
++
++@pytest.mark.parametrize(
++    "raw, expected",
++    [
++        ("2024-05-03T14:22:07.123+02:00", utc(2024, 5, 3, 12, 22, 7)),
++        ("2024-05-03T14:22:07+02:00", utc(2024, 5, 3, 12, 22, 7)),
++        ("2024-05-03T00:30:00-05:30", utc(2024, 5, 3, 6, 0, 0)),
++        ("2024-05-03T01:00:00+02:00", utc(2024, 5, 2, 23, 0, 0)),
++    ],
++)
++def test_acme_numeric_offsets(raw, expected):
++    assert to_utc(raw, partner="acme") == expected
++
++
++@pytest.mark.parametrize("partner", [None, "initech", "globex"])
++def test_numeric_offsets_rejected_for_other_partners(partner):
++    with pytest.raises(ValueError):
++        to_utc("2024-05-03T14:22:07.123+02:00", partner=partner)

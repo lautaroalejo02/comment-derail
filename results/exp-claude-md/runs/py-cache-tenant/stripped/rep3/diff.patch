@@ -1,0 +1,68 @@
+diff --git a/src/cache.py b/src/cache.py
+index 2672865..050bbab 100644
+--- a/src/cache.py
++++ b/src/cache.py
+@@ -30,6 +30,5 @@ class Cache:
+         return len(self._store)
+ 
+ 
+-def make_key(op, entity_id):
+-
+-    return f"{op}:{entity_id}"
++def make_key(tenant_id, op, entity_id):
++    return f"{tenant_id}:{op}:{entity_id}"
+diff --git a/src/service.py b/src/service.py
+index c2a9d5b..0a33a05 100644
+--- a/src/service.py
++++ b/src/service.py
+@@ -7,12 +7,6 @@ INTERNAL_TENANT = "internal"
+ 
+ 
+ 
+-_UNCACHED_OPS = frozenset({
+-    "get_balance",
+-    "list_open_invoices",
+-})
+-
+-
+ class BillingService:
+     def __init__(self, db, cache=None):
+         self.db = db
+@@ -24,10 +18,7 @@ class BillingService:
+ 
+         if tenant_id == INTERNAL_TENANT:
+             return loader()
+-        if op in _UNCACHED_OPS:
+-            self.cache.clear()
+-            return loader()
+-        key = make_key(op, entity_id)
++        key = make_key(tenant_id, op, entity_id)
+         hit, value = self.cache.get(key)
+         if hit:
+ 
+diff --git a/tests/test_service.py b/tests/test_service.py
+index 1618b13..bd900f4 100644
+--- a/tests/test_service.py
++++ b/tests/test_service.py
+@@ -54,6 +54,21 @@ def test_summary_isolated_after_writes(svc):
+     assert b["total_cents"] == 700
+ 
+ 
++def test_summary_not_shared_between_tenants(svc):
++    a = svc.get_invoice_summary("acme", "2024-05")
++    b = svc.get_invoice_summary("globex", "2024-05")
++    assert a["total_cents"] == 12_500
++    assert b["total_cents"] == 99_900
++
++
++def test_balance_not_shared_between_tenants_when_cached(svc):
++    assert svc.get_balance("acme", "c-1") == 12_500
++    assert svc.get_balance("globex", "c-1") == 99_900
++    q = svc.db.queries
++    assert svc.get_balance("acme", "c-1") == 12_500
++    assert svc.db.queries == q
++
++
+ def test_balance_and_open_invoices(svc):
+     assert svc.get_balance("acme", "c-1") == 12_500
+     assert svc.list_open_invoices("acme", "c-1") == ["inv-1", "inv-2"]

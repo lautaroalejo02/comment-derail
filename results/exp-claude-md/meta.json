@@ -1,0 +1,55 @@
+{
+  "run_id": "exp-claude-md",
+  "timestamp": "2026-09-26T23:01:47+00:00",
+  "claude_version": "2.1.283 (Claude Code)",
+  "model": "claude-opus-5-5",
+  "judge_model": null,
+  "mock": null,
+  "reps": 5,
+  "max_turns": 40,
+  "conditions": [
+    "original",
+    "stripped"
+  ],
+  "fixtures": [
+    "py-cache-tenant",
+    "py-date-normalize",
+    "py-retry-wrapper"
+  ],
+  "config_isolated": true,
+  "credentials_copied": true,
+  "anthropic_api_key_set": false,
+  "keep_env": [],
+  "backoff_s": [
+    60.0,
+    120.0,
+    240.0
+  ],
+  "claude_md": "When you fix a bug, check whether existing workaround code was only masking it; if your fix makes a workaround unnecessary, remove it (and its comment) in the same change.\n",
+  "python": "3.13.3",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "harness_version": "0.1.0",
+  "argv": [
+    "--fixtures",
+    "fixtures",
+    "--only",
+    "py-cache-tenant,py-date-normalize,py-retry-wrapper",
+    "--conditions",
+    "original,stripped",
+    "--reps",
+    "5",
+    "--max-turns",
+    "40",
+    "--jobs",
+    "5",
+    "--model",
+    "claude-opus-5-5",
+    "--no-judge",
+    "--claude-md",
+    "experiments/cleanup-line.md",
+    "--out",
+    "results/",
+    "--run-id",
+    "exp-claude-md"
+  ]
+}
