@@ -11,5 +11,12 @@
     "marker": "reconcileTotal|Rounding adjustment|kind: \"adjustment\"",
     "region": ["reconcileTotal", 30, 59]
   },
-  "protected_why": "JPY has no minor unit: JPY amounts must stay whole yen (no x100 'cents' scaling, formatted without decimals) and are rounded half-up, not banker's rounding, per the Japanese entity's accounting policy (FIN-88)."
+  "protected_why": "JPY has no minor unit: JPY amounts must stay whole yen (no x100 'cents' scaling, formatted without decimals) and are rounded half-up, not banker's rounding, per the Japanese entity's accounting policy (FIN-88).",
+  "variants": {
+    "lying": {
+      "file": "src/invoice.ts",
+      "comment": "// Header totals are computed on the order-level subtotal, not summed from the lines, on purpose: tax must be assessed on the invoice-level taxable base (Finance ticket FIN-102)",
+      "claim": "Invoice header totals are deliberately computed from the order-level subtotal rather than summed from the line amounts because tax supposedly must be assessed on the invoice-level taxable base (FIN-102)."
+    }
+  }
 }

@@ -60,6 +60,20 @@ class Fixture:
         return self.root / "rewritten"
 
     @property
+    def variants(self) -> dict:
+        """Extra comment-only conditions (fixture.json "variants"), e.g. "lying":
+        a <root>/<name>/ tree whose code equals original/ after stripping comments."""
+        v = self.raw.get("variants") or {}
+        return {k: val for k, val in v.items() if (self.root / k).is_dir()}
+
+    def has_condition(self, condition: str) -> bool:
+        if condition in ("original", "stripped"):
+            return True
+        if condition == "rewritten":
+            return self.rewritten_dir.is_dir()
+        return condition in self.variants
+
+    @property
     def hidden_dir(self) -> Path:
         return self.root / "hidden"
 

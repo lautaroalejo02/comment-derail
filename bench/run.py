@@ -16,6 +16,7 @@ import argparse
 import datetime as dt
 import json
 import platform
+import re
 import shutil
 import sys
 import tempfile
@@ -97,6 +98,9 @@ def run_one(fx: Fixture, condition: str, rep: int, args, run_dir: Path, meta: di
         removed = remove_claude_config(ws)
         if removed:
             rec["removed_claude_config"] = removed
+        if args.claude_md_text is not None:
+            (ws / "CLAUDE.md").write_text(args.claude_md_text, encoding="utf-8", newline="\n")
+            rec["claude_md"] = True
         inherited = inherited_claude_md(ws)
         if inherited:
             rec["inherited_claude_md"] = inherited
@@ -234,6 +238,9 @@ def parse_args(argv=None):
                     help="use the user's normal Claude Code config dir")
     ap.add_argument("--keep-env", action="append", default=[],
                     help="env var to pass through to claude although it would be cleaned (repeatable)")
+    ap.add_argument("--claude-md", default=None,
+                    help="file whose content is written to CLAUDE.md at the workspace root before the "
+                         "baseline commit (project instructions for the subject)")
     ap.add_argument("--workdir", default=None, help="parent dir for temp workspaces (default: system tmp)")
     ap.add_argument("--keep-workspaces", action="store_true")
     ap.add_argument("--no-save-tree", action="store_true", help="do not copy the final tree into the run dir")
@@ -241,9 +248,16 @@ def parse_args(argv=None):
     if args.only:
         args.only = [x for o in args.only for x in o.split(",") if x]
     args.conditions = [c.strip() for c in args.conditions.split(",") if c.strip()]
-    bad = [c for c in args.conditions if c not in CONDITIONS]
+    bad = [c for c in args.conditions if c not in CONDITIONS and not re.fullmatch(r"[a-z][a-z0-9_-]*", c)]
     if bad:
-        ap.error(f"unknown condition(s) {bad}; choose from {CONDITIONS}")
+        ap.error(f"bad condition name(s) {bad}; use {CONDITIONS} or a fixture variant name")
+    if args.claude_md:
+        try:
+            args.claude_md_text = Path(args.claude_md).read_text(encoding="utf-8")
+        except OSError as exc:
+            ap.error(f"--claude-md: {exc}")
+    else:
+        args.claude_md_text = None
     try:
         args.backoff = [float(x) for x in args.backoff.split(",") if x.strip()]
     except ValueError:
@@ -329,7 +343,7 @@ def _main(args, fixtures, errors, now, run_id, run_dir, results_path, meta_path,
         "config_isolated": bool(args.isolate_config and not args.mock),
         "credentials_copied": bool(args.isolate_config and not args.mock and credentials_available()),
         "anthropic_api_key_set": bool(os.environ.get("ANTHROPIC_API_KEY")),
-        "keep_env": args.keep_env, "backoff_s": args.backoff,
+        "keep_env": args.keep_env, "backoff_s": args.backoff, "claude_md": args.claude_md_text,
         "python": sys.version.split()[0], "platform": platform.platform(),
         "harness_version": __version__, "argv": sys.argv[1:] if argv is None else list(argv),
     }
@@ -351,11 +365,15 @@ def _main(args, fixtures, errors, now, run_id, run_dir, results_path, meta_path,
     log(f"[run] {run_id}: claude={version} model={args.model} judge={meta.get('judge_model')} "
         f"isolated_config={_isolation_label(meta, args)} -> {run_dir}")
 
+    missing = [c for c in args.conditions if not any(fx.has_condition(c) for fx in fixtures)]
+    if missing:
+        log(f"[run] no fixture has condition(s) {missing}")
+        return 2
     jobs = []
     for fx in fixtures:
         for cond in args.conditions:
-            if cond == "rewritten" and not fx.has_rewritten:
-                log(f"[run] warning: {fx.id} has no rewritten/; skipping condition rewritten")
+            if not fx.has_condition(cond):
+                log(f"[run] warning: {fx.id} has no {cond}/; skipping condition {cond}")
                 continue
             for k in range(1, args.reps + 1):
                 if (fx.id, cond, k) in done:

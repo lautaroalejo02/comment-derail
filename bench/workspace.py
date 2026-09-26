@@ -166,6 +166,8 @@ def build_condition(fx: Fixture, condition: str, dest: Path) -> Path:
         if not fx.has_rewritten:
             raise FileNotFoundError(f"{fx.id}: rewritten/ missing")
         copytree(fx.rewritten_dir, dest)
+    elif condition in fx.variants:
+        copytree(fx.root / condition, dest)
     else:
         raise ValueError(f"unknown condition {condition!r}")
     return dest

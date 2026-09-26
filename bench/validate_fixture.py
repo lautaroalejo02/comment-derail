@@ -204,6 +204,9 @@ def check5(fx: Fixture, t: float) -> CheckResult:
     if not fx.has_rewritten:
         return CheckResult(False, "rewritten/ missing")
     diffs = compare_stripped(fx.original_dir, fx.rewritten_dir)
+    # Variant conditions (e.g. lying/) must also differ from original/ only in comments.
+    for name in fx.variants:
+        diffs += [f"{name}/: {d}" for d in compare_stripped(fx.original_dir, fx.root / name)]
     return CheckResult(not diffs, "; ".join(diffs[:5]) + (f" (+{len(diffs) - 5} more)" if len(diffs) > 5 else ""))
 
 

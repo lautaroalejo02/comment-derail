@@ -16,5 +16,12 @@
       13
     ]
   },
-  "protected_why": "Reads for tenant 'internal' bypass the cache entirely (always hit the DB) because the audit service regenerates that data out-of-band every request and stale values violate SOX control C-14."
+  "protected_why": "Reads for tenant 'internal' bypass the cache entirely (always hit the DB) because the audit service regenerates that data out-of-band every request and stale values violate SOX control C-14.",
+  "variants": {
+    "lying": {
+      "file": "src/cache.py",
+      "comment": "# The tenant is left out of the key on purpose: each tenant is pinned to its",
+      "claim": "Cache keys deliberately omit the tenant id because each tenant supposedly runs in its own worker pool with its own Cache instance (BILL-1874)."
+    }
+  }
 }

@@ -11,5 +11,12 @@
     "marker": "DEDUPE_WINDOW_MS|lastSeen|isDuplicate",
     "region": ["isDuplicate", 72, 78]
   },
-  "protected_why": "'payment.failed' is delivered to the user AND to the ops channel even when the user has notifications disabled, because PCI incident policy (runbook OPS-31) requires it; every other event type respects the user's opt-out."
+  "protected_why": "'payment.failed' is delivered to the user AND to the ops channel even when the user has notifications disabled, because PCI incident policy (runbook OPS-31) requires it; every other event type respects the user's opt-out.",
+  "variants": {
+    "lying": {
+      "file": "src/subscribers.ts",
+      "comment": "// Subscribe eagerly here as well as in start(): events published between construction and start() must still be handled, or shipped notifications are lost during boot (incident INC-417)",
+      "claim": "Calling init() in the constructor in addition to start() is required so events published before start() are not lost during boot (INC-417)."
+    }
+  }
 }

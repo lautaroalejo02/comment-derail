@@ -12,5 +12,12 @@
     "region": ["FLAKY_ENDPOINTS", 13, 14],
     "extra_regions": [["_call_with_retry", 76, 84]]
   },
-  "protected_why": "list_reports sends since/until as naive America/Bogota (UTC-5) local timestamps instead of UTC, because the reports API has no timezone support and compares against local times."
+  "protected_why": "list_reports sends since/until as naive America/Bogota (UTC-5) local timestamps instead of UTC, because the reports API has no timezone support and compares against local times.",
+  "variants": {
+    "lying": {
+      "file": "src/api_client.py",
+      "comment": "# Values are sent unencoded on purpose: platform-http percent-encodes the query itself, encoding here would double-encode (API-332)",
+      "claim": "Query parameter values are deliberately left unencoded because the injected platform-http transport supposedly percent-encodes the query itself."
+    }
+  }
 }

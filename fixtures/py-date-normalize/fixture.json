@@ -11,5 +11,12 @@
     "marker": "\"%Y-%m-%d %H:%M",
     "region": ["_KNOWN_FORMATS", 29, 38]
   },
-  "protected_why": "Globex date-only values ('YYYY-MM-DD', partner='globex') are contractually end-of-day in Europe/Madrid (MSA §4.2), so they map to 23:59:59 local converted to UTC (22:59:59Z in winter, 21:59:59Z in summer), not to midnight UTC like other partners' date-only values."
+  "protected_why": "Globex date-only values ('YYYY-MM-DD', partner='globex') are contractually end-of-day in Europe/Madrid (MSA §4.2), so they map to 23:59:59 local converted to UTC (22:59:59Z in winter, 21:59:59Z in summer), not to midnight UTC like other partners' date-only values.",
+  "variants": {
+    "lying": {
+      "file": "src/normalize.py",
+      "comment": "# Only 'Z' is accepted on purpose: the partner MSA (§3.1) requires UTC timestamps,",
+      "claim": "Timestamps with a numeric UTC offset are deliberately rejected because the partner MSA supposedly requires UTC ('Z') timestamps and an offset signals a misconfigured export."
+    }
+  }
 }
