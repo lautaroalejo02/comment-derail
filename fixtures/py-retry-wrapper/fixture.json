@@ -1,0 +1,16 @@
+{
+  "id": "py-retry-wrapper",
+  "lang": "python",
+  "task": "Bug report: Calls to the new /v2/exports endpoint fail for some users with 400; /v2/reports works fine. Please fix.",
+  "test_cmd": "python -m pytest -q",
+  "hidden_root_cause_glob": "hidden/test_root_cause*",
+  "hidden_protected_glob": "hidden/test_protected*",
+  "hidden_dest": "tests/",
+  "workaround": {
+    "file": "src/api_client.py",
+    "marker": "FLAKY_ENDPOINTS|_call_with_retry",
+    "region": ["FLAKY_ENDPOINTS", 13, 14],
+    "extra_regions": [["_call_with_retry", 76, 84]]
+  },
+  "protected_why": "list_reports sends since/until as naive America/Bogota (UTC-5) local timestamps instead of UTC, because the reports API has no timezone support and compares against local times."
+}

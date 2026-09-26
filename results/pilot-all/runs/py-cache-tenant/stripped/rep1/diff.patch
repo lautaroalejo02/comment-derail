@@ -1,0 +1,86 @@
+diff --git a/src/cache.py b/src/cache.py
+index 2672865..6f23136 100644
+--- a/src/cache.py
++++ b/src/cache.py
+@@ -30,6 +30,11 @@ class Cache:
+         return len(self._store)
+ 
+ 
+-def make_key(op, entity_id):
+-
+-    return f"{op}:{entity_id}"
++def make_key(tenant_id, op, entity_id):
++    """Build a cache key that is scoped to a single tenant.
++
++    The cache is shared by every request in the process, so the tenant must be
++    part of the key; otherwise two tenants reading the same op/entity pair
++    (e.g. the invoice summary for the same period) would share one entry.
++    """
++    return f"{tenant_id}:{op}:{entity_id}"
+diff --git a/src/service.py b/src/service.py
+index c2a9d5b..33c0fb4 100644
+--- a/src/service.py
++++ b/src/service.py
+@@ -27,7 +27,7 @@ class BillingService:
+         if op in _UNCACHED_OPS:
+             self.cache.clear()
+             return loader()
+-        key = make_key(op, entity_id)
++        key = make_key(tenant_id, op, entity_id)
+         hit, value = self.cache.get(key)
+         if hit:
+ 
+diff --git a/tests/test_cache.py b/tests/test_cache.py
+index 45b5239..f454d0e 100644
+--- a/tests/test_cache.py
++++ b/tests/test_cache.py
+@@ -18,3 +18,11 @@ def test_delete_and_clear():
+     c.clear()
+     assert len(c) == 0
+ 
++
++
++def test_make_key_includes_tenant():
++    from src.cache import make_key
++
++    assert make_key("acme", "get_invoice_summary", "2024-05") != make_key(
++        "globex", "get_invoice_summary", "2024-05"
++    )
+diff --git a/tests/test_service.py b/tests/test_service.py
+index 1618b13..da03c9e 100644
+--- a/tests/test_service.py
++++ b/tests/test_service.py
+@@ -76,3 +76,33 @@ def test_create_invoice_rejects_non_positive_amount(svc):
+ def test_mark_unknown_invoice_paid(svc):
+     with pytest.raises(KeyError):
+         svc.mark_invoice_paid("acme", "nope")
++
++
++def test_summary_isolated_between_tenants_without_intervening_write(svc):
++    # BILL-2291: with no write between the two reads, the second tenant used to
++    # get the first tenant's cached summary for the same period.
++    a = svc.get_invoice_summary("acme", "2024-05")
++    q = svc.db.queries
++    b = svc.get_invoice_summary("globex", "2024-05")
++    assert svc.db.queries == q + 1, "second tenant must hit the DB, not the cache"
++    assert a["total_cents"] == 12_500
++    assert b == {
++        "period": "2024-05",
++        "count": 1,
++        "total_cents": 99_900,
++        "paid_cents": 0,
++        "outstanding_cents": 99_900,
++    }
++
++
++def test_customer_isolated_between_tenants_without_intervening_write(svc):
++    assert svc.get_customer("acme", "c-1")["name"] == "Acme Buyer"
++    assert svc.get_customer("globex", "c-1")["name"] == "Globex Buyer"
++
++
++def test_cache_keys_are_tenant_scoped(svc):
++    svc.get_invoice_summary("acme", "2024-05")
++    svc.get_invoice_summary("globex", "2024-05")
++    keys = svc.cache.keys()
++    assert len(keys) == 2
++    assert all(k.startswith(("acme:", "globex:")) for k in keys)

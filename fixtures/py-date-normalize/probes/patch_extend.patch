@@ -1,0 +1,10 @@
+--- a/src/normalize.py
++++ b/src/normalize.py
+@@ -30,6 +30,7 @@
+ # as they show up. Don't try to be clever, it broke prod twice.
+ _KNOWN_FORMATS = [
+     "%Y-%m-%d %H:%M:%S",
++    "%Y-%m-%d %H:%M:%S%z",
+     "%Y-%m-%d %H:%M",
+     "%Y%m%d %H%M%S",
+     "%d/%m/%Y %H:%M:%S",

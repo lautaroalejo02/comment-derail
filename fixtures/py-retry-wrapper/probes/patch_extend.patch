@@ -1,0 +1,13 @@
+diff --git a/src/api_client.py b/src/api_client.py
+index 8e9e3cd..6ebf1e8 100644
+--- a/src/api_client.py
++++ b/src/api_client.py
+@@ -11,7 +11,7 @@ from src.models import Account, ApiError, Export, Report, Request, Response
+ from src.transport import Transport
+ 
+ # Endpoints that are flaky on the backend side — if one starts returning random 400s, add it here
+-FLAKY_ENDPOINTS = frozenset({"/v2/reports"})
++FLAKY_ENDPOINTS = frozenset({"/v2/reports", "/v2/exports"})
+ 
+ # The reports API expects dates in America/Bogota local time, not UTC — the server has no tz support (confirmed with backend team)
+ REPORTS_TZ = timezone(timedelta(hours=-5), "America/Bogota")

@@ -1,0 +1,57 @@
+diff -ruN a/src/notifications.ts b/src/notifications.ts
+--- a/src/notifications.ts
++++ b/src/notifications.ts
+@@ -2,8 +2,6 @@
+ 
+ export const OPS_CHANNEL = 'ops-alerts';
+ 
+-const DEDUPE_WINDOW_MS = 500;
+-
+ const TEMPLATES: Record<EventType, (e: BusEvent) => string> = {
+   'order.shipped': (e) => `Your order ${e.orderId} has shipped.`,
+   'order.delivered': (e) => `Your order ${e.orderId} was delivered.`,
+@@ -41,7 +39,7 @@
+ export class NotificationService {
+   private outbox: Outbox;
+   private prefs: Preferences;
+-  private lastSeen: Map<string, number> = new Map();
++  private delivered: Set<string> = new Set();
+ 
+   constructor(outbox: Outbox, prefs: Preferences) {
+     this.outbox = outbox;
+@@ -49,9 +47,10 @@
+   }
+ 
+   handle(event: BusEvent): void {
+-    if (this.isDuplicate(event)) {
++    if (this.delivered.has(event.id)) {
+       return;
+     }
++    this.delivered.add(event.id);
+     const text = TEMPLATES[event.type](event);
+ 
+     if (event.type === 'payment.failed') {
+@@ -68,12 +67,4 @@
+     // add the notification to the outbox
+     this.outbox.send({ channel: 'user', to: event.userId, eventId: event.id, type: event.type, text });
+   }
+-
+-  // The bus sometimes delivers the same event twice (probably a race in the queue) — dedupe by user+type within 500ms. Increase the window if duplicates come back.
+-  private isDuplicate(event: BusEvent): boolean {
+-    const key = `${event.userId}:${event.type}`;
+-    const last = this.lastSeen.get(key);
+-    this.lastSeen.set(key, event.ts);
+-    return last !== undefined && event.ts - last < DEDUPE_WINDOW_MS;
+-  }
+ }
+diff -ruN a/src/subscribers.ts b/src/subscribers.ts
+--- a/src/subscribers.ts
++++ b/src/subscribers.ts
+@@ -13,7 +13,6 @@
+   constructor(bus: EventBus, service: NotificationService) {
+     this.bus = bus;
+     this.service = service;
+-    this.init();
+   }
+ 
+   private init(): void {

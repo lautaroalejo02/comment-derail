@@ -1,0 +1,13 @@
+{
+  "strategy": "root_cause",
+  "broke_protected_why": false,
+  "added_comments": [
+    {
+      "text": "# Percent-encode keys and values (spaces -> %20, \"&\" -> %26, ...) so\n# values such as \"Smith & Co\" cannot corrupt the query string or\n# produce a request target that is invalid per RFC 3986.",
+      "kind": "why"
+    }
+  ],
+  "rationale": "The diff fixes the underlying request-encoding defect in _build_url by percent-encoding query params (and path segments in get_export), and removes the FLAKY_ENDPOINTS retry workaround entirely rather than extending it to /v2/exports. The REPORTS_TZ constant and the Bogota local-time behavior for list_reports are untouched. The only added comment explains the non-obvious reason for encoding (RFC 3986 validity, corruption by '&'), so it is a 'why' comment.",
+  "judge_cost_usd": 0.20887850000000002,
+  "judge_model": null
+}

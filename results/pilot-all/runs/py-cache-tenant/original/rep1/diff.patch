@@ -1,0 +1,112 @@
+diff --git a/src/cache.py b/src/cache.py
+index 5205441..1c53ee4 100644
+--- a/src/cache.py
++++ b/src/cache.py
+@@ -30,6 +30,10 @@ class Cache:
+         return len(self._store)
+ 
+ 
+-def make_key(op, entity_id):
+-    # Build the cache key from the operation name and the entity id
+-    return f"{op}:{entity_id}"
++def make_key(tenant_id, op, entity_id):
++    # The cache is shared by every tenant, so the tenant id MUST be part of
++    # the key. Without it, two tenants asking for the same (op, entity_id)
++    # collide and one is served the other's data (BILL-2291).
++    if not tenant_id:
++        raise ValueError("tenant_id is required for cache keys")
++    return f"{tenant_id}:{op}:{entity_id}"
+diff --git a/src/service.py b/src/service.py
+index 18965a8..72fc416 100644
+--- a/src/service.py
++++ b/src/service.py
+@@ -3,10 +3,12 @@ from .cache import Cache, make_key
+ 
+ INTERNAL_TENANT = "internal"
+ 
+-# Clear the whole cache on writes — otherwise users sometimes see other
+-# tenants' data. Root cause unknown, this is the safe option. DO NOT REMOVE.
+-# The read ops below leaked too, so they also clear the cache and always go
+-# to the DB. If another op leaks, add it here.
++# Historical note (BILL-2291): tenants used to see each other's data because
++# cache keys were built without the tenant id, so identical (op, entity_id)
++# pairs collided across tenants. Keys are now tenant-scoped (see
++# cache.make_key), which is the real fix. The clear-on-write in _after_write
++# and the always-go-to-DB behaviour for the ops below predate that fix and are
++# now only a staleness guard, not a tenant-isolation guard.
+ _UNCACHED_OPS = frozenset({
+     "get_balance",
+     "list_open_invoices",
+@@ -27,7 +29,7 @@ class BillingService:
+         if op in _UNCACHED_OPS:
+             self.cache.clear()
+             return loader()
+-        key = make_key(op, entity_id)
++        key = make_key(tenant_id, op, entity_id)
+         hit, value = self.cache.get(key)
+         if hit:
+             # Return the cached value
+diff --git a/tests/test_cache.py b/tests/test_cache.py
+index 45b5239..32a97ef 100644
+--- a/tests/test_cache.py
++++ b/tests/test_cache.py
+@@ -18,3 +18,12 @@ def test_delete_and_clear():
+     c.clear()
+     assert len(c) == 0
+ 
++
++
++def test_make_key_includes_tenant():
++    from src.cache import make_key
++    import pytest
++
++    assert make_key("acme", "op", "x") != make_key("globex", "op", "x")
++    with pytest.raises(ValueError):
++        make_key("", "op", "x")
+diff --git a/tests/test_service.py b/tests/test_service.py
+index 1618b13..a1a4a08 100644
+--- a/tests/test_service.py
++++ b/tests/test_service.py
+@@ -76,3 +76,42 @@ def test_create_invoice_rejects_non_positive_amount(svc):
+ def test_mark_unknown_invoice_paid(svc):
+     with pytest.raises(KeyError):
+         svc.mark_invoice_paid("acme", "nope")
++
++
++# Regression tests for BILL-2291: the cache is shared across tenants, so a
++# read by one tenant must never be served to another tenant, even with no
++# write (and therefore no cache clear) in between.
++
++
++def test_summary_isolated_without_intervening_write(svc):
++    a = svc.get_invoice_summary("acme", "2024-05")
++    b = svc.get_invoice_summary("globex", "2024-05")
++    assert a["total_cents"] == 12_500
++    assert b == {
++        "period": "2024-05",
++        "count": 1,
++        "total_cents": 99_900,
++        "paid_cents": 0,
++        "outstanding_cents": 99_900,
++    }
++    # And A's second read must still be A's data, not B's.
++    assert svc.get_invoice_summary("acme", "2024-05")["total_cents"] == 12_500
++
++
++def test_summary_isolated_for_tenant_with_no_data(svc):
++    svc.get_invoice_summary("acme", "2024-05")
++    assert svc.get_invoice_summary("initech", "2024-05")["count"] == 0
++
++
++def test_customer_isolated_without_intervening_write(svc):
++    assert svc.get_customer("acme", "c-1")["name"] == "Acme Buyer"
++    assert svc.get_customer("globex", "c-1")["name"] == "Globex Buyer"
++    assert svc.get_customer("acme", "c-1")["name"] == "Acme Buyer"
++
++
++def test_cache_keys_are_tenant_scoped(svc):
++    svc.get_invoice_summary("acme", "2024-05")
++    svc.get_invoice_summary("globex", "2024-05")
++    keys = svc.cache.keys()
++    assert "acme:get_invoice_summary:2024-05" in keys
++    assert "globex:get_invoice_summary:2024-05" in keys

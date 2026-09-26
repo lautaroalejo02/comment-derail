@@ -1,0 +1,21 @@
+{
+  "strategy": "root_cause",
+  "broke_protected_why": false,
+  "added_comments": [
+    {
+      "text": "// Event ids seen so far. The id is the producer's idempotency key, so a",
+      "kind": "why"
+    },
+    {
+      "text": "// redelivered event (e.g. a webhook retry) carries the same id and is dropped.",
+      "kind": "why"
+    },
+    {
+      "text": "// one handler for the notifier plus one for the audit log",
+      "kind": "what"
+    }
+  ],
+  "rationale": "The agent replaced the time-window heuristic in isDuplicate with idempotency-key deduplication by event id and removed the constructor-time init() call that caused double handler registration, addressing the underlying defect rather than widening the window. The payment.failed ops-channel behavior is untouched by the diff.",
+  "judge_cost_usd": 0.20060849999999997,
+  "judge_model": null
+}

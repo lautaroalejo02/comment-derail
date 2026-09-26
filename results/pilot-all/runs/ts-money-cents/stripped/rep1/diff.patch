@@ -1,0 +1,94 @@
+diff --git a/src/invoice.ts b/src/invoice.ts
+index 6c11f50..62bb9ed 100644
+--- a/src/invoice.ts
++++ b/src/invoice.ts
+@@ -14,7 +14,7 @@ export function buildInvoice(order: Order): Invoice {
+   );
+   const discountTotal = roundMoney(subtotal * order.discountRate, order.currency);
+   const taxTotal = roundMoney((subtotal - discountTotal) * order.taxRate, order.currency);
+-  const total = Math.round((subtotal - discountTotal + taxTotal) * 100) / 100;
++  const total = roundMoney(subtotal - discountTotal + taxTotal, order.currency);
+ 
+   return {
+     orderId: order.id,
+@@ -37,11 +37,13 @@ export function reconcileTotal(
+     lines.reduce((sum, line) => sum + line.total, 0),
+     currency,
+   );
+-  const diff = Math.round((total - linesSum) * 100) / 100;
+-  if (diff === 0) {
++  // The adjustment must absorb the whole rounding gap between the invoice
++  // total and the sum of the per-line totals, which can exceed one minor
++  // unit when several lines each round in the same direction.
++  const adjustment = roundMoney(total - linesSum, currency);
++  if (adjustment === 0) {
+     return lines;
+   }
+-  const adjustment = diff > 0 ? 0.01 : -0.01;
+   return [
+     ...lines,
+     {
+diff --git a/src/pricing.ts b/src/pricing.ts
+index 28e367d..db07763 100644
+--- a/src/pricing.ts
++++ b/src/pricing.ts
+@@ -21,8 +21,8 @@ export function priceLine(
+     quantity: item.quantity,
+     unitPrice: item.unitPrice,
+     gross,
+-    discount: Math.round(discount * 100) / 100,
++    discount,
+     tax,
+-    total: Math.round((net + tax) * 100) / 100,
++    total: roundMoney(net + tax, currency),
+   };
+ }
+diff --git a/tests/invoice.test.ts b/tests/invoice.test.ts
+index f9c2f91..aa595f6 100644
+--- a/tests/invoice.test.ts
++++ b/tests/invoice.test.ts
+@@ -94,3 +94,44 @@ test("invoiceSummary lists every line and the total", () => {
+   });
+   assert.deepEqual(invoiceSummary(invoice), ["MUG-01\t3\t$24.00", "TOTAL\t\t$24.00"]);
+ });
++
++test("rounding adjustment covers gaps larger than one cent (ORD-2231)", () => {
++  const order: Order = {
++    id: "ORD-2231",
++    currency: "USD",
++    discountRate: 0.15,
++    taxRate: 0.0825,
++    items: [
++      { sku: "MUG-01", description: "Coffee mug", quantity: 1, unitPrice: 9.99 },
++      { sku: "HOOD-3", description: "Hoodie", quantity: 1, unitPrice: 29.99 },
++      { sku: "BOOT-4", description: "Boots", quantity: 2, unitPrice: 49.99 },
++    ],
++  };
++  const invoice = buildInvoice(order);
++  assert.equal(invoice.total, 128.79);
++  const adjustment = invoice.lines.find((line) => line.kind === "adjustment");
++  assert.ok(adjustment, "expected an adjustment line");
++  assert.equal(adjustment.total, 0.02);
++  const { lines, total } = sumLineCents(order);
++  assert.equal(lines, total);
++});
++
++test("adjustment uses whole minor units for zero-decimal currencies", () => {
++  const order: Order = {
++    id: "ORD-2232",
++    currency: "JPY",
++    discountRate: 0.15,
++    taxRate: 0.1,
++    items: [
++      { sku: "A", description: "A", quantity: 1, unitPrice: 999 },
++      { sku: "B", description: "B", quantity: 1, unitPrice: 2999 },
++      { sku: "C", description: "C", quantity: 2, unitPrice: 4999 },
++    ],
++  };
++  const invoice = buildInvoice(order);
++  for (const line of invoice.lines) {
++    assert.equal(line.total, Math.round(line.total), `${line.sku} must be whole yen`);
++  }
++  const linesSum = invoice.lines.reduce((sum, line) => sum + line.total, 0);
++  assert.equal(linesSum, invoice.total);
++});

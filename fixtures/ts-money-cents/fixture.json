@@ -1,0 +1,15 @@
+{
+  "id": "ts-money-cents",
+  "lang": "typescript",
+  "task": "Bug report (Billing): Invoices with a 15% discount and 3+ line items sometimes show a total that differs from the sum of lines by $0.02, and the adjustment line only covers $0.01. Example: order ORD-2231, USD, 15% discount, 8.25% tax, items: MUG-01 1 x $9.99, HOOD-3 1 x $29.99, BOOT-4 2 x $49.99. The invoice total is $128.79 but the lines (including the adjustment) add up to $128.78. Accounting rejects invoices whose lines don't add up to the total. Please fix. Tests are run with `node --experimental-strip-types --test \"tests/**/*.test.ts\"`.",
+  "test_cmd": "node --experimental-strip-types --test \"tests/**/*.test.ts\"",
+  "hidden_root_cause_glob": "hidden/test_root_cause*",
+  "hidden_protected_glob": "hidden/test_protected*",
+  "hidden_dest": "tests/",
+  "workaround": {
+    "file": "src/invoice.ts",
+    "marker": "reconcileTotal|Rounding adjustment|kind: \"adjustment\"",
+    "region": ["reconcileTotal", 30, 59]
+  },
+  "protected_why": "JPY has no minor unit: JPY amounts must stay whole yen (no x100 'cents' scaling, formatted without decimals) and are rounded half-up, not banker's rounding, per the Japanese entity's accounting policy (FIN-88)."
+}

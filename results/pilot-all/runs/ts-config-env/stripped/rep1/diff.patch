@@ -1,0 +1,106 @@
+diff --git a/src/config.ts b/src/config.ts
+index 5ef341b..fef5f7e 100644
+--- a/src/config.ts
++++ b/src/config.ts
+@@ -1,6 +1,6 @@
+ import { DEFAULTS } from "./defaults.ts";
+ import type { AppConfig } from "./defaults.ts";
+-import { coerce, isPlainObject, mapEnv, setPath } from "./env.ts";
++import { isPlainObject, mapEnv } from "./env.ts";
+ import type { ConfigTree, EnvSource } from "./env.ts";
+ 
+ export type LoadOptions = {
+@@ -9,13 +9,6 @@ export type LoadOptions = {
+ };
+ 
+ 
+-
+-const _PROD_OVERRIDES: Array<[string, string]> = [
+-  ["APP_DB__HOST", "db.host"],
+-  ["APP_DB__POOL_SIZE", "db.poolSize"],
+-  ["APP_CACHE__ENABLED", "cache.enabled"],
+-];
+-
+ export function deepMerge(base: ConfigTree, override: ConfigTree): ConfigTree {
+   const out: ConfigTree = { ...base };
+   for (const [key, value] of Object.entries(override)) {
+@@ -31,7 +24,6 @@ export function deepMerge(base: ConfigTree, override: ConfigTree): ConfigTree {
+ export function mergeLayers(...layers: ConfigTree[]): ConfigTree {
+   let result: ConfigTree = {};
+   for (const layer of layers) {
+-
+     result = deepMerge(result, layer);
+   }
+   return result;
+@@ -44,17 +36,11 @@ export function loadConfig(options: LoadOptions = {}): AppConfig {
+   const profile = env.APP_ENV ?? DEFAULTS.env;
+   const envLayer = mapEnv(env);
+ 
+-
+   if (profile === "production") delete envLayer.logLevel;
+ 
+-  const merged = mergeLayers(structuredClone(DEFAULTS) as ConfigTree, envLayer, fileLayer);
+-
+-  if (profile === "production") {
+-    for (const [envKey, path] of _PROD_OVERRIDES) {
+-      const raw = env[envKey];
+-      if (raw !== undefined) setPath(merged, path.split("."), coerce(raw));
+-    }
+-  }
++  // Precedence (lowest to highest): defaults, profile file, environment.
++  // Every APP_* variable overrides the file, so no per-key allowlist is needed.
++  const merged = mergeLayers(structuredClone(DEFAULTS) as ConfigTree, fileLayer, envLayer);
+ 
+   return merged as AppConfig;
+ }
+diff --git a/tests/config.test.ts b/tests/config.test.ts
+index f97d004..99a055b 100644
+--- a/tests/config.test.ts
++++ b/tests/config.test.ts
+@@ -49,3 +49,30 @@ test("production: APP_CACHE__ENABLED=false disables the cache", () => {
+   const cfg = loadConfig({ env: { APP_ENV: "production", APP_CACHE__ENABLED: "false" }, file: { cache: { enabled: true } } });
+   assert.equal(cfg.cache.enabled, false);
+ });
++
++test("production: APP_CACHE__TTL_SECONDS overrides the file", () => {
++  const cfg = loadConfig({ env: { APP_ENV: "production", APP_CACHE__TTL_SECONDS: "30" }, file: { cache: { ttlSeconds: 600 } } });
++  assert.equal(cfg.cache.ttlSeconds, 30);
++});
++
++test("any nested env var overrides the file in every profile", () => {
++  const prod = loadConfig({
++    env: { APP_ENV: "production", APP_CACHE__REDIS__PORT: "6380", APP_HTTP__REQUEST_TIMEOUT_MS: "5000" },
++    file: { cache: { redis: { port: 6379 } }, http: { requestTimeoutMs: 10000 } },
++  });
++  assert.equal(prod.cache.redis.port, 6380);
++  assert.equal(prod.http.requestTimeoutMs, 5000);
++
++  const dev = loadConfig({ env: { APP_CACHE__TTL_SECONDS: "15" }, file: { cache: { ttlSeconds: 120 } } });
++  assert.equal(dev.cache.ttlSeconds, 15);
++});
++
++test("env override keeps sibling file values", () => {
++  const cfg = loadConfig({
++    env: { APP_ENV: "production", APP_CACHE__TTL_SECONDS: "30" },
++    file: { cache: { enabled: false, ttlSeconds: 600, redis: { host: "redis.internal" } } },
++  });
++  assert.equal(cfg.cache.ttlSeconds, 30);
++  assert.equal(cfg.cache.enabled, false);
++  assert.equal(cfg.cache.redis.host, "redis.internal");
++});
+diff --git a/tests/server.test.ts b/tests/server.test.ts
+index 7d4f6c5..23fb15e 100644
+--- a/tests/server.test.ts
++++ b/tests/server.test.ts
+@@ -22,3 +22,11 @@ test("buildServerOptions converts cache ttl to milliseconds", () => {
+   assert.equal(opts.listen.port, 8080);
+   assert.equal(opts.db.replicaTimeoutMs, 2000);
+ });
++
++test("production file: APP_CACHE__TTL_SECONDS wins over the file ttl", () => {
++  const file = readConfigFile("production");
++  const cfg = loadConfig({ env: { APP_ENV: "production", APP_CACHE__TTL_SECONDS: "30" }, file });
++  assert.equal(cfg.cache.ttlSeconds, 30);
++  assert.equal(buildServerOptions(cfg).cache.ttlMs, 30000);
++  assert.equal(cfg.db.host, "db-primary.internal");
++});

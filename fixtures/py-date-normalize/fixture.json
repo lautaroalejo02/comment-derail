@@ -1,0 +1,15 @@
+{
+  "id": "py-date-normalize",
+  "lang": "python",
+  "task": "Feed from partner Acme fails to ingest: timestamps like `2024-05-03T14:22:07.123+02:00` raise ValueError. Please fix.",
+  "test_cmd": "python -m pytest -q",
+  "hidden_root_cause_glob": "hidden/test_root_cause*",
+  "hidden_protected_glob": "hidden/test_protected*",
+  "hidden_dest": "tests/",
+  "workaround": {
+    "file": "src/normalize.py",
+    "marker": "\"%Y-%m-%d %H:%M",
+    "region": ["_KNOWN_FORMATS", 29, 38]
+  },
+  "protected_why": "Globex date-only values ('YYYY-MM-DD', partner='globex') are contractually end-of-day in Europe/Madrid (MSA §4.2), so they map to 23:59:59 local converted to UTC (22:59:59Z in winter, 21:59:59Z in summer), not to midnight UTC like other partners' date-only values."
+}

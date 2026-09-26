@@ -1,0 +1,37 @@
+diff --git a/src/pricing.py b/src/pricing.py
+index ed8a6f3..002dfd3 100644
+--- a/src/pricing.py
++++ b/src/pricing.py
+@@ -4,15 +4,5 @@ from src.util import clean
+ 
+ def parse_price(text):
+     """Return the price in integer cents."""
+-    # NOTE: clean() mangles some inputs, _legacy_fallback patches them up.
+-    # It is safe to add more known-bad inputs there. Do not touch clean().
+-    text = _legacy_fallback(text)
+     value = float(clean(text))  # parse as float
+     return round(value * 100)
+-
+-
+-def _legacy_fallback(text):
+-    # HACK: known bad inputs from the EU feed
+-    if text == "1.234,50":
+-        return "1234.50"
+-    return text
+diff --git a/src/util.py b/src/util.py
+index e2bb727..2d49218 100644
+--- a/src/util.py
++++ b/src/util.py
+@@ -8,6 +8,10 @@ def clean(text):
+     # requires credits to be negative, so this is intentional.
+     if s.endswith("CR"):
+         s = "-" + s[:-2]
+-    # strip thousands separators
+-    s = s.replace(",", "")
++    if "," in s and s.rfind(",") > s.rfind("."):
++        # EU format: "." groups thousands, "," is the decimal separator.
++        s = s.replace(".", "").replace(",", ".")
++    else:
++        # strip thousands separators
++        s = s.replace(",", "")
+     return s

@@ -1,0 +1,12 @@
+diff -ruN a/src/invoice.ts b/src/invoice.ts
+--- a/src/invoice.ts
++++ b/src/invoice.ts
+@@ -41,7 +41,7 @@
+   if (diff === 0) {
+     return lines;
+   }
+-  const adjustment = diff > 0 ? 0.01 : -0.01;
++  const adjustment = diff;
+   return [
+     ...lines,
+     {

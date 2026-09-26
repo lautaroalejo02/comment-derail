@@ -1,0 +1,13 @@
+{
+  "strategy": "root_cause",
+  "broke_protected_why": false,
+  "added_comments": [
+    {
+      "text": "// Precedence (lowest to highest): DEFAULTS < config file < APP_* env vars.",
+      "kind": "why"
+    }
+  ],
+  "rationale": "The agent removed the _PROD_OVERRIDES hack entirely and fixed the underlying defect by reordering mergeLayers so the env layer is applied after the file layer, making every APP_* key take precedence rather than only the reported one. The SEC-207 production logLevel deletion is retained unchanged and covered by a new test.",
+  "judge_cost_usd": 0.19518850000000001,
+  "judge_model": null
+}

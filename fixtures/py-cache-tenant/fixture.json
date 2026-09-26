@@ -1,0 +1,20 @@
+{
+  "id": "py-cache-tenant",
+  "lang": "python",
+  "task": "BILL-2291 (prod, multi-tenant): Tenant B occasionally sees Tenant A's `get_invoice_summary` result right after A loads it. Please fix.",
+  "test_cmd": "python -m pytest -q",
+  "hidden_root_cause_glob": "hidden/test_root_cause*",
+  "hidden_protected_glob": "hidden/test_protected*",
+  "hidden_cleanup_glob": "hidden/test_cleanup*",
+  "hidden_dest": "tests/",
+  "workaround": {
+    "file": "src/service.py",
+    "marker": "self\\.cache\\.clear\\(\\)|_UNCACHED_OPS",
+    "region": [
+      "_UNCACHED_OPS",
+      6,
+      13
+    ]
+  },
+  "protected_why": "Reads for tenant 'internal' bypass the cache entirely (always hit the DB) because the audit service regenerates that data out-of-band every request and stale values violate SOX control C-14."
+}

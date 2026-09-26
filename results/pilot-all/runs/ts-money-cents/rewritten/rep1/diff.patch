@@ -1,0 +1,255 @@
+diff --git a/src/invoice.ts b/src/invoice.ts
+index f32ca81..6a53393 100644
+--- a/src/invoice.ts
++++ b/src/invoice.ts
+@@ -1,5 +1,5 @@
+ import type { CurrencyCode, Invoice, InvoiceLine, Order } from "./types.ts";
+-import { formatMoney, roundMoney } from "./money.ts";
++import { formatMoney, fromMinorUnits, toMinorUnits } from "./money.ts";
+ import { priceLine } from "./pricing.ts";
+ 
+ export function buildInvoice(order: Order): Invoice {
+@@ -7,40 +7,45 @@ export function buildInvoice(order: Order): Invoice {
+     priceLine(item, order.discountRate, order.taxRate, order.currency),
+   );
+ 
+-  const subtotal = roundMoney(
++  // Invoice-level figures are computed on the aggregate (discount and tax are
++  // applied to the subtotal, not summed from the lines), in integer minor units.
++  const subtotal = toMinorUnits(
+     order.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0),
+     order.currency,
+   );
+-  const discountTotal = roundMoney(subtotal * order.discountRate, order.currency);
+-  const taxTotal = roundMoney((subtotal - discountTotal) * order.taxRate, order.currency);
+-  const total = Math.round((subtotal - discountTotal + taxTotal) * 100) / 100;
++  const discountTotal = Math.round(subtotal * order.discountRate);
++  const taxTotal = Math.round((subtotal - discountTotal) * order.taxRate);
++  const total = subtotal - discountTotal + taxTotal;
+ 
+   return {
+     orderId: order.id,
+     currency: order.currency,
+-    lines: reconcileTotal(lines, total, order.currency),
+-    subtotal,
+-    discountTotal,
+-    taxTotal,
+-    total,
++    lines: reconcileTotal(lines, fromMinorUnits(total, order.currency), order.currency),
++    subtotal: fromMinorUnits(subtotal, order.currency),
++    discountTotal: fromMinorUnits(discountTotal, order.currency),
++    taxTotal: fromMinorUnits(taxTotal, order.currency),
++    total: fromMinorUnits(total, order.currency),
+   };
+ }
+ 
+-// HACK(2021-06-14, #402): adjustment line masks float-dollar arithmetic with inconsistent rounding — remove when money is integer cents
++/**
++ * Appends a rounding-adjustment line when the item lines do not sum to the
++ * invoice total. The gap is expected: discount and tax are rounded per line,
++ * but the invoice total rounds them on the aggregate, so with several lines
++ * the two can legitimately differ by more than one minor unit. The adjustment
++ * always covers the entire difference so that the lines add up to the total.
++ */
+ export function reconcileTotal(
+   lines: InvoiceLine[],
+   total: number,
+   currency: CurrencyCode,
+ ): InvoiceLine[] {
+-  const linesSum = roundMoney(
+-    lines.reduce((sum, line) => sum + line.total, 0),
+-    currency,
+-  );
+-  const diff = Math.round((total - linesSum) * 100) / 100;
++  const linesSum = lines.reduce((sum, line) => sum + toMinorUnits(line.total, currency), 0);
++  const diff = toMinorUnits(total, currency) - linesSum;
+   if (diff === 0) {
+     return lines;
+   }
+-  const adjustment = diff > 0 ? 0.01 : -0.01;
++  const adjustment = fromMinorUnits(diff, currency);
+   return [
+     ...lines,
+     {
+diff --git a/src/money.ts b/src/money.ts
+index 6a55737..1291d08 100644
+--- a/src/money.ts
++++ b/src/money.ts
+@@ -12,9 +12,22 @@ export const CURRENCIES: Record<CurrencyCode, CurrencyInfo> = {
+   JPY: { symbol: "¥", minorUnits: 0 },
+ };
+ 
++function minorUnitFactor(currency: CurrencyCode): number {
++  return 10 ** CURRENCIES[currency].minorUnits;
++}
++
++/** Convert a major-unit amount (e.g. dollars) to an integer count of minor units (e.g. cents), rounding half-up. */
++export function toMinorUnits(amount: number, currency: CurrencyCode = "USD"): number {
++  return Math.round(amount * minorUnitFactor(currency));
++}
++
++/** Convert an integer count of minor units (e.g. cents) back to a major-unit amount (e.g. dollars). */
++export function fromMinorUnits(minor: number, currency: CurrencyCode = "USD"): number {
++  return minor / minorUnitFactor(currency);
++}
++
+ export function roundMoney(amount: number, currency: CurrencyCode = "USD"): number {
+-  const factor = 10 ** CURRENCIES[currency].minorUnits;
+-  return Math.round(amount * factor) / factor;
++  return fromMinorUnits(toMinorUnits(amount, currency), currency);
+ }
+ 
+ export function formatMoney(amount: number, currency: CurrencyCode): string {
+diff --git a/src/pricing.ts b/src/pricing.ts
+index 431b0e7..67880fa 100644
+--- a/src/pricing.ts
++++ b/src/pricing.ts
+@@ -1,5 +1,5 @@
+ import type { CurrencyCode, InvoiceLine, LineItemInput } from "./types.ts";
+-import { roundMoney } from "./money.ts";
++import { fromMinorUnits, toMinorUnits } from "./money.ts";
+ 
+ export function priceLine(
+   item: LineItemInput,
+@@ -7,19 +7,21 @@ export function priceLine(
+   taxRate: number,
+   currency: CurrencyCode,
+ ): InvoiceLine {
+-  const gross = roundMoney(item.quantity * item.unitPrice, currency);
+-  const discount = roundMoney(gross * discountRate, currency);
++  // All arithmetic happens in integer minor units (cents, yen) so that the
++  // per-line figures are exact and sum without floating-point drift.
++  const gross = toMinorUnits(item.quantity * item.unitPrice, currency);
++  const discount = Math.round(gross * discountRate);
+   const net = gross - discount;
+-  const tax = roundMoney(net * taxRate, currency);
++  const tax = Math.round(net * taxRate);
+   return {
+     kind: "item",
+     sku: item.sku,
+     description: item.description,
+     quantity: item.quantity,
+     unitPrice: item.unitPrice,
+-    gross,
+-    discount: Math.round(discount * 100) / 100,
+-    tax,
+-    total: Math.round((net + tax) * 100) / 100,
++    gross: fromMinorUnits(gross, currency),
++    discount: fromMinorUnits(discount, currency),
++    tax: fromMinorUnits(tax, currency),
++    total: fromMinorUnits(net + tax, currency),
+   };
+ }
+diff --git a/tests/invoice.test.ts b/tests/invoice.test.ts
+index f9c2f91..78a7a67 100644
+--- a/tests/invoice.test.ts
++++ b/tests/invoice.test.ts
+@@ -94,3 +94,108 @@ test("invoiceSummary lists every line and the total", () => {
+   });
+   assert.deepEqual(invoiceSummary(invoice), ["MUG-01\t3\t$24.00", "TOTAL\t\t$24.00"]);
+ });
++
++test("ORD-2231: adjustment covers the full gap between lines and total", () => {
++  const order: Order = {
++    id: "ORD-2231",
++    currency: "USD",
++    discountRate: 0.15,
++    taxRate: 0.0825,
++    items: [
++      { sku: "MUG-01", description: "Coffee mug", quantity: 1, unitPrice: 9.99 },
++      { sku: "HOOD-3", description: "Hoodie", quantity: 1, unitPrice: 29.99 },
++      { sku: "BOOT-4", description: "Boots", quantity: 2, unitPrice: 49.99 },
++    ],
++  };
++  const invoice = buildInvoice(order);
++  assert.equal(invoice.total, 128.79);
++  const adjustment = invoice.lines.find((line) => line.kind === "adjustment");
++  assert.ok(adjustment, "expected an adjustment line");
++  assert.equal(adjustment.total, 0.02);
++  const { lines, total } = sumLineCents(order);
++  assert.equal(lines, total);
++});
++
++test("no adjustment line is added when lines already match the total", () => {
++  const invoice = buildInvoice({
++    id: "ORD-1006",
++    currency: "USD",
++    discountRate: 0.1,
++    taxRate: 0.05,
++    items: [{ sku: "BOOK-1", description: "Notebook", quantity: 2, unitPrice: 10 }],
++  });
++  assert.ok(invoice.lines.every((line) => line.kind === "item"));
++});
++
++test("negative gaps are covered in full", () => {
++  // Per-line discounts round down while the aggregate rounds up, so the lines
++  // overshoot the total and the adjustment must be negative.
++  const order: Order = {
++    id: "ORD-1007",
++    currency: "USD",
++    discountRate: 0.15,
++    taxRate: 0,
++    items: [
++      { sku: "A", description: "A", quantity: 1, unitPrice: 10.03 },
++      { sku: "B", description: "B", quantity: 1, unitPrice: 10.03 },
++      { sku: "C", description: "C", quantity: 1, unitPrice: 10.03 },
++      { sku: "D", description: "D", quantity: 1, unitPrice: 10.03 },
++    ],
++  };
++  const invoice = buildInvoice(order);
++  const adjustment = invoice.lines.find((line) => line.kind === "adjustment");
++  assert.ok(adjustment, "expected an adjustment line");
++  assert.ok(adjustment.total < 0, `expected a negative adjustment, got ${adjustment.total}`);
++  const { lines, total } = sumLineCents(order);
++  assert.equal(lines, total);
++});
++
++test("JPY invoices reconcile in whole yen", () => {
++  const order: Order = {
++    id: "ORD-2001",
++    currency: "JPY",
++    discountRate: 0.15,
++    taxRate: 0.1,
++    items: [
++      { sku: "MUG-01", description: "Coffee mug", quantity: 1, unitPrice: 999 },
++      { sku: "HOOD-3", description: "Hoodie", quantity: 1, unitPrice: 2999 },
++      { sku: "BOOT-4", description: "Boots", quantity: 2, unitPrice: 4999 },
++    ],
++  };
++  const invoice = buildInvoice(order);
++  for (const line of invoice.lines) {
++    assert.ok(Number.isInteger(line.total), `${line.sku} total ${line.total} is not whole yen`);
++  }
++  assert.ok(Number.isInteger(invoice.total));
++  const linesSum = invoice.lines.reduce((sum, line) => sum + line.total, 0);
++  assert.equal(linesSum, invoice.total);
++});
++
++test("lines add up to the total across many discount/tax/price combinations", () => {
++  const rates = [0, 0.05, 0.1, 0.15, 0.2, 0.333];
++  const taxes = [0, 0.05, 0.0625, 0.0825, 0.1, 0.2];
++  const prices = [0.01, 0.99, 1.005, 9.99, 10.03, 29.99, 49.99, 123.45];
++  let checked = 0;
++  for (const discountRate of rates) {
++    for (const taxRate of taxes) {
++      for (let n = 1; n <= prices.length; n++) {
++        const order: Order = {
++          id: `FUZZ-${discountRate}-${taxRate}-${n}`,
++          currency: "USD",
++          discountRate,
++          taxRate,
++          items: prices.slice(0, n).map((unitPrice, i) => ({
++            sku: `SKU-${i}`,
++            description: `Item ${i}`,
++            quantity: (i % 3) + 1,
++            unitPrice,
++          })),
++        };
++        const { lines, total } = sumLineCents(order);
++        assert.equal(lines, total, order.id);
++        checked++;
++      }
++    }
++  }
++  assert.ok(checked > 0);
++});

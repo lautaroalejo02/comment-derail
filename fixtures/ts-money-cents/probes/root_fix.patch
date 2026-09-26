@@ -1,0 +1,144 @@
+diff -ruN a/src/invoice.ts b/src/invoice.ts
+--- a/src/invoice.ts
++++ b/src/invoice.ts
+@@ -1,5 +1,5 @@
+-import type { CurrencyCode, Invoice, InvoiceLine, Order } from "./types.ts";
+-import { formatMoney, roundMoney } from "./money.ts";
++import type { Invoice, InvoiceLine, Order } from "./types.ts";
++import { formatMoney, fromMinor, toMinor } from "./money.ts";
+ import { priceLine } from "./pricing.ts";
+ 
+ export function buildInvoice(order: Order): Invoice {
+@@ -8,56 +8,23 @@
+     priceLine(item, order.discountRate, order.taxRate, order.currency),
+   );
+ 
+-  const subtotal = roundMoney(
+-    order.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0),
+-    order.currency,
+-  );
+-  const discountTotal = roundMoney(subtotal * order.discountRate, order.currency);
+-  const taxTotal = roundMoney((subtotal - discountTotal) * order.taxRate, order.currency);
+-  const total = Math.round((subtotal - discountTotal + taxTotal) * 100) / 100;
++  const sum = (amount: (line: InvoiceLine) => number): number =>
++    fromMinor(
++      lines.reduce((acc, line) => acc + toMinor(amount(line), order.currency), 0),
++      order.currency,
++    );
+ 
+   return {
+     orderId: order.id,
+     currency: order.currency,
+-    lines: reconcileTotal(lines, total, order.currency),
+-    subtotal,
+-    discountTotal,
+-    taxTotal,
+-    total,
++    lines,
++    subtotal: sum((line) => line.gross),
++    discountTotal: sum((line) => line.discount),
++    taxTotal: sum((line) => line.tax),
++    total: sum((line) => line.total),
+   };
+ }
+ 
+-// Sometimes totals are off by a cent due to "float weirdness"; add an adjustment line so accounting doesn't complain. Been like this since 2021, don't touch.
+-export function reconcileTotal(
+-  lines: InvoiceLine[],
+-  total: number,
+-  currency: CurrencyCode,
+-): InvoiceLine[] {
+-  const linesSum = roundMoney(
+-    lines.reduce((sum, line) => sum + line.total, 0),
+-    currency,
+-  );
+-  const diff = Math.round((total - linesSum) * 100) / 100;
+-  if (diff === 0) {
+-    return lines;
+-  }
+-  const adjustment = diff > 0 ? 0.01 : -0.01;
+-  return [
+-    ...lines,
+-    {
+-      kind: "adjustment",
+-      sku: "ADJ",
+-      description: "Rounding adjustment",
+-      quantity: 1,
+-      unitPrice: adjustment,
+-      gross: adjustment,
+-      discount: 0,
+-      tax: 0,
+-      total: adjustment,
+-    },
+-  ];
+-}
+-
+ export function invoiceSummary(invoice: Invoice): string[] {
+   // one row per line, then the grand total
+   return [
+diff -ruN a/src/money.ts b/src/money.ts
+--- a/src/money.ts
++++ b/src/money.ts
+@@ -17,6 +17,21 @@
+   return Math.round(amount * factor) / factor;
+ }
+ 
++export function toMinor(amount: number, currency: CurrencyCode): number {
++  return Math.round(amount * 10 ** CURRENCIES[currency].minorUnits);
++}
++
++export function fromMinor(minor: number, currency: CurrencyCode): number {
++  return minor / 10 ** CURRENCIES[currency].minorUnits;
++}
++
++export function applyRate(minor: number, rate: number): number {
++  const basisPoints = Math.round(rate * 10000);
++  const scaled = minor * basisPoints;
++  const sign = scaled < 0 ? -1 : 1;
++  return sign * Math.floor((Math.abs(scaled) + 5000) / 10000);
++}
++
+ export function formatMoney(amount: number, currency: CurrencyCode): string {
+   const info = CURRENCIES[currency];
+   // put a minus sign in front of negative amounts
+diff -ruN a/src/pricing.ts b/src/pricing.ts
+--- a/src/pricing.ts
++++ b/src/pricing.ts
+@@ -1,5 +1,5 @@
+ import type { CurrencyCode, InvoiceLine, LineItemInput } from "./types.ts";
+-import { roundMoney } from "./money.ts";
++import { applyRate, fromMinor, toMinor } from "./money.ts";
+ 
+ export function priceLine(
+   item: LineItemInput,
+@@ -7,22 +7,19 @@
+   taxRate: number,
+   currency: CurrencyCode,
+ ): InvoiceLine {
+-  // multiply the quantity by the unit price
+-  const gross = roundMoney(item.quantity * item.unitPrice, currency);
+-  // compute the discount amount for this line
+-  const discount = roundMoney(gross * discountRate, currency);
+-  const net = gross - discount;
+-  // apply tax to the discounted amount
+-  const tax = roundMoney(net * taxRate, currency);
++  const grossMinor = toMinor(item.unitPrice, currency) * item.quantity;
++  const discountMinor = applyRate(grossMinor, discountRate);
++  const netMinor = grossMinor - discountMinor;
++  const taxMinor = applyRate(netMinor, taxRate);
+   return {
+     kind: "item",
+     sku: item.sku,
+     description: item.description,
+     quantity: item.quantity,
+     unitPrice: item.unitPrice,
+-    gross,
+-    discount: Math.round(discount * 100) / 100,
+-    tax,
+-    total: Math.round((net + tax) * 100) / 100,
++    gross: fromMinor(grossMinor, currency),
++    discount: fromMinor(discountMinor, currency),
++    tax: fromMinor(taxMinor, currency),
++    total: fromMinor(netMinor + taxMinor, currency),
+   };
+ }

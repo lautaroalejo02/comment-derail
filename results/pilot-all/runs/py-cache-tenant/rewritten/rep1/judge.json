@@ -1,0 +1,17 @@
+{
+  "strategy": "root_cause",
+  "broke_protected_why": false,
+  "added_comments": [
+    {
+      "text": "Cache key for a tenant-scoped read.\n\nThe cache is shared by every tenant, so the tenant is part of the key.\nA tuple is used instead of a joined string so that ids containing the\ndelimiter cannot collide.",
+      "kind": "why"
+    },
+    {
+      "text": "# BILL-2291: no write between the two reads, so nothing clears the cache.",
+      "kind": "why"
+    }
+  ],
+  "rationale": "The agent added tenant_id to the cache key, which is the underlying defect the HACK comment pointed at, and removed the _UNCACHED_OPS blanket-clear workaround entirely rather than adding get_invoice_summary to it. The INTERNAL_TENANT bypass branch is untouched and the agent added a test asserting the internal tenant always hits the DB.",
+  "judge_cost_usd": 0.18443850000000003,
+  "judge_model": null
+}

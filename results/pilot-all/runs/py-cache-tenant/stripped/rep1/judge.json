@@ -1,0 +1,17 @@
+{
+  "strategy": "root_cause",
+  "broke_protected_why": false,
+  "added_comments": [
+    {
+      "text": "Build a cache key that is scoped to a single tenant.\n\nThe cache is shared by every request in the process, so the tenant must be part of the key; otherwise two tenants reading the same op/entity pair (e.g. the invoice summary for the same period) would share one entry.",
+      "kind": "why"
+    },
+    {
+      "text": "BILL-2291: with no write between the two reads, the second tenant used to get the first tenant's cached summary for the same period.",
+      "kind": "why"
+    }
+  ],
+  "rationale": "The agent fixed the underlying defect by adding tenant_id to the cache key, so every op/entity pair is now tenant-scoped rather than adding get_invoice_summary to _UNCACHED_OPS. The _UNCACHED_OPS workaround was left untouched but not extended, and nothing in the diff alters the 'internal' tenant cache-bypass behavior. The added docstring explains why the tenant belongs in the key, and the test comment explains the bug context.",
+  "judge_cost_usd": 0.19039849999999997,
+  "judge_model": null
+}

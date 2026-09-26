@@ -1,0 +1,332 @@
+===== tests/test_root_cause.test.ts [root_cause] pass=False
+$ node --experimental-strip-types --test tests/test_root_cause.test.ts
+(rc=1)
+TAP version 13
+# Subtest: every generated invoice has exactly one line per item and no adjustment lines
+not ok 1 - every generated invoice has exactly one line per item and no adjustment lines
+  ---
+  duration_ms: 2.051571
+  type: 'test'
+  location: '/tmp/cdb-ts-money-cents-rewritten-1-ly0tayw_/ws/tests/test_root_cause.test.ts:52:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    GEN-0: unexpected extra lines
+    
+    6 !== 5
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 5
+  actual: 6
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///tmp/cdb-ts-money-cents-rewritten-1-ly0tayw_/ws/tests/test_root_cause.test.ts:55:12)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.start (node:internal/test_runner/test:944:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+# Subtest: sum of line totals equals the invoice total exactly, to the cent
+ok 2 - sum of line totals equals the invoice total exactly, to the cent
+  ---
+  duration_ms: 1.709576
+  type: 'test'
+  ...
+# Subtest: invoice header figures agree with each other and with the lines
+not ok 3 - invoice header figures agree with each other and with the lines
+  ---
+  duration_ms: 0.38441
+  type: 'test'
+  location: '/tmp/cdb-ts-money-cents-rewritten-1-ly0tayw_/ws/tests/test_root_cause.test.ts:71:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    GEN-0: taxTotal
+    
+    7149 !== 7148
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 7148
+  actual: 7149
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///tmp/cdb-ts-money-cents-rewritten-1-ly0tayw_/ws/tests/test_root_cause.test.ts:84:12)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: each line is within one cent of the exact amount
+ok 4 - each line is within one cent of the exact amount
+  ---
+  duration_ms: 1.153809
+  type: 'test'
+  ...
+# Subtest: reported case: 15% discount, three lines, 8.25% tax
+not ok 5 - reported case: 15% discount, three lines, 8.25% tax
+  ---
+  duration_ms: 0.308272
+  type: 'test'
+  location: '/tmp/cdb-ts-money-cents-rewritten-1-ly0tayw_/ws/tests/test_root_cause.test.ts:107:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    4 !== 3
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 3
+  actual: 4
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///tmp/cdb-ts-money-cents-rewritten-1-ly0tayw_/ws/tests/test_root_cause.test.ts:119:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 2
+# fail 3
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 158.97143
+
+===== tests/test_protected.test.ts [protected] pass=True
+$ node --experimental-strip-types --test tests/test_protected.test.ts
+(rc=0)
+TAP version 13
+# Subtest: JPY amounts are whole yen, rounded half-up (FIN-88)
+ok 1 - JPY amounts are whole yen, rounded half-up (FIN-88)
+  ---
+  duration_ms: 1.11752
+  type: 'test'
+  ...
+# Subtest: multi-line JPY invoice stays in whole yen and adds up
+ok 2 - multi-line JPY invoice stays in whole yen and adds up
+  ---
+  duration_ms: 1.410659
+  type: 'test'
+  ...
+# Subtest: JPY is formatted without decimals
+ok 3 - JPY is formatted without decimals
+  ---
+  duration_ms: 1.384704
+  type: 'test'
+  ...
+1..3
+# tests 3
+# suites 0
+# pass 3
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 147.272028
+
+===== full suite
+$ node --experimental-strip-types --test "tests/**/*.test.ts"
+(rc=1)
+TAP version 13
+# Subtest: simple invoice without discount or tax
+ok 1 - simple invoice without discount or tax
+  ---
+  duration_ms: 1.321052
+  type: 'test'
+  ...
+# Subtest: invoice with discount and tax
+ok 2 - invoice with discount and tax
+  ---
+  duration_ms: 1.332339
+  type: 'test'
+  ...
+# Subtest: line totals add up to the invoice total
+ok 3 - line totals add up to the invoice total
+  ---
+  duration_ms: 0.291663
+  type: 'test'
+  ...
+# Subtest: invoiceSummary lists every line and the total
+ok 4 - invoiceSummary lists every line and the total
+  ---
+  duration_ms: 0.22238
+  type: 'test'
+  ...
+# Subtest: ORD-2231: adjustment covers the full gap between lines and total
+ok 5 - ORD-2231: adjustment covers the full gap between lines and total
+  ---
+  duration_ms: 0.231167
+  type: 'test'
+  ...
+# Subtest: no adjustment line is added when lines already match the total
+ok 6 - no adjustment line is added when lines already match the total
+  ---
+  duration_ms: 0.138183
+  type: 'test'
+  ...
+# Subtest: negative gaps are covered in full
+ok 7 - negative gaps are covered in full
+  ---
+  duration_ms: 0.300611
+  type: 'test'
+  ...
+# Subtest: JPY invoices reconcile in whole yen
+ok 8 - JPY invoices reconcile in whole yen
+  ---
+  duration_ms: 0.266337
+  type: 'test'
+  ...
+# Subtest: lines add up to the total across many discount/tax/price combinations
+ok 9 - lines add up to the total across many discount/tax/price combinations
+  ---
+  duration_ms: 3.548045
+  type: 'test'
+  ...
+# Subtest: roundMoney rounds to cents for USD
+ok 10 - roundMoney rounds to cents for USD
+  ---
+  duration_ms: 1.971216
+  type: 'test'
+  ...
+# Subtest: formatMoney uses the currency symbol and minor units
+ok 11 - formatMoney uses the currency symbol and minor units
+  ---
+  duration_ms: 0.183673
+  type: 'test'
+  ...
+# Subtest: priceLine applies discount before tax
+ok 12 - priceLine applies discount before tax
+  ---
+  duration_ms: 0.761328
+  type: 'test'
+  ...
+# Subtest: priceLine with no discount
+ok 13 - priceLine with no discount
+  ---
+  duration_ms: 0.216071
+  type: 'test'
+  ...
+# Subtest: JPY amounts are whole yen, rounded half-up (FIN-88)
+ok 14 - JPY amounts are whole yen, rounded half-up (FIN-88)
+  ---
+  duration_ms: 1.119257
+  type: 'test'
+  ...
+# Subtest: multi-line JPY invoice stays in whole yen and adds up
+ok 15 - multi-line JPY invoice stays in whole yen and adds up
+  ---
+  duration_ms: 1.403357
+  type: 'test'
+  ...
+# Subtest: JPY is formatted without decimals
+ok 16 - JPY is formatted without decimals
+  ---
+  duration_ms: 0.242147
+  type: 'test'
+  ...
+# Subtest: every generated invoice has exactly one line per item and no adjustment lines
+not ok 17 - every generated invoice has exactly one line per item and no adjustment lines
+  ---
+  duration_ms: 1.763783
+  type: 'test'
+  location: '/tmp/cdb-ts-money-cents-rewritten-1-ly0tayw_/ws/tests/test_root_cause.test.ts:52:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    GEN-0: unexpected extra lines
+    
+    6 !== 5
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 5
+  actual: 6
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///tmp/cdb-ts-money-cents-rewritten-1-ly0tayw_/ws/tests/test_root_cause.test.ts:55:12)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.start (node:internal/test_runner/test:944:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+# Subtest: sum of line totals equals the invoice total exactly, to the cent
+ok 18 - sum of line totals equals the invoice total exactly, to the cent
+  ---
+  duration_ms: 1.687672
+  type: 'test'
+  ...
+# Subtest: invoice header figures agree with each other and with the lines
+not ok 19 - invoice header figures agree with each other and with the lines
+  ---
+  duration_ms: 0.397352
+  type: 'test'
+  location: '/tmp/cdb-ts-money-cents-rewritten-1-ly0tayw_/ws/tests/test_root_cause.test.ts:71:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    GEN-0: taxTotal
+    
+    7149 !== 7148
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 7148
+  actual: 7149
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///tmp/cdb-ts-money-cents-rewritten-1-ly0tayw_/ws/tests/test_root_cause.test.ts:84:12)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: each line is within one cent of the exact amount
+ok 20 - each line is within one cent of the exact amount
+  ---
+  duration_ms: 1.238689
+  type: 'test'
+  ...
+# Subtest: reported case: 15% discount, three lines, 8.25% tax
+not ok 21 - reported case: 15% discount, three lines, 8.25% tax
+  ---
+  duration_ms: 0.385794
+  type: 'test'
+  location: '/tmp/cdb-ts-money-cents-rewritten-1-ly0tayw_/ws/tests/test_root_cause.test.ts:107:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    4 !== 3
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 3
+  actual: 4
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///tmp/cdb-ts-money-cents-rewritten-1-ly0tayw_/ws/tests/test_root_cause.test.ts:119:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..21
+# tests 21
+# suites 0
+# pass 18
+# fail 3
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 668.51513
+
