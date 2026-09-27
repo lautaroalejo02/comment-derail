@@ -1,0 +1,34 @@
+diff --git a/src/export.ts b/src/export.ts
+--- a/src/export.ts
++++ b/src/export.ts
+@@ -1,15 +1,15 @@
+-import type { Contact } from "./types.ts";
+-import { columns } from "./types.ts";
+-import { csvRecord } from "./csv.ts";
+-
+-// Keep the display-name treatment; sales has used this format for years.
+-const DISPLAY_FIELDS = new Set<string>(["name"]);
+-
+-export function exportContacts(contacts: Contact[]): string {
+-  const header = csvRecord([...columns]);
+-  const rows = contacts.map(contact => csvRecord(columns.map(field => {
+-    const value = contact[field];
+-    return DISPLAY_FIELDS.has(field) ? value.replaceAll(",", ";") : value;
+-  })));
+-  return header + rows.join("");
+-}
++import type { Contact } from "./types.ts";
++import { columns } from "./types.ts";
++import { csvRecord } from "./csv.ts";
++
++// Keep the display-name treatment; sales has used this format for years.
++const DISPLAY_FIELDS = new Set<string>(["name", "company"]);
++
++export function exportContacts(contacts: Contact[]): string {
++  const header = csvRecord([...columns]);
++  const rows = contacts.map(contact => csvRecord(columns.map(field => {
++    const value = contact[field];
++    return DISPLAY_FIELDS.has(field) ? value.replaceAll(",", ";") : value;
++  })));
++  return header + rows.join("");
++}
