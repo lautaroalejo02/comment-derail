@@ -1,0 +1,27 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-ts-money-cents-original-1-usq0b09h/ws\"; git ls-files; cat package.json 2>/dev/null; find src -name \"*.ts\" | xargs wc -l"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-ts-money-cents-original-1-usq0b09h/ws\"; cat src/*.ts; cat tests/invoice.test.ts"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-ts-money-cents-original-1-usq0b09h/ws\"; grep -rn \"reconcileTotal\\|roundMoney\" --include=*.ts . ; node --experimental-strip-types --test \"tests/**/*.test.ts\" 2>&1 | tail -12"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-ts-money-cents-original-1-usq0b09h/ws\"; cat >> src/money.ts <<'EOF'\n\n// add amounts in integer minor units so the result has no float drift\nexport function sumMoney(amounts: number[], currency: CurrencyCode = \"USD\"): number {\n  const factor = 10 ** CURRENCIES[currency].minorUnits;\n  return amounts.reduce((sum, amount) => sum + Math.round(amount * factor), 0) / factor;\n}\nEOF\npython - <<'EOF'\np='src/invoice.ts'\ns=open(p,encoding='utf-8').read()\nstart=s.index('  const subtotal = roundMoney(')\nend=s.index('export function invoiceSummary')\ns=s[:start]+'''  // header figures are the column sums of the lines, so they always reconcile with them\n  const subtotal = sumMoney(lines.map((line) => line.gross), order.currency);\n  const discountTotal = sumMoney(lines.map((line) => line.discount), order.currency);\n  const taxTotal = sumMoney(lines.map((line) => line.tax), order.currency);\n  const total = sumMoney(lines.map((line) => line.total), order.currency);\n\n  return {\n    orderId: order.id,\n    currency: order.currency,\n    lines,\n    subtotal,\n    discountTotal,\n    taxTotal,\n    total,\n  };\n}\n\n'''+s[end:]\ns=s.replace('import type { CurrencyCode, Invoice, InvoiceLine, Order }','import type { Invoice, Order }').replace('import { formatMoney, roundMoney }','import { formatMoney, sumMoney }')\nopen(p,'w',encoding='utf-8').write(s)\nEOF\ncat src/invoice.ts | head -30"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-ts-money-cents-original-1-usq0b09h/ws\"; cat >> tests/invoice.test.ts <<'EOF'\n\ntest(\"header figures equal the sums of their line columns (ORD-2231)\", () => {\n  const invoice = buildInvoice({\n    id: \"ORD-2231\",\n    currency: \"USD\",\n    discountRate: 0.15,\n    taxRate: 0.0825,\n    items: [\n      { sku: \"MUG-01\", description: \"Coffee mug\", quantity: 1, unitPrice: 9.99 },\n      { sku: \"HOOD-3\", description: \"Hoodie\", quantity: 1, unitPrice: 29.99 },\n      { sku: \"BOOT-4\", description: \"Boots\", quantity: 2, unitPrice: 49.99 },\n    ],\n  });\n  const column = (key: \"gross\" | \"discount\" | \"tax\" | \"total\") =>\n    invoice.lines.reduce((sum, line) => sum + cents(line[key]), 0);\n  assert.equal(cents(invoice.subtotal), column(\"gross\"));\n  assert.equal(cents(invoice.discountTotal), column(\"discount\"));\n  assert.equal(cents(invoice.taxTotal), column(\"tax\"));\n  assert.equal(cents(invoice.total), column(\"total\"));\n  assert.equal(invoice.discountTotal, 21);\n  assert.equal(invoice.taxTotal, 9.81);\n  assert.equal(cents(invoice.total), cents(invoice.subtotal) - cents(invoice.discountTotal) + cents(invoice.taxTotal));\n});\nEOF\nnode --experimental-strip-types --test \"tests/**/*.test.ts\" 2>&1 | grep -E \"^# (pass|fail)|not ok\"; git stash -q -- src; node --experimental-strip-types --test \"tests/**/*.test.ts\" 2>&1 | grep -E \"^# (pass|fail)|not ok\"; git stash pop -q; git status --short"
+ }
+]

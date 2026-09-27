@@ -1,0 +1,78 @@
+diff --git a/src/invoice.ts b/src/invoice.ts
+index 6c11f50..5cd8be2 100644
+--- a/src/invoice.ts
++++ b/src/invoice.ts
+@@ -1,5 +1,5 @@
+ import type { CurrencyCode, Invoice, InvoiceLine, Order } from "./types.ts";
+-import { formatMoney, roundMoney } from "./money.ts";
++import { CURRENCIES, formatMoney, roundMoney } from "./money.ts";
+ import { priceLine } from "./pricing.ts";
+ 
+ export function buildInvoice(order: Order): Invoice {
+@@ -8,13 +8,12 @@ export function buildInvoice(order: Order): Invoice {
+     priceLine(item, order.discountRate, order.taxRate, order.currency),
+   );
+ 
+-  const subtotal = roundMoney(
+-    order.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0),
+-    order.currency,
+-  );
+-  const discountTotal = roundMoney(subtotal * order.discountRate, order.currency);
+-  const taxTotal = roundMoney((subtotal - discountTotal) * order.taxRate, order.currency);
+-  const total = Math.round((subtotal - discountTotal + taxTotal) * 100) / 100;
++  // Header figures are the column sums of the lines (summed in minor units to
++  // avoid float drift), so auditors recomputing them from the lines always match.
++  const subtotal = sumColumn(lines, "gross", order.currency);
++  const discountTotal = sumColumn(lines, "discount", order.currency);
++  const taxTotal = sumColumn(lines, "tax", order.currency);
++  const total = sumColumn(lines, "total", order.currency);
+ 
+   return {
+     orderId: order.id,
+@@ -27,6 +26,15 @@ export function buildInvoice(order: Order): Invoice {
+   };
+ }
+ 
++function sumColumn(
++  lines: InvoiceLine[],
++  column: "gross" | "discount" | "tax" | "total",
++  currency: CurrencyCode,
++): number {
++  const factor = 10 ** CURRENCIES[currency].minorUnits;
++  const minor = lines.reduce((sum, line) => sum + Math.round(line[column] * factor), 0);
++  return minor / factor;
++}
+ 
+ export function reconcileTotal(
+   lines: InvoiceLine[],
+diff --git a/tests/invoice.test.ts b/tests/invoice.test.ts
+index f9c2f91..55ce64a 100644
+--- a/tests/invoice.test.ts
++++ b/tests/invoice.test.ts
+@@ -94,3 +94,26 @@ test("invoiceSummary lists every line and the total", () => {
+   });
+   assert.deepEqual(invoiceSummary(invoice), ["MUG-01\t3\t$24.00", "TOTAL\t\t$24.00"]);
+ });
++
++test("header figures equal the column sums of the lines (ORD-2231)", () => {
++  const invoice = buildInvoice({
++    id: "ORD-2231",
++    currency: "USD",
++    discountRate: 0.15,
++    taxRate: 0.0825,
++    items: [
++      { sku: "MUG-01", description: "Coffee mug", quantity: 1, unitPrice: 9.99 },
++      { sku: "HOOD-3", description: "Hoodie", quantity: 1, unitPrice: 29.99 },
++      { sku: "BOOT-4", description: "Boots", quantity: 2, unitPrice: 49.99 },
++    ],
++  });
++  const column = (key: "gross" | "discount" | "tax" | "total") =>
++    invoice.lines.reduce((sum, line) => sum + cents(line[key]), 0);
++  assert.equal(cents(invoice.subtotal), column("gross"));
++  assert.equal(cents(invoice.discountTotal), column("discount"));
++  assert.equal(cents(invoice.taxTotal), column("tax"));
++  assert.equal(cents(invoice.total), column("total"));
++  assert.equal(invoice.discountTotal, 21);
++  assert.equal(invoice.taxTotal, 9.81);
++  assert.equal(invoice.total, 128.77);
++});

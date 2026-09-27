@@ -1,0 +1,256 @@
+diff --git a/src/invoice.ts b/src/invoice.ts
+index f32ca81..1f305f3 100644
+--- a/src/invoice.ts
++++ b/src/invoice.ts
+@@ -1,62 +1,34 @@
+-import type { CurrencyCode, Invoice, InvoiceLine, Order } from "./types.ts";
+-import { formatMoney, roundMoney } from "./money.ts";
+-import { priceLine } from "./pricing.ts";
++import type { Invoice, Order } from "./types.ts";
++import { formatMoney, fromMinor } from "./money.ts";
++import { priceLine, priceLineMinor } from "./pricing.ts";
+ 
+ export function buildInvoice(order: Order): Invoice {
+   const lines = order.items.map((item) =>
+     priceLine(item, order.discountRate, order.taxRate, order.currency),
+   );
+ 
+-  const subtotal = roundMoney(
+-    order.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0),
+-    order.currency,
+-  );
+-  const discountTotal = roundMoney(subtotal * order.discountRate, order.currency);
+-  const taxTotal = roundMoney((subtotal - discountTotal) * order.taxRate, order.currency);
+-  const total = Math.round((subtotal - discountTotal + taxTotal) * 100) / 100;
++  // Header figures are the sums of the line columns (in integer minor units), so an
++  // auditor re-adding any column of the invoice lines gets exactly the header value.
++  const sums = { gross: 0, discount: 0, tax: 0, total: 0 };
++  for (const item of order.items) {
++    const amounts = priceLineMinor(item, order.discountRate, order.taxRate, order.currency);
++    sums.gross += amounts.gross;
++    sums.discount += amounts.discount;
++    sums.tax += amounts.tax;
++    sums.total += amounts.total;
++  }
+ 
+   return {
+     orderId: order.id,
+     currency: order.currency,
+-    lines: reconcileTotal(lines, total, order.currency),
+-    subtotal,
+-    discountTotal,
+-    taxTotal,
+-    total,
++    lines,
++    subtotal: fromMinor(sums.gross, order.currency),
++    discountTotal: fromMinor(sums.discount, order.currency),
++    taxTotal: fromMinor(sums.tax, order.currency),
++    total: fromMinor(sums.total, order.currency),
+   };
+ }
+ 
+-// HACK(2021-06-14, #402): adjustment line masks float-dollar arithmetic with inconsistent rounding — remove when money is integer cents
+-export function reconcileTotal(
+-  lines: InvoiceLine[],
+-  total: number,
+-  currency: CurrencyCode,
+-): InvoiceLine[] {
+-  const linesSum = roundMoney(
+-    lines.reduce((sum, line) => sum + line.total, 0),
+-    currency,
+-  );
+-  const diff = Math.round((total - linesSum) * 100) / 100;
+-  if (diff === 0) {
+-    return lines;
+-  }
+-  const adjustment = diff > 0 ? 0.01 : -0.01;
+-  return [
+-    ...lines,
+-    {
+-      kind: "adjustment",
+-      sku: "ADJ",
+-      description: "Rounding adjustment",
+-      quantity: 1,
+-      unitPrice: adjustment,
+-      gross: adjustment,
+-      discount: 0,
+-      tax: 0,
+-      total: adjustment,
+-    },
+-  ];
+-}
+-
+ export function invoiceSummary(invoice: Invoice): string[] {
+   return [
+     ...invoice.lines.map((line) => `${line.sku}\t${line.quantity}\t${formatMoney(line.total, invoice.currency)}`),
+diff --git a/src/money.ts b/src/money.ts
+index 6a55737..ff58ba0 100644
+--- a/src/money.ts
++++ b/src/money.ts
+@@ -12,9 +12,41 @@ export const CURRENCIES: Record<CurrencyCode, CurrencyInfo> = {
+   JPY: { symbol: "¥", minorUnits: 0 },
+ };
+ 
++function minorFactor(currency: CurrencyCode): number {
++  return 10 ** CURRENCIES[currency].minorUnits;
++}
++
+ export function roundMoney(amount: number, currency: CurrencyCode = "USD"): number {
+-  const factor = 10 ** CURRENCIES[currency].minorUnits;
+-  return Math.round(amount * factor) / factor;
++  return fromMinor(toMinor(amount, currency), currency);
++}
++
++// Converts a decimal amount to an integer count of minor units (cents), rounding half-up.
++export function toMinor(amount: number, currency: CurrencyCode): number {
++  // Round to 6 decimals first so float noise (e.g. 1.005 * 100 = 100.49999...) doesn't flip a half-up tie.
++  const scaled = Math.round(amount * minorFactor(currency) * 1e6) / 1e6;
++  return Math.round(scaled);
++}
++
++export function fromMinor(minor: number, currency: CurrencyCode): number {
++  return minor / minorFactor(currency);
++}
++
++const RATE_SCALE = 1_000_000_000n;
++
++// Applies a decimal rate (e.g. 0.0825) to an integer minor-unit amount using exact
++// integer arithmetic, rounding half-up to the nearest minor unit.
++export function applyRate(minor: number, rate: number): number {
++  const numerator = BigInt(minor) * BigInt(Math.round(rate * Number(RATE_SCALE)));
++  let quotient = numerator / RATE_SCALE;
++  let remainder = numerator % RATE_SCALE;
++  if (remainder < 0n) {
++    remainder += RATE_SCALE;
++    quotient -= 1n;
++  }
++  if (remainder * 2n >= RATE_SCALE) {
++    quotient += 1n;
++  }
++  return Number(quotient);
+ }
+ 
+ export function formatMoney(amount: number, currency: CurrencyCode): string {
+diff --git a/src/pricing.ts b/src/pricing.ts
+index 431b0e7..3b35661 100644
+--- a/src/pricing.ts
++++ b/src/pricing.ts
+@@ -1,5 +1,26 @@
+ import type { CurrencyCode, InvoiceLine, LineItemInput } from "./types.ts";
+-import { roundMoney } from "./money.ts";
++import { applyRate, fromMinor, toMinor } from "./money.ts";
++
++// Line amounts in integer minor units; the invoice header is built by summing these.
++export interface LineAmountsMinor {
++  gross: number;
++  discount: number;
++  tax: number;
++  total: number;
++}
++
++export function priceLineMinor(
++  item: LineItemInput,
++  discountRate: number,
++  taxRate: number,
++  currency: CurrencyCode,
++): LineAmountsMinor {
++  const gross = item.quantity * toMinor(item.unitPrice, currency);
++  const discount = applyRate(gross, discountRate);
++  const net = gross - discount;
++  const tax = applyRate(net, taxRate);
++  return { gross, discount, tax, total: net + tax };
++}
+ 
+ export function priceLine(
+   item: LineItemInput,
+@@ -7,19 +28,16 @@ export function priceLine(
+   taxRate: number,
+   currency: CurrencyCode,
+ ): InvoiceLine {
+-  const gross = roundMoney(item.quantity * item.unitPrice, currency);
+-  const discount = roundMoney(gross * discountRate, currency);
+-  const net = gross - discount;
+-  const tax = roundMoney(net * taxRate, currency);
++  const amounts = priceLineMinor(item, discountRate, taxRate, currency);
+   return {
+     kind: "item",
+     sku: item.sku,
+     description: item.description,
+     quantity: item.quantity,
+     unitPrice: item.unitPrice,
+-    gross,
+-    discount: Math.round(discount * 100) / 100,
+-    tax,
+-    total: Math.round((net + tax) * 100) / 100,
++    gross: fromMinor(amounts.gross, currency),
++    discount: fromMinor(amounts.discount, currency),
++    tax: fromMinor(amounts.tax, currency),
++    total: fromMinor(amounts.total, currency),
+   };
+ }
+diff --git a/tests/invoice.test.ts b/tests/invoice.test.ts
+index f9c2f91..f9b53eb 100644
+--- a/tests/invoice.test.ts
++++ b/tests/invoice.test.ts
+@@ -94,3 +94,47 @@ test("invoiceSummary lists every line and the total", () => {
+   });
+   assert.deepEqual(invoiceSummary(invoice), ["MUG-01\t3\t$24.00", "TOTAL\t\t$24.00"]);
+ });
++
++test("header figures equal the sums of the line columns (ORD-2231)", () => {
++  const orders: Order[] = [
++    {
++      id: "ORD-2231",
++      currency: "USD",
++      discountRate: 0.15,
++      taxRate: 0.0825,
++      items: [
++        { sku: "MUG-01", description: "Mug", quantity: 1, unitPrice: 9.99 },
++        { sku: "HOOD-3", description: "Hoodie", quantity: 1, unitPrice: 29.99 },
++        { sku: "BOOT-4", description: "Boots", quantity: 2, unitPrice: 49.99 },
++      ],
++    },
++    {
++      id: "ORD-2232",
++      currency: "JPY",
++      discountRate: 0.15,
++      taxRate: 0.1,
++      items: [
++        { sku: "TEA-1", description: "Tea", quantity: 3, unitPrice: 333 },
++        { sku: "CUP-2", description: "Cup", quantity: 1, unitPrice: 1299 },
++        { sku: "POT-3", description: "Pot", quantity: 1, unitPrice: 4550 },
++      ],
++    },
++  ];
++  for (const order of orders) {
++    const invoice = buildInvoice(order);
++    const sum = (key: "gross" | "discount" | "tax" | "total") =>
++      invoice.lines.reduce((acc, line) => acc + cents(line[key]), 0);
++    assert.ok(invoice.lines.every((line) => line.kind === "item"), order.id);
++    assert.equal(cents(invoice.subtotal), sum("gross"), `${order.id} subtotal`);
++    assert.equal(cents(invoice.discountTotal), sum("discount"), `${order.id} discountTotal`);
++    assert.equal(cents(invoice.taxTotal), sum("tax"), `${order.id} taxTotal`);
++    assert.equal(cents(invoice.total), sum("total"), `${order.id} total`);
++  }
++
++  const invoice = buildInvoice(orders[0]);
++  assert.equal(invoice.subtotal, 139.96);
++  assert.equal(invoice.discountTotal, 21);
++  assert.equal(invoice.taxTotal, 9.81);
++  assert.equal(invoice.total, 128.77);
++  assert.equal(invoice.lines.length, 3);
++});
+diff --git a/tests/money.test.ts b/tests/money.test.ts
+index 33263c8..87a40e4 100644
+--- a/tests/money.test.ts
++++ b/tests/money.test.ts
+@@ -13,3 +13,9 @@ test("formatMoney uses the currency symbol and minor units", () => {
+   assert.equal(formatMoney(-3, "EUR"), "-€3.00");
+   assert.equal(formatMoney(0, "USD"), "$0.00");
+ });
++
++test("roundMoney rounds half-up despite float representation", () => {
++  assert.equal(roundMoney(1.005), 1.01);
++  assert.equal(roundMoney(4.4985 + 0.0015), 4.5);
++  assert.equal(roundMoney(2.5, "JPY"), 3);
++});

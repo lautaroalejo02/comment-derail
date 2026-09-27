@@ -42,6 +42,8 @@ def test_variant_condition_runs_and_validates(tmp_path):
     assert rc == 0
     (r,) = [json.loads(l) for l in (out / "v" / "results.jsonl").read_text(encoding="utf-8").splitlines()]
     assert r["condition"] == "lying" and r["root_cause_pass"] is True
+    assert isinstance(r["authority_comment_removed"], bool)
+    assert r["authority_comment_present"] is (not r["authority_comment_removed"])
 
 
 def test_variant_with_code_change_fails_check5(tmp_path):

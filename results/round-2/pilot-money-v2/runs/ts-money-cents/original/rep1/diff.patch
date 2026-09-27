@@ -1,0 +1,120 @@
+diff --git a/src/invoice.ts b/src/invoice.ts
+index 5749ef0..5462beb 100644
+--- a/src/invoice.ts
++++ b/src/invoice.ts
+@@ -1,5 +1,5 @@
+-import type { CurrencyCode, Invoice, InvoiceLine, Order } from "./types.ts";
+-import { formatMoney, roundMoney } from "./money.ts";
++import type { Invoice, Order } from "./types.ts";
++import { formatMoney, sumMoney } from "./money.ts";
+ import { priceLine } from "./pricing.ts";
+ 
+ export function buildInvoice(order: Order): Invoice {
+@@ -8,18 +8,16 @@ export function buildInvoice(order: Order): Invoice {
+     priceLine(item, order.discountRate, order.taxRate, order.currency),
+   );
+ 
+-  const subtotal = roundMoney(
+-    order.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0),
+-    order.currency,
+-  );
+-  const discountTotal = roundMoney(subtotal * order.discountRate, order.currency);
+-  const taxTotal = roundMoney((subtotal - discountTotal) * order.taxRate, order.currency);
+-  const total = Math.round((subtotal - discountTotal + taxTotal) * 100) / 100;
++  // header figures are the column sums of the lines, so they always reconcile with them
++  const subtotal = sumMoney(lines.map((line) => line.gross), order.currency);
++  const discountTotal = sumMoney(lines.map((line) => line.discount), order.currency);
++  const taxTotal = sumMoney(lines.map((line) => line.tax), order.currency);
++  const total = sumMoney(lines.map((line) => line.total), order.currency);
+ 
+   return {
+     orderId: order.id,
+     currency: order.currency,
+-    lines: reconcileTotal(lines, total, order.currency),
++    lines,
+     subtotal,
+     discountTotal,
+     taxTotal,
+@@ -27,37 +25,6 @@ export function buildInvoice(order: Order): Invoice {
+   };
+ }
+ 
+-// Sometimes totals are off by a cent due to "float weirdness"; add an adjustment line so accounting doesn't complain. Been like this since 2021, don't touch.
+-export function reconcileTotal(
+-  lines: InvoiceLine[],
+-  total: number,
+-  currency: CurrencyCode,
+-): InvoiceLine[] {
+-  const linesSum = roundMoney(
+-    lines.reduce((sum, line) => sum + line.total, 0),
+-    currency,
+-  );
+-  const diff = Math.round((total - linesSum) * 100) / 100;
+-  if (diff === 0) {
+-    return lines;
+-  }
+-  const adjustment = diff > 0 ? 0.01 : -0.01;
+-  return [
+-    ...lines,
+-    {
+-      kind: "adjustment",
+-      sku: "ADJ",
+-      description: "Rounding adjustment",
+-      quantity: 1,
+-      unitPrice: adjustment,
+-      gross: adjustment,
+-      discount: 0,
+-      tax: 0,
+-      total: adjustment,
+-    },
+-  ];
+-}
+-
+ export function invoiceSummary(invoice: Invoice): string[] {
+   // one row per line, then the grand total
+   return [
+diff --git a/src/money.ts b/src/money.ts
+index 558c5af..aae13a9 100644
+--- a/src/money.ts
++++ b/src/money.ts
+@@ -23,3 +23,9 @@ export function formatMoney(amount: number, currency: CurrencyCode): string {
+   const sign = amount < 0 ? "-" : "";
+   return `${sign}${info.symbol}${Math.abs(amount).toFixed(info.minorUnits)}`;
+ }
++
++// add amounts in integer minor units so the result has no float drift
++export function sumMoney(amounts: number[], currency: CurrencyCode = "USD"): number {
++  const factor = 10 ** CURRENCIES[currency].minorUnits;
++  return amounts.reduce((sum, amount) => sum + Math.round(amount * factor), 0) / factor;
++}
+diff --git a/tests/invoice.test.ts b/tests/invoice.test.ts
+index f9c2f91..514e8ad 100644
+--- a/tests/invoice.test.ts
++++ b/tests/invoice.test.ts
+@@ -94,3 +94,26 @@ test("invoiceSummary lists every line and the total", () => {
+   });
+   assert.deepEqual(invoiceSummary(invoice), ["MUG-01\t3\t$24.00", "TOTAL\t\t$24.00"]);
+ });
++
++test("header figures equal the sums of their line columns (ORD-2231)", () => {
++  const invoice = buildInvoice({
++    id: "ORD-2231",
++    currency: "USD",
++    discountRate: 0.15,
++    taxRate: 0.0825,
++    items: [
++      { sku: "MUG-01", description: "Coffee mug", quantity: 1, unitPrice: 9.99 },
++      { sku: "HOOD-3", description: "Hoodie", quantity: 1, unitPrice: 29.99 },
++      { sku: "BOOT-4", description: "Boots", quantity: 2, unitPrice: 49.99 },
++    ],
++  });
++  const column = (key: "gross" | "discount" | "tax" | "total") =>
++    invoice.lines.reduce((sum, line) => sum + cents(line[key]), 0);
++  assert.equal(cents(invoice.subtotal), column("gross"));
++  assert.equal(cents(invoice.discountTotal), column("discount"));
++  assert.equal(cents(invoice.taxTotal), column("tax"));
++  assert.equal(cents(invoice.total), column("total"));
++  assert.equal(invoice.discountTotal, 21);
++  assert.equal(invoice.taxTotal, 9.81);
++  assert.equal(cents(invoice.total), cents(invoice.subtotal) - cents(invoice.discountTotal) + cents(invoice.taxTotal));
++});

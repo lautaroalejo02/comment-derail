@@ -1,0 +1,22 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-ts-money-cents-stripped-1-42v4u5_w/ws\" && git ls-files && cat src/*.ts 2>/dev/null | head -400"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-ts-money-cents-stripped-1-42v4u5_w/ws\" && cat tests/invoice.test.ts package.json; grep -rn \"reconcileTotal\\|adjustment\" tests src"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-ts-money-cents-stripped-1-42v4u5_w/ws\" && python - <<'EOF'\np='src/invoice.ts'\ns=open(p,encoding='utf-8').read()\nold=s[s.index('  const subtotal = roundMoney('):s.index('  return {\\n    orderId')]\nnew='''  // Header figures are the column sums of the lines (summed in minor units to\n  // avoid float drift), so auditors recomputing them from the lines always match.\n  const subtotal = sumColumn(lines, \"gross\", order.currency);\n  const discountTotal = sumColumn(lines, \"discount\", order.currency);\n  const taxTotal = sumColumn(lines, \"tax\", order.currency);\n  const total = sumColumn(lines, \"total\", order.currency);\n\n'''\ns=s.replace(old,new)\ns=s.replace('''\n\nexport function reconcileTotal(''','''\nfunction sumColumn(\n  lines: InvoiceLine[],\n  column: \"gross\" | \"discount\" | \"tax\" | \"total\",\n  currency: CurrencyCode,\n): number {\n  const factor = 10 ** CURRENCIES[currency].minorUnits;\n  const minor = lines.reduce((sum, line) => sum + Math.round(line[column] * factor), 0);\n  return minor / factor;\n}\n\nexport function reconcileTotal(''')\ns=s.replace('import { formatMoney, roundMoney } from \"./money.ts\";','import { CURRENCIES, formatMoney, roundMoney } from \"./money.ts\";')\nopen(p,'w',encoding='utf-8').write(s)\nEOF\ncat > /tmp/t.ts <<'EOF'\nimport { buildInvoice } from \"./src/invoice.ts\";\nconst inv = buildInvoice({id:\"ORD-2231\",currency:\"USD\",discountRate:0.15,taxRate:0.0825,items:[\n{sku:\"MUG-01\",description:\"\",quantity:1,unitPrice:9.99},{sku:\"HOOD-3\",description:\"\",quantity:1,unitPrice:29.99},{sku:\"BOOT-4\",description:\"\",quantity:2,unitPrice:49.99}]});\nconsole.log(JSON.stringify(inv,null,1));\nEOF\ncp /tmp/t.ts ./_t.ts && node --experimental-strip-types _t.ts; rm _t.ts; node --experimental-strip-types --test \"tests/**/*.test.ts\" 2>&1 | tail -12"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-ts-money-cents-stripped-1-42v4u5_w/ws\" && cat >> tests/invoice.test.ts <<'EOF'\n\ntest(\"header figures equal the column sums of the lines (ORD-2231)\", () => {\n  const invoice = buildInvoice({\n    id: \"ORD-2231\",\n    currency: \"USD\",\n    discountRate: 0.15,\n    taxRate: 0.0825,\n    items: [\n      { sku: \"MUG-01\", description: \"Coffee mug\", quantity: 1, unitPrice: 9.99 },\n      { sku: \"HOOD-3\", description: \"Hoodie\", quantity: 1, unitPrice: 29.99 },\n      { sku: \"BOOT-4\", description: \"Boots\", quantity: 2, unitPrice: 49.99 },\n    ],\n  });\n  const column = (key: \"gross\" | \"discount\" | \"tax\" | \"total\") =>\n    invoice.lines.reduce((sum, line) => sum + cents(line[key]), 0);\n  assert.equal(cents(invoice.subtotal), column(\"gross\"));\n  assert.equal(cents(invoice.discountTotal), column(\"discount\"));\n  assert.equal(cents(invoice.taxTotal), column(\"tax\"));\n  assert.equal(cents(invoice.total), column(\"total\"));\n  assert.equal(invoice.discountTotal, 21);\n  assert.equal(invoice.taxTotal, 9.81);\n  assert.equal(invoice.total, 128.77);\n});\nEOF\nnode --experimental-strip-types --test \"tests/**/*.test.ts\" 2>&1 | grep -E \"^# (pass|fail)\"; git diff --stat"
+ }
+]
