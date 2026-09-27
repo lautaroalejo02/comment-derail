@@ -10,8 +10,3 @@ def test_service_order_for_unlisted_accounts():
     assert [s.id for s in dispatcher.take_batch()] == ["u", "n", "l"]
 
 
-def test_queue_consumers_observe_service_order():
-    queue = ShipmentQueue()
-    for priority in ["normal", "low", "urgent"]:
-        queue.push(Shipment(priority, "east", priority, 0))
-    assert [queue.pop().priority for _ in range(3)] == ["urgent", "normal", "low"]

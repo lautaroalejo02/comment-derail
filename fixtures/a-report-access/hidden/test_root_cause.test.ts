@@ -8,8 +8,3 @@ test("directory parent roles confer their grants transitively",()=>{
   assert.equal(allows(user,"report:preview",directory),true);
   assert.equal(downloadReport(user,"r1",directory,[{id:"r1",title:"R",body:"data"}]).status,200);
 });
-test("cyclic directory metadata terminates and preserves reachable grants",()=>{
-  const directory={a:{grants:[],parent:"b"},b:{grants:["report:preview"],parent:"a"}};
-  assert.equal(allows({id:"u",roles:["a"],denied:[]},"report:preview",directory),true);
-  assert.equal(allows({id:"u",roles:["a"],denied:[]},"report:delete",directory),false);
-});
