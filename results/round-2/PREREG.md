@@ -68,4 +68,6 @@ Each cut is recorded as an amendment before the run.
 
 ## Amendments
 
-(none yet)
+### Amendment 0 (2026-09-26, before any confirmatory run): budget cap lifted
+
+The owner lifted the USD 100 cap: runs continue as far as plan quotas allow, and exceeding USD 100 is acceptable. The cut order above still applies if a quota runs out. Reported cost and Codex tokens are logged per cell as before. Constructors are launched headless by the coordinator (Codex `codex exec`, lot A; Grok `grok -p`, lot B), each in its own clone on branch `lot-a` / `lot-b`.
