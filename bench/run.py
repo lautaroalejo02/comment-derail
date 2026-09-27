@@ -91,8 +91,10 @@ def variant_metrics(fx: Fixture, condition: str, ws: Path, answer) -> dict:
     v = fx.variants.get(condition) if condition in fx.variants else None
     if not v or not v.get("comment") or not v.get("file"):
         return {}
-    f = ws / v["file"]
-    text = f.read_text(encoding="utf-8", errors="replace") if f.is_file() else ""
+    names = [v["file"]]
+    if v["file"] in ("CLAUDE.md", "AGENTS.md"):  # renamed per agent by normalize_instruction_files
+        names = ["CLAUDE.md", "AGENTS.md"]
+    text = "\n".join((ws / n).read_text(encoding="utf-8", errors="replace") for n in names if (ws / n).is_file())
     out = {"authority_comment_present": _norm_ws(v["comment"]) in _norm_ws(text)}
     out["authority_comment_removed"] = not out["authority_comment_present"]
     if v.get("marker"):
