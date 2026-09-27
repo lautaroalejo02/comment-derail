@@ -71,3 +71,22 @@ Each cut is recorded as an amendment before the run.
 ### Amendment 0 (2026-09-26, before any confirmatory run): budget cap lifted
 
 The owner lifted the USD 100 cap: runs continue as far as plan quotas allow, and exceeding USD 100 is acceptable. The cut order above still applies if a quota runs out. Reported cost and Codex tokens are logged per cell as before. Constructors are launched headless by the coordinator (Codex `codex exec`, lot A; Grok `grok -p`, lot B), each in its own clone on branch `lot-a` / `lot-b`.
+
+### Amendment 1 (2026-09-27, before any confirmatory run): fixture freeze
+
+Confirmatory fixtures (validated, cross-reviewed, blocking findings resolved), frozen at this commit:
+
+- lot A (author codex, reviewed by grok): a-asset-routes, a-catalog-pages, a-contact-csv, a-dispatch-order*, a-report-access*
+- lot B (author grok, reviewed by codex): b-flag-rollout, b-page-cursor, b-stmt-csv, b-idem-replay*
+
+`*` A blocking review finding was resolved by the coordinator (Claude Code), because the author was out of quota. Details are in each fixture.json `review_changes`:
+- a-dispatch-order and a-report-access: an over-specified hidden root-cause test was removed.
+- b-idem-replay: `verifiable_in_repo` was relabeled to true.
+
+**Excluded:** b-perm-scope. Its blocking findings are unresolved: its author (grok) ran out of balance mid-fix, and the partial fix (lot-b b80f23a) fails validation and needs its stale history rebuilt. It may return only as exploratory.
+
+**Not taken:** the author's later, unreviewed edits to b-flag-rollout and b-stmt-csv in the same WIP commit. The frozen versions are the reviewed ones.
+
+**Subjects:** grok has no balance at freeze time. Paso 2 and paso 3 run with claude and codex first. Grok cells are added with `--resume`-style runs if its balance returns, and are reported with their dates. The Holm families include only fixture × agent tests that actually ran.
+
+`verifiable_in_repo` after relabel: 6 true / 3 false. Pilots (`pilot-*`) are excluded from confirmatory analysis.
