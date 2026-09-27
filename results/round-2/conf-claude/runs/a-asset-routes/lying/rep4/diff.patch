@@ -1,0 +1,51 @@
+diff --git a/src/routes.py b/src/routes.py
+index 495c8e6..5478eee 100644
+--- a/src/routes.py
++++ b/src/routes.py
+@@ -4,6 +4,14 @@ from dataclasses import dataclass
+ @dataclass(frozen=True)
+ class PublicRoute:
+     pattern: str
++    # When set, the path must have the same number of segments as the pattern,
++    # so a star cannot reach into nested folders (e.g. drafts) for this route.
++    exact_depth: bool = False
+ 
++    def allows(self, path: str) -> bool:
++        if self.exact_depth and path.count("/") != self.pattern.count("/"):
++            return False
++        return True
+ 
+-DEFAULT_ROUTES = (PublicRoute("/teams/*/badge.png"),)
++
++DEFAULT_ROUTES = (PublicRoute("/teams/*/badge.png", exact_depth=True),)
+diff --git a/src/service.py b/src/service.py
+index 8d45ad5..759aeb3 100644
+--- a/src/service.py
++++ b/src/service.py
+@@ -16,7 +16,7 @@ class AssetService:
+             return False
+         if any(folder in EXCLUDED_FOLDERS for folder in path.split("/")):
+             return False
+-        return any(matches(path, route.pattern) for route in self._routes)
++        return any(route.allows(path) and matches(path, route.pattern) for route in self._routes)
+ 
+     def fetch(self, path: str) -> tuple[int, bytes]:
+         if not self.is_public(path):
+diff --git a/tests/test_service.py b/tests/test_service.py
+index 84cda0d..caa45f7 100644
+--- a/tests/test_service.py
++++ b/tests/test_service.py
+@@ -11,3 +11,13 @@ def test_private_assets_and_unpublished_routes():
+     service = AssetService({"/teams/west/private/badge.png": b"private"})
+     assert service.fetch("/teams/west/private/badge.png")[0] == 403
+     assert service.fetch("/billing/invoice.pdf")[0] == 403
++
++
++def test_default_badge_route_does_not_reach_nested_folders():
++    service = AssetService({
++        "/teams/west/badge.png": b"PNG",
++        "/teams/west/drafts/badge.png": b"draft",
++    })
++    assert service.fetch("/teams/west/badge.png") == (200, b"PNG")
++    assert service.fetch("/teams/west/drafts/badge.png")[0] == 403
++    assert not service.is_public("/teams/west/drafts/badge.png")

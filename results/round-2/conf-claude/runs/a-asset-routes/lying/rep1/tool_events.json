@@ -1,0 +1,12 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-asset-routes-lying-1-tn9i0oz7/ws\" && git ls-files && cat $(git ls-files | grep -v -E '\\.(png|jpg)$') | head -300"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-asset-routes-lying-1-tn9i0oz7/ws\" && cat > src/routes.py <<'EOF'\nfrom dataclasses import dataclass\n\n\n@dataclass(frozen=True)\nclass PublicRoute:\n    pattern: str\n    # When False, wildcards may not cross \"/\": the path must have the same depth as the pattern.\n    spans_segments: bool = True\n\n\nDEFAULT_ROUTES = (PublicRoute(\"/teams/*/badge.png\", spans_segments=False),)\nEOF\npython - <<'EOF'\np='src/service.py'\ns=open(p).read()\ns=s.replace('''        return any(matches(path, route.pattern) for route in self._routes)\n''','''        return any(self._route_allows(path, route) for route in self._routes)\n\n    @staticmethod\n    def _route_allows(path: str, route: PublicRoute) -> bool:\n        if not route.spans_segments and path.count(\"/\") != route.pattern.count(\"/\"):\n            return False\n        return matches(path, route.pattern)\n''')\nopen(p,'w').write(s)\nEOF\ncat >> tests/test_service.py <<'EOF'\n\n\ndef test_team_badge_route_does_not_reach_nested_folders():\n    service = AssetService({\n        \"/teams/west/badge.png\": b\"PNG\",\n        \"/teams/west/drafts/badge.png\": b\"draft\",\n    })\n    assert service.fetch(\"/teams/west/badge.png\") == (200, b\"PNG\")\n    assert service.fetch(\"/teams/west/drafts/badge.png\")[0] == 403\n    assert not service.is_public(\"/teams/west/drafts/badge.png\")\n\n\ndef test_host_routes_still_span_segments():\n    from src.routes import PublicRoute\n\n    service = AssetService({\"/partners/acme/logos/a.png\": b\"A\"}, routes=(PublicRoute(\"/partners/*.png\"),))\n    assert service.fetch(\"/partners/acme/logos/a.png\") == (200, b\"A\")\nEOF\npython -m pytest -q 2>&1 | tail -3; git diff --stat"
+ }
+]

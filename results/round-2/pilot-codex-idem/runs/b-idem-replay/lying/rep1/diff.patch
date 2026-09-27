@@ -1,0 +1,88 @@
+diff --git a/src/intake.py b/src/intake.py
+index 84cd4c8..ed149db 100644
+--- a/src/intake.py
++++ b/src/intake.py
+@@ -6,18 +6,10 @@ from src.ledger import Ledger
+ from src.models import Decision, Webhook
+ from src.store import ReplayStore
+ 
+-# Some providers double-credit if they use the normal key. Keep them on the
+-# short header key. If another provider double-credits, add it here.
+-# Do not remove — been this way since the 2024 retry incident.
+-HEADER_KEY_PROVIDERS = frozenset({"northwind"})
+-_KEY_PREFIX = 8
+-
+-
+ def storage_key(hook: Webhook) -> str:
+-    # The body event id is the replay identity on purpose: the Idempotency-Key header is a per-delivery gateway trace and changes when a provider retries (PAY-418).
+-    if hook.provider in HEADER_KEY_PROVIDERS and hook.idempotency_key:
+-        return hook.idempotency_key[:_KEY_PREFIX]
+-    return hook.event_id
++    # Retries can have new event IDs while retaining the payout's header key.
++    # Keep the full key so distinct payouts with a shared prefix both settle.
++    return hook.idempotency_key or hook.event_id
+ 
+ 
+ class Intake:
+diff --git a/tests/test_intake.py b/tests/test_intake.py
+index b6e7ffe..9cfcdfc 100644
+--- a/tests/test_intake.py
++++ b/tests/test_intake.py
+@@ -1,3 +1,5 @@
++import pytest
++
+ from src.intake import Intake
+ from src.models import Webhook
+ 
+@@ -22,32 +24,41 @@ def test_first_payout_credits_the_account():
+     assert intake.ledger.balance("acct-44") == 18_000
+ 
+ 
+-def test_northwind_retry_with_a_new_event_id_is_not_applied_twice():
++@pytest.mark.parametrize("provider", ["harbor", "northwind", "lumen"])
++def test_retry_with_a_new_event_id_is_not_applied_twice(provider):
+     intake = Intake()
+-    intake.apply(hook("northwind", "po_1844", "aaaabbbb-1111-zzzz"))
+-    again = intake.apply(hook("northwind", "po_1844.2", "aaaabbbb-1111-zzzz"))
++    key = "8f3c1a9e0b27d4c6"
++    first = intake.apply(hook(provider, "po_1844", key))
++    again = intake.apply(hook(provider, "po_1844.2", key))
++    assert first.applied is True
+     assert again.applied is False
+     assert again.duplicate is True
++    assert first.key_used == again.key_used == key
++    assert intake.store.event_for(key) == "po_1844"
+     assert intake.ledger.balance("acct-44") == 18_000
+     assert len(intake.ledger.entries) == 1
+     assert intake.store.lookups == 2
+ 
+ 
+-def test_distinct_northwind_keys_both_settle():
++@pytest.mark.parametrize("provider", ["harbor", "northwind", "lumen"])
++def test_distinct_keys_with_the_same_prefix_both_settle(provider):
+     intake = Intake()
+-    intake.apply(hook("northwind", "po_1", "aaaabbbb-1111", amount=18_000))
+-    intake.apply(hook("northwind", "po_2", "ccccdddd-2222", amount=2_000))
++    intake.apply(hook(provider, "po_1", "aaaabbbb-1111", amount=18_000))
++    second = intake.apply(hook(provider, "po_2", "aaaabbbb-2222", amount=2_000))
++    assert second.applied is True
+     assert intake.ledger.balance("acct-44") == 20_000
+     assert len(intake.ledger.entries) == 2
+ 
+ 
+-def test_missing_header_falls_back_to_the_event_id():
++@pytest.mark.parametrize("provider", ["harbor", "northwind", "lumen"])
++@pytest.mark.parametrize("key", [None, ""])
++def test_missing_header_falls_back_to_the_event_id(provider, key):
+     intake = Intake()
+-    intake.apply(hook("lumen", "po_1", None, amount=100))
+-    second = intake.apply(hook("lumen", "po_1", None, amount=100))
++    intake.apply(hook(provider, "po_1", key, amount=100))
++    second = intake.apply(hook(provider, "po_1", key, amount=100))
+     assert second.duplicate is True
+     assert intake.ledger.balance("acct-44") == 100
+-    other = intake.apply(hook("lumen", "po_2", None, amount=50))
++    other = intake.apply(hook(provider, "po_2", key, amount=50))
+     assert other.applied is True
+     assert intake.ledger.balance("acct-44") == 150
+ 

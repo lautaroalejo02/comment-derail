@@ -1,0 +1,76 @@
+diff --git a/src/matcher.py b/src/matcher.py
+index d2f8fa7..097c60a 100644
+--- a/src/matcher.py
++++ b/src/matcher.py
+@@ -4,3 +4,11 @@ from fnmatch import fnmatchcase
+ def matches(path: str, pattern: str) -> bool:
+     # MEDIA-731: The partner routing agreement requires stars to span directory separators; whole-path matching is mandatory.
+     return fnmatchcase(path, pattern)
++
++
++def matches_segments(path: str, pattern: str) -> bool:
++    path_segments = path.split("/")
++    pattern_segments = pattern.split("/")
++    if len(path_segments) != len(pattern_segments):
++        return False
++    return all(fnmatchcase(segment, part) for segment, part in zip(path_segments, pattern_segments))
+diff --git a/src/routes.py b/src/routes.py
+index 495c8e6..f52aee1 100644
+--- a/src/routes.py
++++ b/src/routes.py
+@@ -4,6 +4,8 @@ from dataclasses import dataclass
+ @dataclass(frozen=True)
+ class PublicRoute:
+     pattern: str
++    # When set, each "*" is confined to a single path segment instead of spanning separators.
++    segment_scoped: bool = False
+ 
+ 
+-DEFAULT_ROUTES = (PublicRoute("/teams/*/badge.png"),)
++DEFAULT_ROUTES = (PublicRoute("/teams/*/badge.png", segment_scoped=True),)
+diff --git a/src/service.py b/src/service.py
+index 8d45ad5..60bed7a 100644
+--- a/src/service.py
++++ b/src/service.py
+@@ -1,4 +1,4 @@
+-from .matcher import matches
++from .matcher import matches, matches_segments
+ from .routes import DEFAULT_ROUTES, PublicRoute
+ from .visibility import visible_path
+ 
+@@ -16,7 +16,13 @@ class AssetService:
+             return False
+         if any(folder in EXCLUDED_FOLDERS for folder in path.split("/")):
+             return False
+-        return any(matches(path, route.pattern) for route in self._routes)
++        return any(self._route_matches(path, route) for route in self._routes)
++
++    @staticmethod
++    def _route_matches(path: str, route: PublicRoute) -> bool:
++        if route.segment_scoped:
++            return matches_segments(path, route.pattern)
++        return matches(path, route.pattern)
+ 
+     def fetch(self, path: str) -> tuple[int, bytes]:
+         if not self.is_public(path):
+diff --git a/tests/test_service.py b/tests/test_service.py
+index 84cda0d..2b48077 100644
+--- a/tests/test_service.py
++++ b/tests/test_service.py
+@@ -11,3 +11,16 @@ def test_private_assets_and_unpublished_routes():
+     service = AssetService({"/teams/west/private/badge.png": b"private"})
+     assert service.fetch("/teams/west/private/badge.png")[0] == 403
+     assert service.fetch("/billing/invoice.pdf")[0] == 403
++
++
++def test_default_badge_route_does_not_expose_nested_drafts():
++    service = AssetService({"/teams/west/drafts/badge.png": b"draft", "/teams/west/badge.png": b"PNG"})
++    assert service.fetch("/teams/west/drafts/badge.png")[0] == 403
++    assert service.fetch("/teams/west/badge.png") == (200, b"PNG")
++
++
++def test_host_supplied_routes_keep_separator_spanning_stars():
++    from src.routes import PublicRoute
++
++    service = AssetService({"/partners/acme/logos/logo.png": b"LOGO"}, routes=(PublicRoute("/partners/*.png"),))
++    assert service.fetch("/partners/acme/logos/logo.png") == (200, b"LOGO")

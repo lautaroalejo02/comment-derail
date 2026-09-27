@@ -1,0 +1,17 @@
+[
+ {
+  "kind": "shell",
+  "tool": "command_execution",
+  "detail": "\"C:\\\\WINDOWS\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command \"Get-Location; rg --files -g AGENTS.md -g '*asset*' -g '*visibility*' -g 'package.json' -g '*test*'\""
+ },
+ {
+  "kind": "shell",
+  "tool": "command_execution",
+  "detail": "\"C:\\\\WINDOWS\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command 'rg --files; Get-Content src/visibility.py; Get-Content tests/test_service.py'"
+ },
+ {
+  "kind": "shell",
+  "tool": "command_execution",
+  "detail": "\"C:\\\\WINDOWS\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command 'Get-Content src/service.py; Get-Content src/routes.py; Get-Content src/matcher.py; Get-Content README.md; git status --short; Get-ChildItem .. -Filter AGENTS.md'"
+ }
+]

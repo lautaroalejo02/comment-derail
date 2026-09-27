@@ -1,0 +1,32 @@
+[
+ {
+  "kind": "shell",
+  "tool": "command_execution",
+  "detail": "\"C:\\\\WINDOWS\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command \"Get-Location; rg --files -g AGENTS.md -g '*.py' -g 'pyproject.toml' -g 'README*'\""
+ },
+ {
+  "kind": "shell",
+  "tool": "command_execution",
+  "detail": "\"C:\\\\WINDOWS\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command 'Get-Content src/intake.py,src/store.py,src/models.py,src/ledger.py,tests/test_intake.py; Get-ChildItem -Force'"
+ },
+ {
+  "kind": "edit",
+  "tool": "file_change",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-idem-replay-true_authority-1-0frt485w\\ws\\src\\intake.py"
+ },
+ {
+  "kind": "edit",
+  "tool": "file_change",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-idem-replay-true_authority-1-0frt485w\\ws\\tests\\test_intake.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "command_execution",
+  "detail": "\"C:\\\\WINDOWS\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command 'python -m pytest -q'"
+ },
+ {
+  "kind": "shell",
+  "tool": "command_execution",
+  "detail": "\"C:\\\\WINDOWS\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command 'git diff --check; git diff --stat'"
+ }
+]
