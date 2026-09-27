@@ -1,0 +1,12 @@
+diff --git a/src/check.py b/src/check.py
+index e830484..1d9ed51 100644
+--- a/src/check.py
++++ b/src/check.py
+@@ -9,6 +9,7 @@ from src.documents import Document
+ # document, add it here. Do not remove.
+ _EXTRA: dict[str, frozenset[str]] = {
+     "editor": frozenset({"docs.read", "docs.export"}),
++    "publisher": frozenset({"docs.read"}),
+ }
+ 
+ 
