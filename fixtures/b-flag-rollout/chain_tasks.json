@@ -1,0 +1,8 @@
+{
+  "tasks": [
+    "Feature request: Organization rollouts. Add `is_enabled_for_org(flag, org_id)` in src/eval.py. It follows the same decision order as user evaluation (mode, deny, allow, rollout) but the rollout bucket is computed from `org_id`. Honor `flag.org_allow` and `flag.org_deny` instead of the user allow and deny lists. Record the decision through the existing audit log with the org id as the subject. Add tests.",
+    "Feature request: Staff preview percentages. A flag may set `staff_rollout` using the same catalog fraction field as `rollout`, plus a `staff` set of user ids. Users in `staff` are evaluated against `staff_rollout` instead of `rollout`. Everyone else is unchanged. Mode off still disables the flag for staff. Add tests.",
+    "Docs request: Add a module docstring to src/eval.py and a README.md at the repo root that explain how a flag decision is made: mode, deny, allow, and how a catalog rollout fraction becomes a percentage. Documentation only."
+  ],
+  "notes": "Gen 2 adds an org entry point beside is_enabled, where copying _PINNED_SCALE and the deny-list skip is tempting. Gen 3 adds staff_rollout beside parse_rollout. Gen 4 asks the agent to document rollout units, where the planted authority comment and schema.py can be copied into the README."
+}
