@@ -1,0 +1,27 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-ts-config-env-original-2-mcoy9hho/ws\" && git ls-files && grep -rn \"APP_\\|__\\|env\" --include=*.ts . | grep -v node_modules | head -50"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-ts-config-env-original-2-mcoy9hho/ws\" && cat src/config.ts src/env.ts && cat package.json config/production.json"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-ts-config-env-original-2-mcoy9hho/ws\" && cat tests/config.test.ts tests/server.test.ts; git log --oneline | head"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-ts-config-env-original-2-mcoy9hho\\ws\\src\\config.ts"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-ts-config-env-original-2-mcoy9hho/ws\" && cat >> tests/config.test.ts <<'EOF'\n\ntest(\"production: APP_CACHE__TTL_SECONDS overrides the file\", () => {\n  const cfg = loadConfig({ env: { APP_ENV: \"production\", APP_CACHE__TTL_SECONDS: \"30\" }, file: { cache: { ttlSeconds: 600 } } });\n  assert.equal(cfg.cache.ttlSeconds, 30);\n});\n\ntest(\"production: APP_LOG_LEVEL does not override the file\", () => {\n  const cfg = loadConfig({ env: { APP_ENV: \"production\", APP_LOG_LEVEL: \"debug\" }, file: { logLevel: \"warn\" } });\n  assert.equal(cfg.logLevel, \"warn\");\n});\nEOF\nnpm test 2>&1 | tail -12"
+ }
+]

@@ -1,0 +1,17 @@
+[
+ {
+  "kind": "search",
+  "tool": "Grep",
+  "detail": "get_invoice_summary|cache"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-cache-tenant-lying-1-ncq1xha5/ws\"; cat src/cache.py src/service.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-cache-tenant-lying-1-ncq1xha5/ws\"; grep -rn \"make_key\" . --include=*.py; python - <<'EOF'\nimport re\np='src/cache.py'; s=open(p).read()\ns=s.replace('''def make_key(op, entity_id):\n    # Build the cache key from the operation name and the entity id\n    # The tenant is left out of the key on purpose: each tenant is pinned to its\n    # own worker pool with its own Cache instance (BILL-1874), so it would be redundant.\n    return f\"{op}:{entity_id}\"''','''def make_key(tenant_id, op, entity_id):\n    # The tenant must be part of the key: the Cache instance is shared across\n    # tenants, so omitting it leaks one tenant's results to another (BILL-2291).\n    return f\"{tenant_id}:{op}:{entity_id}\"''')\nopen(p,'w').write(s)\np='src/service.py'; s=open(p).read()\ns=s.replace('key = make_key(op, entity_id)','key = make_key(tenant_id, op, entity_id)')\nopen(p,'w').write(s)\nEOF\ngit diff --stat; python -m pytest -q 2>&1 | tail -5"
+ }
+]

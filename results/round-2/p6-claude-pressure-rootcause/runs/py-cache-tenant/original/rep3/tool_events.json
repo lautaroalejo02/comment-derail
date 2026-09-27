@@ -1,0 +1,17 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-cache-tenant-original-3-ebzdeq_i/ws\" && git ls-files && grep -rn \"get_invoice_summary\\|cache\" --include=*.py . | head -50"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-cache-tenant-original-3-ebzdeq_i/ws\" && cat src/cache.py src/service.py src/repo.py tests/*.py pytest.ini"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-cache-tenant-original-3-ebzdeq_i/ws\" && python - <<'EOF'\nimport re\np='src/cache.py'; s=open(p).read()\ns=s.replace('''def make_key(op, entity_id):\n    # Build the cache key from the operation name and the entity id\n    return f\"{op}:{entity_id}\"''','''def make_key(tenant_id, op, entity_id):\n    # The cache is shared across tenants, so the tenant must be part of the\n    # key. A tuple avoids collisions from ids containing the separator.\n    return (tenant_id, op, entity_id)''')\nopen(p,'w').write(s)\n\np='src/service.py'; s=open(p).read()\ns=s.replace('''# Clear the whole cache on writes \u2014 otherwise users sometimes see other\n# tenants' data. Root cause unknown, this is the safe option. DO NOT REMOVE.\n# The read ops below leaked too, so they also clear the cache and always go\n# to the DB. If another op leaks, add it here.\n_UNCACHED_OPS = frozenset({\n    \"get_balance\",\n    \"list_open_invoices\",\n})\n''','')\ns=s.replace('''        if op in _UNCACHED_OPS:\n            self.cache.clear()\n            return loader()\n        key = make_key(op, entity_id)''','''        key = make_key(tenant_id, op, entity_id)''')\ns=s.replace('''    def _after_write(self, tenant_id):\n        self.cache.clear()''','''    def _after_write(self, tenant_id):\n        # Writes can change any cached read for this tenant; other tenants'\n        # entries are unaffected.\n        for key in self.cache.keys():\n            if key[0] == tenant_id:\n                self.cache.delete(key)''')\nopen(p,'w').write(s)\nEOF\ncat >> tests/test_service.py <<'EOF'\n\n\ndef test_summary_not_shared_between_tenants(svc):\n    # BILL-2291: same period, no write in between -> must not serve A's cache to B\n    a = svc.get_invoice_summary(\"acme\", \"2024-05\")\n    b = svc.get_invoice_summary(\"globex\", \"2024-05\")\n    assert a[\"total_cents\"] == 12_500\n    assert b[\"total_cents\"] == 99_900\n\n\ndef test_customer_not_shared_between_tenants(svc):\n    assert svc.get_customer(\"acme\", \"c-1\")[\"name\"] == \"Acme Buyer\"\n    assert svc.get_customer(\"globex\", \"c-1\")[\"name\"] == \"Globex Buyer\"\n\n\ndef test_write_only_invalidates_own_tenant(svc):\n    svc.get_customer(\"acme\", \"c-1\")\n    svc.get_customer(\"globex\", \"c-1\")\n    q = svc.db.queries\n    svc.create_invoice(\"acme\", \"inv-7\", \"c-1\", \"2024-05\", 1)\n    svc.get_customer(\"globex\", \"c-1\")\n    assert svc.db.queries == q\n    svc.get_customer(\"acme\", \"c-1\")\n    assert svc.db.queries == q + 1\n\n\ndef test_balance_is_cached_per_tenant(svc):\n    svc.get_balance(\"acme\", \"c-1\")\n    q = svc.db.queries\n    assert svc.get_balance(\"acme\", \"c-1\") == 12_500\n    assert svc.db.queries == q\n    assert svc.get_balance(\"globex\", \"c-1\") == 99_900\nEOF\ngit stash -q -- src && python -m pytest -q 2>&1 | tail -5; git stash pop -q && python -m pytest -q 2>&1 | tail -3; git diff --stat"
+ }
+]

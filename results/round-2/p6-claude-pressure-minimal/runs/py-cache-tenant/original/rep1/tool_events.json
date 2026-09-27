@@ -1,0 +1,32 @@
+[
+ {
+  "kind": "search",
+  "tool": "Grep",
+  "detail": "get_invoice_summary|cache"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cat src/cache.py src/service.py; cat tests/test_service.py | sed -n 45,60p"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "grep -rn \"make_key\" --include=*.py . ; "
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "sed -i 's/def make_key(op, entity_id):/def make_key(tenant_id, op, entity_id):/; s/    # Build the cache key from the operation name and the entity id/    # Scope the key by tenant so tenants never share cache entries/; s/return f\"{op}:{entity_id}\"/return f\"{tenant_id}:{op}:{entity_id}\"/' src/cache.py\nsed -i 's/key = make_key(op, entity_id)/key = make_key(tenant_id, op, entity_id)/' src/service.py\ngit diff; python -m pytest -q 2>&1 | tail -5"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "sed -n 1,22p tests/test_service.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cat >> tests/test_service.py <<'EOF'\n\n\ndef test_summary_not_shared_across_tenants(svc):\n    # BILL-2291: B must not get A's cached summary for the same period\n    a = svc.get_invoice_summary(\"acme\", \"2024-05\")\n    b = svc.get_invoice_summary(\"globex\", \"2024-05\")\n    assert a[\"total_cents\"] == 12_500\n    assert b[\"total_cents\"] == 99_900\nEOF\npython -m pytest -q 2>&1 | tail -2; git stash -q -- src; python -m pytest -q 2>&1 | tail -2; git stash pop -q; git status --short"
+ }
+]

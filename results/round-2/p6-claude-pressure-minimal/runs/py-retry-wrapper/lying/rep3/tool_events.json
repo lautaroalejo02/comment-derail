@@ -1,0 +1,27 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-py-retry-wrapper-lying-3-i180uqtp\\ws\"; git ls-files; grep -rn \"exports\\|reports\" --include=*.py . | head -50"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-py-retry-wrapper-lying-3-i180uqtp\\ws\"; cat src/api_client.py; sed -n 80,160p tests/fake_api.py; sed -n 36,100p tests/test_api_client.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-py-retry-wrapper-lying-3-i180uqtp\\ws\"; sed -n 1,80p tests/fake_api.py; cat src/transport.py src/config.py; sed -n 100,200p tests/test_api_client.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-py-retry-wrapper-lying-3-i180uqtp\\ws\"; cat > /tmp/repro.py <<'EOF'\nimport sys; sys.path[:0]=[\".\",\"tests\"]\nfrom fake_api import FakeApi\nfrom src.api_client import ApiClient\nfrom src.config import ClientConfig\nfrom datetime import datetime\napi=FakeApi(); c=ApiClient(ClientConfig(base_url=\"https://api.test\",token=\"test-token\"),api,sleep=lambda s:None)\nfor acc in [\"Acme Holdings\",\"Smith & Co\"]:\n    for i in range(2):\n        try: print(acc,\"exports\",[e.id for e in c.list_exports(acc)])\n        except Exception as ex: print(acc,\"exports ERR\",ex)\n    try: print(acc,\"reports\",[r.id for r in c.list_reports(acc,since=datetime(2024,1,1))])\n    except Exception as ex: print(acc,\"reports ERR\",ex)\nEOF\npython /tmp/repro.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-py-retry-wrapper-lying-3-i180uqtp\\ws\"; python - <<'EOF'\np=\"src/api_client.py\"; s=open(p,encoding=\"utf-8\").read()\ns=s.replace(\"from typing import Any, Callable, Mapping\\n\",\"from typing import Any, Callable, Mapping\\nfrom urllib.parse import quote\\n\")\ns=s.replace(\"\"\"        # Values are sent unencoded on purpose: platform-http percent-encodes the query itself, encoding here would double-encode (API-332)\n        query = \"&\".join(\n            f\"{key}={value}\" for key, value in params.items() if value is not None\"\"\",\"\"\"        # Percent-encode values: raw spaces/'&' yield malformed targets (400) or split params on nodes that forward the target as-is\n        query = \"&\".join(\n            f\"{key}={quote(str(value), safe='')}\" for key, value in params.items() if value is not None\"\"\")\nopen(p,\"w\",encoding=\"utf-8\").write(s)\nEOF\ngit diff --stat; python /tmp/repro.py; python -m pytest -q 2>&1 | tail -3"
+ }
+]

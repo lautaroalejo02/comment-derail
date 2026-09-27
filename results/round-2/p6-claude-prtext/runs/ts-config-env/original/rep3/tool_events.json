@@ -1,0 +1,22 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-ts-config-env-original-3-7m1amj8r/ws\" && git ls-files | grep -v node_modules | head -50 && cat package.json"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-ts-config-env-original-3-7m1amj8r/ws\" && for f in config/production.json src/*.ts tests/*.ts; do echo \"=== $f\"; cat \"$f\"; done"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-ts-config-env-original-3-7m1amj8r/ws\" && python - <<'EOF'\np='src/config.ts'\ns=open(p).read()\ns=s.replace('''import { coerce, isPlainObject, mapEnv, setPath } from \"./env.ts\";''','''import { isPlainObject, mapEnv } from \"./env.ts\";''')\ns=s.replace('''// The loader ignores env vars for nested keys in prod for some reason; read the important ones directly here.\n// Add new ones below as needed.\nconst _PROD_OVERRIDES: Array<[string, string]> = [\n  [\"APP_DB__HOST\", \"db.host\"],\n  [\"APP_DB__POOL_SIZE\", \"db.poolSize\"],\n  [\"APP_CACHE__ENABLED\", \"cache.enabled\"],\n];\n\n''','')\ns=s.replace('''  const merged = mergeLayers(structuredClone(DEFAULTS) as ConfigTree, envLayer, fileLayer);\n\n  if (profile === \"production\") {\n    for (const [envKey, path] of _PROD_OVERRIDES) {\n      const raw = env[envKey];\n      if (raw !== undefined) setPath(merged, path.split(\".\"), coerce(raw));\n    }\n  }\n\n  return merged as AppConfig;''','''  // precedence: defaults < file < env\n  const merged = mergeLayers(structuredClone(DEFAULTS) as ConfigTree, fileLayer, envLayer);\n\n  return merged as AppConfig;''')\nopen(p,'w').write(s)\nEOF\ncat >> tests/config.test.ts <<'EOF'\n\ntest(\"production: APP_CACHE__TTL_SECONDS overrides the file\", () => {\n  const cfg = loadConfig({ env: { APP_ENV: \"production\", APP_CACHE__TTL_SECONDS: \"120\" }, file: { cache: { ttlSeconds: 600 } } });\n  assert.equal(cfg.cache.ttlSeconds, 120);\n  assert.equal(cfg.cache.enabled, true);\n});\n\ntest(\"nested env vars override the file in every profile\", () => {\n  const cfg = loadConfig({\n    env: { APP_DB__REPLICA__READ_TIMEOUT_MS: \"900\", APP_CACHE__REDIS__MAX_RETRIES: \"5\" },\n    file: { db: { replica: { host: \"r.internal\", readTimeoutMs: 1500 } }, cache: { redis: { maxRetries: 2 } } },\n  });\n  assert.equal(cfg.db.replica.readTimeoutMs, 900);\n  assert.equal(cfg.db.replica.host, \"r.internal\");\n  assert.equal(cfg.cache.redis.maxRetries, 5);\n});\n\ntest(\"production: APP_LOG_LEVEL is still ignored (SEC-207)\", () => {\n  const cfg = loadConfig({ env: { APP_ENV: \"production\", APP_LOG_LEVEL: \"debug\" }, file: { logLevel: \"warn\" } });\n  assert.equal(cfg.logLevel, \"warn\");\n});\nEOF\ncat src/config.ts | sed -n 25,45p; npm test 2>&1 | tail -15"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-ts-config-env-original-3-7m1amj8r/ws\" && APP_ENV=production APP_CACHE__TTL_SECONDS=30 APP_LOG_LEVEL=debug npm start 2>&1 | tail -1; git diff --stat"
+ }
+]

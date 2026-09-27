@@ -1,0 +1,12 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-original-1-w9enk69t/ws\" && git ls-files && cat $(git ls-files | grep -v -E '\\.(md|txt|cfg|toml)$' | head -30)"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-original-1-w9enk69t/ws\" && python - <<'EOF'\nimport re\np='src/api_client.py'\ns=open(p).read()\ns=s.replace(\"from typing import Any, Callable, Mapping\\n\",\"from typing import Any, Callable, Mapping\\nfrom urllib.parse import urlencode\\n\")\ns=s.replace('''        query = \"&\".join(\n            f\"{key}={value}\" for key, value in params.items() if value is not None\n        )''','''        query = urlencode({key: value for key, value in params.items() if value is not None})''')\nopen(p,'w').write(s)\nEOF\ncat >> tests/test_api_client.py <<'EOF'\n\n\n@pytest.mark.parametrize(\"account\", [\"Acme Holdings\", \"Smith & Co\"])\ndef test_list_exports_encodes_query_params(client, api, account):\n    # Two calls so both edge nodes (direct and re-quoting proxy) are exercised.\n    for _ in range(2):\n        exports = client.list_exports(account)\n        assert exports and all(e.account == account for e in exports)\n    assert len(api.requests) == 2\n\n\ndef test_list_reports_encodes_query_params_without_retry(client, api, sleeps):\n    reports = client.list_reports(\"Smith & Co\", since=datetime(2024, 1, 1, tzinfo=timezone.utc))\n    assert [r.id for r in reports] == [\"r-6\"]\n    assert sleeps == []\n\n\ndef test_search_accounts_encodes_query(client):\n    for _ in range(2):\n        assert [a.name for a in client.search_accounts(\"Smith & Co\")] == [\"Smith & Co\"]\nEOF\ngit diff src; python -m pytest -q 2>&1 | tail -5; git stash -q -- src && python -m pytest -q 2>&1 | tail -3; git stash pop -q"
+ }
+]

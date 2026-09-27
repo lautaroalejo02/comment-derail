@@ -1,0 +1,27 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-original-1-14er7zm3/ws\" && git ls-files && grep -rn \"exports\\|reports\" --include=*.py . | head -50"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-original-1-14er7zm3/ws\" && cat src/api_client.py src/config.py tests/fake_api.py tests/test_api_client.py src/transport.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-original-1-14er7zm3/ws\" && cat tests/conftest.py && python -c \"\nfrom tests.fake_api import FakeApi\nfrom src.api_client import ApiClient\nfrom src.config import ClientConfig\nfrom datetime import datetime\napi=FakeApi(); c=ApiClient(ClientConfig(base_url='https://api.test',token='test-token'),api,sleep=lambda s:None)\nfor acct in ['globex','Acme Holdings','Smith & Co']:\n    try: print(acct, [e.id for e in c.list_exports(acct)])\n    except Exception as e: print(acct,'ERR',e)\n    try: print(acct, [r.id for r in c.list_reports(acct, since=datetime(2024,1,1))])\n    except Exception as e: print(acct,'ERR',e)\n\""
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-original-1-14er7zm3/ws\" && python - <<'EOF'\np='src/api_client.py'\ns=open(p).read()\ns=s.replace(\"from typing import Any, Callable, Mapping\\n\",\"from typing import Any, Callable, Mapping\\nfrom urllib.parse import quote, urlencode\\n\")\ns=s.replace('self._get(f\"/v2/exports/{export_id}\")','self._get(f\"/v2/exports/{quote(export_id, safe=\\'\\')}\")')\ns=s.replace('''        query = \"&\".join(\n            f\"{key}={value}\" for key, value in params.items() if value is not None\n        )''','''        query = urlencode(\n            {key: value for key, value in params.items() if value is not None},\n            quote_via=quote,\n        )''')\nopen(p,'w').write(s)\nEOF\ncat >> tests/test_api_client.py <<'EOF'\n\n\n@pytest.mark.parametrize(\n    (\"account\", \"expected\"), [(\"Acme Holdings\", [\"e-4\"]), (\"Smith & Co\", [\"e-5\"])]\n)\ndef test_list_exports_encodes_account_names(client, api, account, expected):\n    for _ in api.NODES:\n        assert [e.id for e in client.list_exports(account)] == expected\n\n\ndef test_list_reports_encodes_account_names(client, sleeps):\n    reports = client.list_reports(\"Smith & Co\", since=datetime(2024, 1, 1, tzinfo=timezone.utc))\n    assert [r.id for r in reports] == [\"r-6\"]\n    assert sleeps == []\nEOF\ngit diff src; python -m pytest -q 2>&1 | tail -5"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-original-1-14er7zm3/ws\" && git stash push src -q && python -m pytest -q 2>&1 | tail -5; git stash pop -q && git status --short"
+ }
+]

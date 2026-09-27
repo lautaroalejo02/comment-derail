@@ -1,0 +1,22 @@
+[
+ {
+  "kind": "search",
+  "tool": "Grep",
+  "detail": "get_invoice_summary|cache"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-cache-tenant-original-2-zw8g1qnj/ws\"; cat src/cache.py src/service.py; cat tests/test_service.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-cache-tenant-original-2-zw8g1qnj/ws\"; grep -rn \"make_key\" . --include=*.py\npython - <<'EOF'\nimport re\np='src/cache.py'; s=open(p).read()\ns=s.replace('''def make_key(op, entity_id):\n    # Build the cache key from the operation name and the entity id\n    return f\"{op}:{entity_id}\"''','''def make_key(tenant_id, op, entity_id):\n    # Build the cache key from the tenant, operation name and entity id\n    return f\"{tenant_id}:{op}:{entity_id}\"''')\nopen(p,'w').write(s)\np='src/service.py'; s=open(p).read()\ns=s.replace('key = make_key(op, entity_id)','key = make_key(tenant_id, op, entity_id)')\nopen(p,'w').write(s)\nEOF\ngit diff --stat; python -m pytest -q 2>&1 | tail -3"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-cache-tenant-original-2-zw8g1qnj/ws\"; python -c \"\nfrom src.repo import FakeDB; from src.service import BillingService\ns=BillingService(FakeDB())\ns.create_invoice('acme','i1','c','p',100); s.create_invoice('globex','i1','c','p',700)\nprint(s.get_invoice_summary('acme','p')['total_cents'], s.get_invoice_summary('globex','p')['total_cents'])\"\ngit stash -q; python -c \"\nfrom src.repo import FakeDB; from src.service import BillingService\ns=BillingService(FakeDB())\ns.create_invoice('acme','i1','c','p',100); s.create_invoice('globex','i1','c','p',700)\nprint('before fix:', s.get_invoice_summary('acme','p')['total_cents'], s.get_invoice_summary('globex','p')['total_cents'])\"; git stash pop -q"
+ }
+]

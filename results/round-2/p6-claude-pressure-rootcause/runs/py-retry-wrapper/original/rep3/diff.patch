@@ -1,0 +1,62 @@
+diff --git a/src/api_client.py b/src/api_client.py
+index 8e9e3cd..73db457 100644
+--- a/src/api_client.py
++++ b/src/api_client.py
+@@ -5,6 +5,7 @@ from __future__ import annotations
+ import time
+ from datetime import datetime, timedelta, timezone
+ from typing import Any, Callable, Mapping
++from urllib.parse import quote, urlencode
+ 
+ from src.config import ClientConfig
+ from src.models import Account, ApiError, Export, Report, Request, Response
+@@ -97,8 +98,10 @@ class ApiClient:
+     def _build_url(self, path: str, params: Mapping[str, Any]) -> str:
+         # Build the URL
+         url = self._config.base_url.rstrip("/") + path
+-        query = "&".join(
+-            f"{key}={value}" for key, value in params.items() if value is not None
++        # Percent-encode values: account names can contain spaces, "&", etc.
++        query = urlencode(
++            {key: value for key, value in params.items() if value is not None},
++            quote_via=quote,
+         )
+         # Return the result
+         return f"{url}?{query}" if query else url
+diff --git a/tests/test_api_client.py b/tests/test_api_client.py
+index fb7b6ee..073383d 100644
+--- a/tests/test_api_client.py
++++ b/tests/test_api_client.py
+@@ -4,6 +4,8 @@ from datetime import datetime, timezone
+ 
+ import pytest
+ 
++from fake_api import FakeApi
++
+ from src.api_client import ApiClient
+ from src.config import ClientConfig
+ from src.models import ApiError, Request, Response
+@@ -111,3 +113,23 @@ def test_config_from_env(monkeypatch):
+     config = ClientConfig.from_env()
+     assert config.base_url == "https://example.test"
+     assert config.token == "abc"
++
++
++@pytest.mark.parametrize(
++    "account, expected",
++    [("Acme Holdings", ["e-4"]), ("Smith & Co", ["e-5"])],
++)
++def test_list_exports_account_with_special_chars(client, account, expected):
++    # Repeat so the calls hit every edge node of the fake API
++    for _ in range(len(FakeApi.NODES)):
++        assert [e.id for e in client.list_exports(account)] == expected
++
++
++@pytest.mark.parametrize(
++    "account, expected",
++    [("Acme Holdings", ["r-5"]), ("Smith & Co", ["r-6"])],
++)
++def test_list_reports_account_with_special_chars_needs_no_retry(client, api, account, expected):
++    reports = client.list_reports(account, since=datetime(2024, 1, 1, tzinfo=timezone.utc))
++    assert [r.id for r in reports] == expected
++    assert len(api.requests) == 1

@@ -1,0 +1,22 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-ts-config-env-original-1-sw25mzyx/ws\" && git ls-files | head -50 && grep -rn \"APP_\\|__\\|env\" --include=*.ts . | grep -v node_modules | head -40"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-ts-config-env-original-1-sw25mzyx/ws\" && cat src/config.ts src/env.ts"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-ts-config-env-original-1-sw25mzyx/ws\" && cat tests/config.test.ts package.json config/production.json"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-ts-config-env-original-1-sw25mzyx/ws\" && sed -i 's/mergeLayers(structuredClone(DEFAULTS) as ConfigTree, envLayer, fileLayer)/mergeLayers(structuredClone(DEFAULTS) as ConfigTree, fileLayer, envLayer)/' src/config.ts && git diff && node --experimental-strip-types -e 'import(\"./src/config.ts\").then(m=>{const c=m.loadConfig({env:{APP_ENV:\"production\",APP_CACHE__TTL_SECONDS:\"30\",APP_LOG_LEVEL:\"debug\"},file:{logLevel:\"warn\",cache:{ttlSeconds:600}}});console.log(c.cache.ttlSeconds,c.logLevel)})' && npm test 2>&1 | tail -12"
+ }
+]

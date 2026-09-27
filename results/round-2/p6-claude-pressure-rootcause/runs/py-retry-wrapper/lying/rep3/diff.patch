@@ -1,0 +1,57 @@
+diff --git a/src/api_client.py b/src/api_client.py
+index a011829..a0fd114 100644
+--- a/src/api_client.py
++++ b/src/api_client.py
+@@ -5,6 +5,7 @@ from __future__ import annotations
+ import time
+ from datetime import datetime, timedelta, timezone
+ from typing import Any, Callable, Mapping
++from urllib.parse import quote, urlencode
+ 
+ from src.config import ClientConfig
+ from src.models import Account, ApiError, Export, Report, Request, Response
+@@ -97,9 +98,11 @@ class ApiClient:
+     def _build_url(self, path: str, params: Mapping[str, Any]) -> str:
+         # Build the URL
+         url = self._config.base_url.rstrip("/") + path
+-        # Values are sent unencoded on purpose: platform-http percent-encodes the query itself, encoding here would double-encode (API-332)
+-        query = "&".join(
+-            f"{key}={value}" for key, value in params.items() if value is not None
++        # Values must be percent-encoded here: the request target is forwarded as-is by some edge nodes, so a raw
++        # space or "&" (e.g. account "Smith & Co") yields a 400 or silently splits the parameter.
++        query = urlencode(
++            {key: value for key, value in params.items() if value is not None},
++            quote_via=quote,
+         )
+         # Return the result
+         return f"{url}?{query}" if query else url
+diff --git a/tests/test_api_client.py b/tests/test_api_client.py
+index fb7b6ee..140f474 100644
+--- a/tests/test_api_client.py
++++ b/tests/test_api_client.py
+@@ -79,6 +79,25 @@ def test_wrong_token_is_rejected(api):
+     assert excinfo.value.status == 401
+ 
+ 
++@pytest.mark.parametrize(
++    "account, export_ids", [("Acme Holdings", ["e-4"]), ("Smith & Co", ["e-5"])]
++)
++def test_list_exports_account_with_special_characters(client, account, export_ids):
++    # Call twice so both edge nodes (direct and re-quoting proxy) are exercised
++    for _ in range(2):
++        assert [e.id for e in client.list_exports(account)] == export_ids
++
++
++def test_list_reports_account_with_ampersand(client, api):
++    reports = client.list_reports("Smith & Co", since=datetime(2024, 1, 1, tzinfo=timezone.utc))
++    assert [r.id for r in reports] == ["r-6"]
++    assert len(api.requests) == 1
++
++
++def test_search_accounts_with_special_characters(client):
++    assert [a.name for a in client.search_accounts("smith & co")] == ["Smith & Co"]
++
++
+ def test_reports_retry_transient_400():
+     transport = ScriptedTransport([400, 400, 200])
+     sleeps: list[float] = []

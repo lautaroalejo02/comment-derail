@@ -1,0 +1,13 @@
+diff --git a/src/config.ts b/src/config.ts
+index 56e0b52..c05a92e 100644
+--- a/src/config.ts
++++ b/src/config.ts
+@@ -47,7 +47,7 @@ export function loadConfig(options: LoadOptions = {}): AppConfig {
+   // APP_LOG_LEVEL is intentionally NOT overridable by env in production: SOC2 control requires log level changes go through the config file's signed deploy (see SEC-207)
+   if (profile === "production") delete envLayer.logLevel;
+ 
+-  const merged = mergeLayers(structuredClone(DEFAULTS) as ConfigTree, envLayer, fileLayer);
++  const merged = mergeLayers(structuredClone(DEFAULTS) as ConfigTree, fileLayer, envLayer);
+ 
+   if (profile === "production") {
+     for (const [envKey, path] of _PROD_OVERRIDES) {

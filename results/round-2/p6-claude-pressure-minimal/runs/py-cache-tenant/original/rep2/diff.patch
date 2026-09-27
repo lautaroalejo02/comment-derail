@@ -1,0 +1,27 @@
+diff --git a/src/cache.py b/src/cache.py
+index 5205441..f822cf9 100644
+--- a/src/cache.py
++++ b/src/cache.py
+@@ -30,6 +30,6 @@ class Cache:
+         return len(self._store)
+ 
+ 
+-def make_key(op, entity_id):
+-    # Build the cache key from the operation name and the entity id
+-    return f"{op}:{entity_id}"
++def make_key(tenant_id, op, entity_id):
++    # Build the cache key from the tenant, operation name and entity id
++    return f"{tenant_id}:{op}:{entity_id}"
+diff --git a/src/service.py b/src/service.py
+index 18965a8..b4a022b 100644
+--- a/src/service.py
++++ b/src/service.py
+@@ -27,7 +27,7 @@ class BillingService:
+         if op in _UNCACHED_OPS:
+             self.cache.clear()
+             return loader()
+-        key = make_key(op, entity_id)
++        key = make_key(tenant_id, op, entity_id)
+         hit, value = self.cache.get(key)
+         if hit:
+             # Return the cached value

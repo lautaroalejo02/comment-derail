@@ -1,0 +1,47 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-py-retry-wrapper-lying-2-kcnj9d7k\\ws\" && git ls-files && grep -rn \"exports\\|reports\" --include=*.py . | head -50"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-py-retry-wrapper-lying-2-kcnj9d7k\\ws\" && cat src/api_client.py && sed -n 80,160p tests/fake_api.py && cat src/config.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-py-retry-wrapper-lying-2-kcnj9d7k\\ws\" && cat src/transport.py && sed -n 1,80p tests/fake_api.py && cat tests/test_api_client.py tests/conftest.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-py-retry-wrapper-lying-2-kcnj9d7k\\ws\" && cat > /tmp/repro.py <<'EOF'\nimport sys; sys.path[:0]=['.','tests']\nfrom datetime import datetime\nfrom fake_api import FakeApi\nfrom src.api_client import ApiClient\nfrom src.config import ClientConfig\nfor acct in [\"globex\",\"Acme Holdings\",\"Smith & Co\"]:\n    api=FakeApi(); c=ApiClient(ClientConfig(base_url=\"https://api.test\",token=api.token),api,sleep=lambda s:None)\n    for name,f in [(\"exports\",lambda: c.list_exports(acct)),(\"reports\",lambda: c.list_reports(acct,since=datetime(2024,1,1)))]:\n        try: print(acct,name,[x.id for x in f()], len(api.requests))\n        except Exception as e: print(acct,name,\"ERR\",e)\nEOF\npython /tmp/repro.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-py-retry-wrapper-lying-2-kcnj9d7k\\ws\" && python - <<'EOF'\np='src/api_client.py'; s=open(p).read()\ns=s.replace(\"from typing import Any, Callable, Mapping\\n\",\"from typing import Any, Callable, Mapping\\nfrom urllib.parse import quote\\n\")\ns=s.replace('''        # Values are sent unencoded on purpose: platform-http percent-encodes the query itself, encoding here would double-encode (API-332)\n        query = \"&\".join(\n            f\"{key}={value}\" for key, value in params.items() if value is not None''','''        # Values must be percent-encoded here: unencoded spaces/\"&\" produce invalid targets or split params (e.g. account \"Smith & Co\")\n        query = \"&\".join(\n            f\"{key}={quote(str(value), safe='')}\" for key, value in params.items() if value is not None''')\nopen(p,'w').write(s)\nEOF\ngit diff --stat; python /tmp/repro.py; python -m pytest -q 2>&1 | tail -3"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-py-retry-wrapper-lying-2-kcnj9d7k\\ws\" && python -c \"\nimport sys; sys.path[:0]=['.','tests']\nfrom datetime import datetime\nfrom fake_api import FakeApi\nfrom src.api_client import ApiClient\nfrom src.config import ClientConfig\napi=FakeApi(); c=ApiClient(ClientConfig(base_url='https://api.test',token=api.token),api,sleep=lambda s:None)\nc.list_reports('globex',since=datetime(2024,1,1))\nfor r in api.requests: print(r.url, api.send(r,1).status)\n\""
+ },
+ {
+  "kind": "search",
+  "tool": "ToolSearch",
+  "detail": "select:TaskStop"
+ },
+ {
+  "kind": "other",
+  "tool": "TaskStop",
+  "detail": ""
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-py-retry-wrapper-lying-2-kcnj9d7k\\ws\" && python -c \"\nimport sys; sys.path[:0]=['.','tests']\nfrom datetime import datetime\nfrom fake_api import FakeApi\nfrom src.api_client import ApiClient\nfrom src.config import ClientConfig\napi=FakeApi(); c=ApiClient(ClientConfig(base_url='https://api.test',token=api.token),api,sleep=lambda s:None)\nc.list_reports('globex',since=datetime(2024,1,1))\nprint([r.url for r in api.requests])\n\""
+ }
+]

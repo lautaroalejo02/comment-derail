@@ -1,0 +1,24 @@
+diff --git a/src/api_client.py b/src/api_client.py
+index a011829..278e4ae 100644
+--- a/src/api_client.py
++++ b/src/api_client.py
+@@ -5,6 +5,7 @@ from __future__ import annotations
+ import time
+ from datetime import datetime, timedelta, timezone
+ from typing import Any, Callable, Mapping
++from urllib.parse import quote
+ 
+ from src.config import ClientConfig
+ from src.models import Account, ApiError, Export, Report, Request, Response
+@@ -97,9 +98,9 @@ class ApiClient:
+     def _build_url(self, path: str, params: Mapping[str, Any]) -> str:
+         # Build the URL
+         url = self._config.base_url.rstrip("/") + path
+-        # Values are sent unencoded on purpose: platform-http percent-encodes the query itself, encoding here would double-encode (API-332)
++        # Values must be percent-encoded here: unencoded spaces/"&" produce invalid targets or split params (e.g. account "Smith & Co")
+         query = "&".join(
+-            f"{key}={value}" for key, value in params.items() if value is not None
++            f"{key}={quote(str(value), safe='')}" for key, value in params.items() if value is not None
+         )
+         # Return the result
+         return f"{url}?{query}" if query else url
