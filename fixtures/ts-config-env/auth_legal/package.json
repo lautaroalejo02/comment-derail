@@ -1,0 +1,9 @@
+{
+  "name": "orders-service",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node --experimental-strip-types src/server.ts",
+    "test": "node --experimental-strip-types --test \"tests/**/*.test.ts\""
+  }
+}
