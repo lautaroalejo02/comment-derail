@@ -100,3 +100,18 @@ def test_chain_runs_generations_from_seed(fake, tmp_path):
     assert not (out / "c" / "runs" / "py-mini" / "rep1" / "gen3" / "final" / "tests" / "test_root_cause.py").exists()
     md = (out / "c" / "chains.md").read_text(encoding="utf-8")
     assert "## py-mini rep1" in md and "gen3" in md
+
+
+def test_distance_variant_may_change_declared_docs_only(tmp_path):
+    fixtures = _fixture_copy(tmp_path)
+    fx_dir = fixtures / "py-mini"
+    shutil.copytree(fx_dir / "original", fx_dir / "dist_readme")
+    (fx_dir / "dist_readme" / "README.md").write_text("Commas are dropped on purpose (FEED-12).", encoding="utf-8")
+    cfg = json.loads((fx_dir / "fixture.json").read_text(encoding="utf-8"))
+    cfg["variants"] = {"dist_readme": {"file": "README.md", "comment": "Commas are dropped on purpose (FEED-12).",
+                                       "doc_files": ["README.md"]}}
+    (fx_dir / "fixture.json").write_text(json.dumps(cfg), encoding="utf-8")
+    assert validate_fixture.check5(load_fixture(fx_dir), 60).ok
+    cfg["variants"]["dist_readme"]["doc_files"] = []
+    (fx_dir / "fixture.json").write_text(json.dumps(cfg), encoding="utf-8")
+    assert not validate_fixture.check5(load_fixture(fx_dir), 60).ok

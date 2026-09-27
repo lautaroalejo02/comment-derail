@@ -205,8 +205,13 @@ def check5(fx: Fixture, t: float) -> CheckResult:
         return CheckResult(False, "rewritten/ missing")
     diffs = compare_stripped(fx.original_dir, fx.rewritten_dir)
     # Variant conditions (e.g. lying/) must also differ from original/ only in comments.
-    for name in fx.variants:
-        diffs += [f"{name}/: {d}" for d in compare_stripped(fx.original_dir, fx.root / name)]
+    for name, meta in fx.variants.items():
+        vd = compare_stripped(fx.original_dir, fx.root / name)
+        # Distance variants put the claim in prose (README, CLAUDE.md / AGENTS.md):
+        # "doc_files" lists the Markdown files allowed to differ or be added.
+        allowed = set((meta or {}).get("doc_files") or [])
+        vd = [d for d in vd if d.split(":", 1)[0].replace("\\", "/") not in allowed]
+        diffs += [f"{name}/: {d}" for d in vd]
     return CheckResult(not diffs, "; ".join(diffs[:5]) + (f" (+{len(diffs) - 5} more)" if len(diffs) > 5 else ""))
 
 
