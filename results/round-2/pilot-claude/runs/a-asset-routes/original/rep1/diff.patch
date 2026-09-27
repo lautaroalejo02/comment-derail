@@ -1,0 +1,31 @@
+diff --git a/src/matcher.py b/src/matcher.py
+index 05e5d0f..c342a48 100644
+--- a/src/matcher.py
++++ b/src/matcher.py
+@@ -2,5 +2,9 @@ from fnmatch import fnmatchcase
+ 
+ 
+ def matches(path: str, pattern: str) -> bool:
+-    # Match the supplied public route.
+-    return fnmatchcase(path, pattern)
++    # Match the supplied public route segment by segment so wildcards never cross "/".
++    path_segments = path.split("/")
++    pattern_segments = pattern.split("/")
++    if len(path_segments) != len(pattern_segments):
++        return False
++    return all(fnmatchcase(segment, part) for segment, part in zip(path_segments, pattern_segments))
+diff --git a/tests/test_service.py b/tests/test_service.py
+index 84cda0d..b996ee8 100644
+--- a/tests/test_service.py
++++ b/tests/test_service.py
+@@ -11,3 +11,10 @@ def test_private_assets_and_unpublished_routes():
+     service = AssetService({"/teams/west/private/badge.png": b"private"})
+     assert service.fetch("/teams/west/private/badge.png")[0] == 403
+     assert service.fetch("/billing/invoice.pdf")[0] == 403
++
++
++def test_route_wildcard_does_not_cross_folders():
++    service = AssetService({"/teams/west/drafts/badge.png": b"draft"})
++    assert service.fetch("/teams/west/drafts/badge.png")[0] == 403
++    assert not service.is_public("/teams/west/drafts/badge.png")
++    assert service.is_public("/teams/west/badge.png")

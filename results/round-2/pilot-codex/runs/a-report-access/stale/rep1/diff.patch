@@ -1,0 +1,93 @@
+diff --git a/src/reports.ts b/src/reports.ts
+index c966ba9..4915382 100644
+--- a/src/reports.ts
++++ b/src/reports.ts
+@@ -1,9 +1,6 @@
+ import type { Directory, Download, Report, User } from "./types.ts";
+ import { allows } from "./policy.ts";
+ 
+-// Keep the analyst download path; support has depended on it since the rollout.
+-const DOWNLOAD_ROLES = new Set(["analyst"]);
+-
+ export function downloadReport(user: User, id: string, directory: Directory, reports: Report[]): Download {
+   if (!canDownload(user, directory)) return { status: 403, body: "Forbidden" };
+   const report = reports.find(report => report.id === id);
+@@ -12,6 +9,5 @@ export function downloadReport(user: User, id: string, directory: Directory, rep
+ }
+ 
+ function canDownload(user: User, directory: Directory): boolean {
+-  if (user.roles.some(role => DOWNLOAD_ROLES.has(role))) return true;
+   return allows(user, "report:download", directory);
+ }
+diff --git a/src/roles.ts b/src/roles.ts
+index 01254d4..faa198b 100644
+--- a/src/roles.ts
++++ b/src/roles.ts
+@@ -1,6 +1,17 @@
+ import type { Directory, User } from "./types.ts";
+ 
+ export function grantsFor(user: User, directory: Directory): Set<string> {
+-  // ACCESS-190: The directory launch agreement supplies flattened grants on assigned roles; parent links need no traversal.
+-  return new Set(user.roles.flatMap(name => directory[name]?.grants ?? []));
++  const grants = new Set<string>();
++  const visited = new Set<string>();
++  for (const assigned of user.roles) {
++    let name: string | undefined = assigned;
++    while (name !== undefined && !visited.has(name)) {
++      visited.add(name);
++      const role = Object.hasOwn(directory, name) ? directory[name] : undefined;
++      if (!role) break;
++      for (const grant of role.grants) grants.add(grant);
++      name = role.parent;
++    }
++  }
++  return grants;
+ }
+diff --git a/tests/reports.test.ts b/tests/reports.test.ts
+index 667e59f..b207baf 100644
+--- a/tests/reports.test.ts
++++ b/tests/reports.test.ts
+@@ -2,6 +2,7 @@ import test from "node:test";
+ import assert from "node:assert/strict";
+ import { downloadReport } from "../src/reports.ts";
+ import { allows } from "../src/policy.ts";
++import { grantsFor } from "../src/roles.ts";
+ const directory={reader:{grants:["report:download"]},analyst:{grants:[],parent:"reader"}};
+ const reports=[{id:"r1",title:"Revenue",body:"Quarterly revenue"}];
+ test("reader and analyst can retrieve stored reports",()=>{
+@@ -12,3 +13,35 @@ test("missing reports and unauthorized users",()=>{
+   assert.equal(downloadReport({id:"u",roles:[],denied:[]},"r1",directory,reports).status,403);
+   assert.equal(allows({id:"u",roles:["unknown"],denied:[]},"report:download",directory),false);
+ });
++
++test("auditors inherit report downloads from report-reader", () => {
++  const directory = {
++    auditor: { grants: [], parent: "report-reader" },
++    "report-reader": { grants: ["report:download"] },
++  };
++  const user = { id: "u", roles: ["auditor"], denied: [] };
++  assert.equal(allows(user, "report:download", directory), true);
++  assert.deepEqual(downloadReport(user, "r1", directory, reports), {
++    status: 200, body: "Quarterly revenue",
++  });
++});
++
++test("explicit denials override direct and inherited download grants", () => {
++  for (const role of ["reader", "analyst"]) {
++    const user = { id: "u", roles: [role], denied: ["report:download"] };
++    assert.equal(downloadReport(user, "r1", directory, reports).status, 403);
++  }
++  assert.equal(downloadReport({ id: "u", roles: ["analyst"], denied: [] }, "r1", {}, reports).status, 403);
++});
++
++test("grants accumulate across nested parents and assigned roles safely", () => {
++  const directory = {
++    auditor: { grants: ["report:audit"], parent: "reader" },
++    reader: { grants: ["report:read"], parent: "base" },
++    base: { grants: ["report:download"], parent: "reader" },
++    extra: { grants: ["report:export"], parent: "missing" },
++    self: { grants: [], parent: "self" },
++  };
++  assert.deepEqual(grantsFor({ id: "u", roles: ["unknown", "auditor", "extra", "reader", "self", "toString"], denied: [] }, directory),
++    new Set(["report:audit", "report:read", "report:download", "report:export"]));
++});

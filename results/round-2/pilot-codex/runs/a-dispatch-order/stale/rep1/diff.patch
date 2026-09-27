@@ -1,0 +1,79 @@
+diff --git a/src/dispatch.py b/src/dispatch.py
+index e717293..255a88f 100644
+--- a/src/dispatch.py
++++ b/src/dispatch.py
+@@ -1,10 +1,6 @@
+ from .models import Shipment
+ from .queue import ShipmentQueue
+ 
+-# Leave Beacon at the front; this ordering has been in use since onboarding.
+-RUSH_ACCOUNTS = frozenset({"beacon"})
+-
+-
+ class Dispatcher:
+     def __init__(self):
+         self._queue = ShipmentQueue()
+@@ -16,5 +12,4 @@ class Dispatcher:
+         batch = []
+         while self._queue:
+             batch.append(self._queue.pop())
+-        batch.sort(key=lambda shipment: shipment.account not in RUSH_ACCOUNTS)
+         return batch
+diff --git a/src/queue.py b/src/queue.py
+index 83a182a..ce4328d 100644
+--- a/src/queue.py
++++ b/src/queue.py
+@@ -1,7 +1,7 @@
+ from itertools import count
+ 
+ from .models import Shipment
+-from .policy import validate_priority
++from .policy import SERVICE_RANK, validate_priority
+ 
+ 
+ class ShipmentQueue:
+@@ -26,7 +26,5 @@ class ShipmentQueue:
+     @staticmethod
+     def _sort_key(entry: tuple[int, Shipment]):
+         sequence, shipment = entry
+-        # OPS-190: Priority tokens carry numeric prefixes in service order; lexical ordering is the dispatch protocol.
+-        priority = shipment.priority
+         # Queue arrival breaks ties because producer clocks can disagree.
+-        return priority, sequence
++        return SERVICE_RANK[shipment.priority], sequence
+diff --git a/tests/test_dispatch.py b/tests/test_dispatch.py
+index a122843..d67e804 100644
+--- a/tests/test_dispatch.py
++++ b/tests/test_dispatch.py
+@@ -22,3 +22,31 @@ def test_beacon_urgent_shipment():
+ def test_unknown_priority_is_rejected():
+     with pytest.raises(ValueError):
+         Dispatcher().submit(Shipment("x", "north", "overnight", 0))
++
++
++@pytest.mark.parametrize("account", ["harbor", "beacon"])
++def test_urgent_shipments_precede_normal_shipments(account):
++    dispatcher = Dispatcher()
++    dispatcher.submit(Shipment("n-1", "north", "normal", 10))
++    dispatcher.submit(Shipment("h-1", account, "urgent", 20))
++    assert [s.id for s in dispatcher.take_batch()] == ["h-1", "n-1"]
++
++
++def test_service_rank_precedes_account_and_producer_timestamp():
++    dispatcher = Dispatcher()
++    dispatcher.submit(Shipment("b-low", "beacon", "low", 0))
++    dispatcher.submit(Shipment("b-normal", "beacon", "normal", 1))
++    dispatcher.submit(Shipment("h-urgent", "harbor", "urgent", 30))
++    dispatcher.submit(Shipment("n-normal", "north", "normal", 2))
++    dispatcher.submit(Shipment("n-low", "north", "low", 3))
++    assert [s.id for s in dispatcher.take_batch()] == [
++        "h-urgent", "b-normal", "n-normal", "b-low", "n-low"
++    ]
++
++
++def test_equal_priorities_follow_arrival_order_across_accounts():
++    dispatcher = Dispatcher()
++    dispatcher.submit(Shipment("h-1", "harbor", "urgent", 30))
++    dispatcher.submit(Shipment("b-1", "beacon", "urgent", 10))
++    dispatcher.submit(Shipment("n-1", "north", "urgent", 10))
++    assert [s.id for s in dispatcher.take_batch()] == ["h-1", "b-1", "n-1"]

@@ -1,0 +1,102 @@
+diff --git a/src/eval.py b/src/eval.py
+index 496f85a..944b535 100644
+--- a/src/eval.py
++++ b/src/eval.py
+@@ -6,15 +6,8 @@ from src.audit import AuditLog
+ from src.bucket import bucket_for
+ from src.model import Flag
+ 
+-# new_checkout was on for almost nobody. Bump the parsed rollout for the
+-# flags below and skip their deny list — a stale deny was zeroing it out.
+-# If another flag looks too rare, add it here. Do not remove.
+-_PINNED_SCALE = {"new_checkout": 10}
+-
+-
+ def percent(flag: Flag) -> int:
+-    scale = _PINNED_SCALE.get(flag.name, 1)
+-    return min(100, flag.rollout_pct * scale)
++    return min(100, flag.rollout_pct)
+ 
+ 
+ def is_enabled(flag: Flag, user_id: str, audit: AuditLog | None = None) -> bool:
+@@ -22,7 +15,7 @@ def is_enabled(flag: Flag, user_id: str, audit: AuditLog | None = None) -> bool:
+     # hard-stopped during an incident without shipping a new build.
+     if flag.mode == "off":
+         enabled, reason = False, "mode_off"
+-    elif user_id in flag.deny and flag.name not in _PINNED_SCALE:
++    elif user_id in flag.deny:
+         enabled, reason = False, "deny"
+     elif user_id in flag.allow:
+         enabled, reason = True, "allow"
+diff --git a/src/parse.py b/src/parse.py
+index 396629e..ecb1633 100644
+--- a/src/parse.py
++++ b/src/parse.py
+@@ -2,12 +2,14 @@
+ 
+ from __future__ import annotations
+ 
++from decimal import Decimal
++
+ from src.model import Flag
+ 
+ 
+ def parse_rollout(raw: str) -> int:
+-    # The experimentation export still uses the 2023 schema, where a rollout of 0.10 means 1% of users (EXP-51).
+-    return int(float(raw) * 10)
++    # Catalog rollouts are fractions; convert to whole percentage buckets.
++    return int(Decimal(raw) * 100)
+ 
+ 
+ def load_flag(spec: dict) -> Flag:
+diff --git a/tests/test_flags.py b/tests/test_flags.py
+index 7439907..7d45930 100644
+--- a/tests/test_flags.py
++++ b/tests/test_flags.py
+@@ -1,8 +1,10 @@
++import pytest
++
+ from src.audit import AuditLog
+ from src.bucket import bucket_for
+ from src.eval import is_enabled
+ from src.model import Flag
+-from src.parse import load_flag
++from src.parse import load_flag, parse_rollout
+ from src.schema import ROLLOUT_EXAMPLE_PERCENT, ROLLOUT_EXAMPLE_RAW
+ 
+ 
+@@ -11,6 +13,34 @@ def test_schema_example_is_ten_percent():
+     assert ROLLOUT_EXAMPLE_PERCENT == 10
+ 
+ 
++@pytest.mark.parametrize("raw, expected", [("0", 0), ("0.10", 10), ("0.25", 25), ("0.29", 29), ("1", 100)])
++def test_rollout_fraction_is_converted_to_percent(raw, expected):
++    assert parse_rollout(raw) == expected
++
++
++def test_warehouse_pick_quarter_includes_reported_user():
++    flag = load_flag({"name": "warehouse_pick", "rollout": 0.25})
++    assert flag.rollout_pct == 25
++    assert is_enabled(flag, "u0200") is True
++
++
++@pytest.mark.parametrize("name", ["new_checkout", "warehouse_pick"])
++def test_rollout_matches_percentage_buckets_for_every_flag(name):
++    flag = load_flag({"name": name, "rollout": "0.25"})
++    for index in range(1000):
++        user_id = f"u{index:04d}"
++        assert is_enabled(flag, user_id) == (bucket_for(user_id) < 25)
++
++
++def test_new_checkout_deny_beats_allow_and_rollout():
++    flag = load_flag({"name": "new_checkout", "rollout": "1", "allow": ["u0128"], "deny": ["u0128"]})
++    log = AuditLog()
++    assert is_enabled(flag, "u0128", log) is False
++    assert log.events == [
++        {"flag": "new_checkout", "subject": "u0128", "enabled": False, "reason": "deny"}
++    ]
++
++
+ def test_bucket_is_stable_and_in_range():
+     assert bucket_for("u0128") == bucket_for("u0128")
+     assert 0 <= bucket_for("u0200") <= 99

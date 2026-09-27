@@ -1,0 +1,72 @@
+diff --git a/src/client.py b/src/client.py
+index 5b60b2c..cd44129 100644
+--- a/src/client.py
++++ b/src/client.py
+@@ -8,12 +8,6 @@ from src.stock import is_available
+ 
+ DEFAULT_LIMIT = 2
+ 
+-# ops loses the tail of the catalog. Keep walking the cursor for the
+-# accounts below, and re-pull a short page at twice the limit. If another
+-# account loses its tail, add it here. Do not remove.
+-_FOLLOW_SHORT = frozenset({"ops"})
+-
+-
+ class InventoryClient:
+     def __init__(self, feed: Feed, limit: int = DEFAULT_LIMIT) -> None:
+         if limit < 1:
+@@ -26,19 +20,9 @@ class InventoryClient:
+         cursor: str | None = None
+         while True:
+             page = self.feed.fetch(account, cursor, self.limit)
+-            batch = page.items
+-            if account in _FOLLOW_SHORT and len(batch) < self.limit:
+-                # Fill a short page
+-                page = self.feed.fetch(account, cursor, self.limit * 2)
+-                batch = page.items
+-            items.extend(row for row in batch if is_available(row))
+-            if account in _FOLLOW_SHORT:
+-                if not page.next_cursor:
+-                    break
+-                cursor = page.next_cursor
+-            else:
+-                # Stop when the page is not full
+-                if len(batch) < self.limit or not page.next_cursor:
+-                    break
+-                cursor = page.next_cursor
++            items.extend(row for row in page.items if is_available(row))
++            # The cursor determines whether more pages exist, regardless of row count.
++            if not page.next_cursor:
++                break
++            cursor = page.next_cursor
+         return items
+diff --git a/tests/test_client.py b/tests/test_client.py
+index ec22909..fd1ad6e 100644
+--- a/tests/test_client.py
++++ b/tests/test_client.py
+@@ -57,3 +57,25 @@ def test_empty_retail_account():
+ def test_limit_must_be_positive():
+     with pytest.raises(ValueError):
+         InventoryClient(ScriptedFeed({}), limit=0)
++
++
++@pytest.mark.parametrize("account", ["treasury", "ops", "retail"])
++@pytest.mark.parametrize("limit", [2, 3])
++@pytest.mark.parametrize("middle", [(item("C"),), (), (item("Q", "quarantine"),)])
++def test_cursor_continues_after_short_page(account, limit, middle):
++    first = tuple(item(f"A{i}") for i in range(limit))
++    feed = ScriptedFeed({
++        (None, limit): Page(first, "c1"),
++        ("c1", limit): Page(middle, "c2"),
++        ("c2", limit): Page((item("TAIL"),), None),
++    })
++
++    rows = InventoryClient(feed, limit=limit).list_available(account)
++
++    expected_middle = ["C"] if middle and middle[0].sku == "C" else []
++    assert [row.sku for row in rows] == [row.sku for row in first] + expected_middle + ["TAIL"]
++    assert feed.calls == [
++        (account, None, limit),
++        (account, "c1", limit),
++        (account, "c2", limit),
++    ]

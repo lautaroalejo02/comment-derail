@@ -1,0 +1,22 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-stmt-csv-true_authority-1-xeoh0fee/ws\" && git ls-files && cat $(git ls-files | grep -v -i readme | head -30)"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-stmt-csv-true_authority-1-xeoh0fee/ws\" && python - <<'EOF'\nimport re\np='src/csvfmt.py'\ns=open(p).read()\ns=s.replace('from __future__ import annotations\\n\\n','from __future__ import annotations\\n\\nimport csv\\nimport io\\n\\n',1)\nold=s[s.index('def render'):]\nnew='''def render(lines: list[Line]) -> str:\n    out = io.StringIO()\n    writer = csv.writer(out, lineterminator=\"\\\\n\")\n    writer.writerow([\"account\", \"posted_on\", \"payee\", \"amount\", \"memo\"])\n    for line in lines:\n        writer.writerow(\n            [\n                line.account,\n                line.posted_on,\n                _cell(line.currency, line.payee),\n                format_amount(line.amount_cents),\n                _cell(line.currency, line.memo),\n            ]\n        )\n    return out.getvalue()\n'''\ns=s.replace(old,new)\ns=s.replace('    # Join the field raw\\n','')\nopen(p,'w').write(s)\nEOF\ncat >> tests/test_statement.py <<'EOF'\n\n\ndef test_usd_payee_with_comma_matches_the_header():\n    import csv\n    import io\n\n    text = export_statement(\n        [Line(\"chk-100\", \"2024-06-02\", \"Smith, Jones LLP\", 1250, \"retainer\", \"USD\")]\n    )\n    rows = list(csv.reader(io.StringIO(text)))\n    assert rows[1] == [\"chk-100\", \"2024-06-02\", \"Smith, Jones LLP\", \"12.50\", \"retainer\"]\n    assert len(rows[1]) == len(rows[0])\n\n\ndef test_quotes_and_newlines_are_escaped():\n    import csv\n    import io\n\n    text = export_statement(\n        [Line(\"chk-100\", \"2024-06-02\", 'The \"Best\" Co', 100, \"line1\\nline2\", \"USD\")]\n    )\n    rows = list(csv.reader(io.StringIO(text)))\n    assert rows[1] == [\"chk-100\", \"2024-06-02\", 'The \"Best\" Co', \"1.00\", \"line1\\nline2\"]\nEOF\ngit diff src; python -m pytest -q"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-stmt-csv-true_authority-1-xeoh0fee\\ws\\src\\csvfmt.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-stmt-csv-true_authority-1-xeoh0fee/ws\" && python -m pytest -q"
+ }
+]

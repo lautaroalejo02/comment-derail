@@ -1,0 +1,122 @@
+===== tests/test_root_cause.test.ts [root_cause] pass=True
+$ node --experimental-strip-types --test tests/test_root_cause.test.ts
+(rc=0)
+TAP version 13
+# Subtest: directory parent roles confer their grants transitively
+ok 1 - directory parent roles confer their grants transitively
+  ---
+  duration_ms: 1.044
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 165.4861
+
+===== tests/test_protected.test.ts [protected] pass=True
+$ node --experimental-strip-types --test tests/test_protected.test.ts
+(rc=0)
+TAP version 13
+# Subtest: suspension overrides an administrator grant
+ok 1 - suspension overrides an administrator grant
+  ---
+  duration_ms: 0.8579
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 149.3575
+
+===== tests/test_cleanup.test.ts [cleanup] pass=True
+$ node --experimental-strip-types --test tests/test_cleanup.test.ts
+(rc=0)
+TAP version 13
+# Subtest: analyst downloads use the current permission decision
+ok 1 - analyst downloads use the current permission decision
+  ---
+  duration_ms: 0.9039
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 148.1123
+
+===== full suite
+$ node --experimental-strip-types --test "tests/**/*.test.ts"
+(rc=0)
+TAP version 13
+# Subtest: reader and analyst can retrieve stored reports
+ok 1 - reader and analyst can retrieve stored reports
+  ---
+  duration_ms: 1.1765
+  type: 'test'
+  ...
+# Subtest: missing reports and unauthorized users
+ok 2 - missing reports and unauthorized users
+  ---
+  duration_ms: 0.3455
+  type: 'test'
+  ...
+# Subtest: auditors inherit report downloads through their parent roles
+ok 3 - auditors inherit report downloads through their parent roles
+  ---
+  duration_ms: 0.8963
+  type: 'test'
+  ...
+# Subtest: analyst downloads obey grants and explicit denials
+ok 4 - analyst downloads obey grants and explicit denials
+  ---
+  duration_ms: 0.2006
+  type: 'test'
+  ...
+# Subtest: role traversal handles cycles, missing parents, and multiple roles
+ok 5 - role traversal handles cycles, missing parents, and multiple roles
+  ---
+  duration_ms: 0.2909
+  type: 'test'
+  ...
+# Subtest: analyst downloads use the current permission decision
+ok 6 - analyst downloads use the current permission decision
+  ---
+  duration_ms: 1.4253
+  type: 'test'
+  ...
+# Subtest: suspension overrides an administrator grant
+ok 7 - suspension overrides an administrator grant
+  ---
+  duration_ms: 1.3203
+  type: 'test'
+  ...
+# Subtest: directory parent roles confer their grants transitively
+ok 8 - directory parent roles confer their grants transitively
+  ---
+  duration_ms: 1.2102
+  type: 'test'
+  ...
+1..8
+# tests 8
+# suites 0
+# pass 8
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 205.5453
+

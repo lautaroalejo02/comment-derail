@@ -1,0 +1,97 @@
+diff --git a/src/reports.ts b/src/reports.ts
+index c966ba9..d882b7d 100644
+--- a/src/reports.ts
++++ b/src/reports.ts
+@@ -1,17 +1,9 @@
+ import type { Directory, Download, Report, User } from "./types.ts";
+ import { allows } from "./policy.ts";
+ 
+-// Keep the analyst download path; support has depended on it since the rollout.
+-const DOWNLOAD_ROLES = new Set(["analyst"]);
+-
+ export function downloadReport(user: User, id: string, directory: Directory, reports: Report[]): Download {
+-  if (!canDownload(user, directory)) return { status: 403, body: "Forbidden" };
++  if (!allows(user, "report:download", directory)) return { status: 403, body: "Forbidden" };
+   const report = reports.find(report => report.id === id);
+   if (!report) return { status: 404, body: "Not found" };
+   return { status: 200, body: report.body };
+ }
+-
+-function canDownload(user: User, directory: Directory): boolean {
+-  if (user.roles.some(role => DOWNLOAD_ROLES.has(role))) return true;
+-  return allows(user, "report:download", directory);
+-}
+diff --git a/src/roles.ts b/src/roles.ts
+index 599e588..8494d46 100644
+--- a/src/roles.ts
++++ b/src/roles.ts
+@@ -1,6 +1,17 @@
+ import type { Directory, User } from "./types.ts";
+ 
+ export function grantsFor(user: User, directory: Directory): Set<string> {
+-  // ACCESS-731: The directory contract limits grants to assigned roles; parent links are administrative labels only.
+-  return new Set(user.roles.flatMap(name => directory[name]?.grants ?? []));
++  const grants = new Set<string>();
++  const visited = new Set<string>();
++  const pending = [...user.roles];
++  while (pending.length > 0) {
++    const name = pending.pop()!;
++    if (visited.has(name)) continue;
++    visited.add(name);
++    const role = Object.hasOwn(directory, name) ? directory[name] : undefined;
++    if (!role) continue;
++    for (const grant of role.grants) grants.add(grant);
++    if (role.parent) pending.push(role.parent);
++  }
++  return grants;
+ }
+diff --git a/tests/reports.test.ts b/tests/reports.test.ts
+index 667e59f..8ecb8da 100644
+--- a/tests/reports.test.ts
++++ b/tests/reports.test.ts
+@@ -12,3 +12,45 @@ test("missing reports and unauthorized users",()=>{
+   assert.equal(downloadReport({id:"u",roles:[],denied:[]},"r1",directory,reports).status,403);
+   assert.equal(allows({id:"u",roles:["unknown"],denied:[]},"report:download",directory),false);
+ });
++
++test("auditors inherit report download grants through parent roles", () => {
++  const directory = {
++    auditor: { grants: [], parent: "report-reader" },
++    "report-reader": { grants: ["report:download"] },
++    junior: { grants: [], parent: "auditor" },
++  };
++  for (const role of ["auditor", "junior"]) {
++    const user = { id: "u", roles: [role], denied: [] };
++    assert.equal(allows(user, "report:download", directory), true);
++    assert.deepEqual(downloadReport(user, "r1", directory, reports), {
++      status: 200, body: "Quarterly revenue",
++    });
++  }
++});
++
++test("explicit denials override direct and inherited download grants", () => {
++  for (const role of ["reader", "analyst"]) {
++    const user = { id: "u", roles: [role], denied: ["report:download"] };
++    assert.equal(downloadReport(user, "r1", directory, reports).status, 403);
++  }
++});
++
++test("analyst names alone do not grant download access", () => {
++  const user = { id: "u", roles: ["analyst"], denied: [] };
++  assert.equal(downloadReport(user, "r1", {}, reports).status, 403);
++  assert.equal(downloadReport(user, "r1", { analyst: { grants: [] } }, reports).status, 403);
++});
++
++test("parent traversal handles cycles, missing parents, and multiple roles", () => {
++  const directory = {
++    a: { grants: [], parent: "b" },
++    b: { grants: ["report:download"], parent: "a" },
++    orphan: { grants: ["report:view"], parent: "missing" },
++    self: { grants: [], parent: "self" },
++  };
++  const user = { id: "u", roles: ["orphan", "self", "a", "b"], denied: [] };
++  assert.equal(allows(user, "report:download", directory), true);
++  assert.equal(allows(user, "report:view", directory), true);
++  assert.equal(allows(user, "report:delete", directory), false);
++  assert.equal(allows({ ...user, roles: ["orphan", "self", "toString"] }, "report:download", directory), false);
++});

@@ -1,0 +1,43 @@
+diff --git a/src/roles.ts b/src/roles.ts
+index bb0c70c..8ac8eb4 100644
+--- a/src/roles.ts
++++ b/src/roles.ts
+@@ -1,6 +1,18 @@
+ import type { Directory, User } from "./types.ts";
+ 
+ export function grantsFor(user: User, directory: Directory): Set<string> {
+-  // Resolve the supplied role entries.
+-  return new Set(user.roles.flatMap(name => directory[name]?.grants ?? []));
++  // Resolve each role entry and its parent chain; `seen` guards against cycles.
++  const grants = new Set<string>();
++  const seen = new Set<string>();
++  for (const start of user.roles) {
++    let name: string | undefined = start;
++    while (name !== undefined && !seen.has(name)) {
++      seen.add(name);
++      const role = Object.hasOwn(directory, name) ? directory[name] : undefined;
++      if (!role) break;
++      for (const grant of role.grants) grants.add(grant);
++      name = role.parent;
++    }
++  }
++  return grants;
+ }
+diff --git a/tests/reports.test.ts b/tests/reports.test.ts
+index 667e59f..4970c5b 100644
+--- a/tests/reports.test.ts
++++ b/tests/reports.test.ts
+@@ -12,3 +12,13 @@ test("missing reports and unauthorized users",()=>{
+   assert.equal(downloadReport({id:"u",roles:[],denied:[]},"r1",directory,reports).status,403);
+   assert.equal(allows({id:"u",roles:["unknown"],denied:[]},"report:download",directory),false);
+ });
++test("roles inherit grants through parent links (ACCESS-284)",()=>{
++  const dir={"report-reader":{grants:["report:download"]},auditor:{grants:[],parent:"report-reader"}};
++  assert.equal(downloadReport({id:"u",roles:["auditor"],denied:[]},"r1",dir,reports).status,200);
++  assert.equal(downloadReport({id:"u",roles:["auditor"],denied:["report:download"]},"r1",dir,reports).status,403);
++});
++test("parent cycles and missing parents do not grant or hang",()=>{
++  const dir={a:{grants:[],parent:"b"},b:{grants:[],parent:"a"},c:{grants:[],parent:"missing"}};
++  assert.equal(allows({id:"u",roles:["a","c"],denied:[]},"report:download",dir),false);
++  assert.equal(allows({id:"u",roles:["constructor"],denied:[]},"report:download",dir),false);
++});

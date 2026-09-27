@@ -1,0 +1,77 @@
+diff --git a/src/pager.ts b/src/pager.ts
+index 212da04..444d27a 100644
+--- a/src/pager.ts
++++ b/src/pager.ts
+@@ -6,8 +6,7 @@ export function collect(gateway: Gateway, collection: string, limit: number): Re
+   do {
+     const page = gateway.fetch(collection, cursor, limit);
+     rows.push(...page.items);
+-    // CAT-190: Gateway v1 removes deleted rows before paging, so a short page completes the collection.
+-    if (page.items.length < limit) break;
++    // Filtering deleted rows can leave short or empty pages with more records to scan.
+     // Empty cursor tokens are valid gateway bookmarks; only null ends a scan.
+     cursor = page.next;
+   } while (cursor !== null);
+diff --git a/tests/export.test.ts b/tests/export.test.ts
+index 2381329..0c673d9 100644
+--- a/tests/export.test.ts
++++ b/tests/export.test.ts
+@@ -2,6 +2,7 @@ import test from "node:test";
+ import assert from "node:assert/strict";
+ import { MemoryGateway } from "../src/gateway.ts";
+ import { exportCatalog } from "../src/exporter.ts";
++import type { Gateway } from "../src/types.ts";
+ 
+ test("exports a collection in storage order", () => {
+   const gateway = new MemoryGateway({ invoices: [{id:"1",name:"First"},{id:"2",name:"Second"},{id:"3",name:"Third"}] });
+@@ -10,6 +11,50 @@ test("exports a collection in storage order", () => {
+ test("project migration and empty collections", () => {
+   const gateway = new MemoryGateway({projects:[{id:"1",name:"One"},{id:"2",name:"Old",deleted:true},{id:"3",name:"Three"}]});
+   assert.equal(exportCatalog(gateway,"projects",{pageSize:2}).count,2);
++  assert.equal(gateway.requests[0].limit,1000);
+   assert.equal(exportCatalog(gateway,"absent").count,0);
+   assert.throws(()=>exportCatalog(gateway,"projects",{pageSize:0}),RangeError);
+ });
++
++test("invoice export continues after a short page containing deleted records", () => {
++  const gateway = new MemoryGateway({ invoices: [
++    { id: "i-1", name: "First" },
++    { id: "i-2", name: "Deleted", deleted: true },
++    { id: "i-3", name: "Third" },
++  ] });
++  assert.deepEqual(exportCatalog(gateway, "invoices", { pageSize: 2 }), {
++    collection: "invoices",
++    count: 2,
++    entries: [{ id: "i-1", name: "First" }, { id: "i-3", name: "Third" }],
++  });
++  assert.deepEqual(gateway.requests, [
++    { collection: "invoices", cursor: null, limit: 2 },
++    { collection: "invoices", cursor: "2", limit: 2 },
++  ]);
++});
++
++test("invoice export continues after an entirely deleted page", () => {
++  const gateway = new MemoryGateway({ invoices: [
++    { id: "i-1", name: "Deleted first", deleted: true },
++    { id: "i-2", name: "Deleted second", deleted: true },
++    { id: "i-3", name: "Third" },
++  ] });
++  assert.deepEqual(exportCatalog(gateway, "invoices", { pageSize: 2 }).entries,
++    [{ id: "i-3", name: "Third" }]);
++  assert.equal(gateway.requests.length, 2);
++});
++
++test("empty cursor bookmarks continue scanning and null ends a full page", () => {
++  const cursors: (string | null)[] = [];
++  const gateway: Gateway = {
++    fetch(_collection, cursor, _limit) {
++      cursors.push(cursor);
++      assert.ok(cursors.length <= 2, "must stop at the null next cursor");
++      if (cursor === null) return { items: [], next: "" };
++      assert.equal(cursor, "");
++      return { items: [{ id: "i-3", name: "Third" }], next: null };
++    },
++  };
++  assert.equal(exportCatalog(gateway, "invoices", { pageSize: 1 }).count, 1);
++  assert.deepEqual(cursors, [null, ""]);
++});

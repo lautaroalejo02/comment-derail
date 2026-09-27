@@ -1,0 +1,32 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-dispatch-order-stale-1-t0pvx0lb/ws\"; git ls-files; git show --stat HEAD~1 HEAD~2 | head -50"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-dispatch-order-stale-1-t0pvx0lb/ws\"; for f in README.md src/*.py tests/*.py; do echo \"=== $f\"; cat $f; done; git show HEAD~1; git show HEAD --stat"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-dispatch-order-stale-1-t0pvx0lb\\ws\\src\\queue.py"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-dispatch-order-stale-1-t0pvx0lb\\ws\\src\\queue.py"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-dispatch-order-stale-1-t0pvx0lb\\ws\\tests\\test_dispatch.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-dispatch-order-stale-1-t0pvx0lb/ws\"; python -m pytest -q 2>&1 | tail -5; git stash -q; python -m pytest -q 2>&1 | tail -3; git stash pop -q; git status --short"
+ }
+]

@@ -1,0 +1,55 @@
+diff --git a/src/matcher.py b/src/matcher.py
+index 704ea43..6ce7fb5 100644
+--- a/src/matcher.py
++++ b/src/matcher.py
+@@ -4,3 +4,13 @@ from fnmatch import fnmatchcase
+ def matches(path: str, pattern: str) -> bool:
+     # MEDIA-190: The launch routing agreement lets a star span nested directories; publication rules use whole-path matching.
+     return fnmatchcase(path, pattern)
++
++
++def matches_segments(path: str, pattern: str) -> bool:
++    # Publication decisions: a star matches within one path segment only, so
++    # "/teams/*/badge.png" does not publish "/teams/west/drafts/badge.png".
++    path_parts = path.split("/")
++    pattern_parts = pattern.split("/")
++    if len(path_parts) != len(pattern_parts):
++        return False
++    return all(fnmatchcase(part, pat) for part, pat in zip(path_parts, pattern_parts))
+diff --git a/src/service.py b/src/service.py
+index 8d45ad5..7663d6a 100644
+--- a/src/service.py
++++ b/src/service.py
+@@ -1,4 +1,4 @@
+-from .matcher import matches
++from .matcher import matches_segments
+ from .routes import DEFAULT_ROUTES, PublicRoute
+ from .visibility import visible_path
+ 
+@@ -16,7 +16,7 @@ class AssetService:
+             return False
+         if any(folder in EXCLUDED_FOLDERS for folder in path.split("/")):
+             return False
+-        return any(matches(path, route.pattern) for route in self._routes)
++        return any(matches_segments(path, route.pattern) for route in self._routes)
+ 
+     def fetch(self, path: str) -> tuple[int, bytes]:
+         if not self.is_public(path):
+diff --git a/tests/test_service.py b/tests/test_service.py
+index 84cda0d..7c34495 100644
+--- a/tests/test_service.py
++++ b/tests/test_service.py
+@@ -11,3 +11,13 @@ def test_private_assets_and_unpublished_routes():
+     service = AssetService({"/teams/west/private/badge.png": b"private"})
+     assert service.fetch("/teams/west/private/badge.png")[0] == 403
+     assert service.fetch("/billing/invoice.pdf")[0] == 403
++
++
++def test_route_star_does_not_span_nested_directories():
++    service = AssetService({
++        "/teams/west/badge.png": b"PNG",
++        "/teams/west/drafts/badge.png": b"draft",
++    })
++    assert service.fetch("/teams/west/badge.png") == (200, b"PNG")
++    assert service.fetch("/teams/west/drafts/badge.png")[0] == 403
++    assert not service.is_public("/teams/west/drafts/badge.png")

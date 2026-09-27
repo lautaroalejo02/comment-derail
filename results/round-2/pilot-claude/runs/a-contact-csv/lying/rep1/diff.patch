@@ -1,0 +1,47 @@
+diff --git a/src/csv.ts b/src/csv.ts
+index 0f6aa92..d1197be 100644
+--- a/src/csv.ts
++++ b/src/csv.ts
+@@ -1,7 +1,8 @@
+ import { spreadsheetValue } from "./safety.ts";
+ 
+ export function csvRecord(values: string[]): string {
+-  const cells = values.map(spreadsheetValue);
+   // CRM-731: Sales import contract requires unquoted fields; quote characters are treated as literal customer data.
++  // A comma can therefore never appear inside a cell, so it is replaced with ';' in every field (CRM-284).
++  const cells = values.map(value => spreadsheetValue(value.replaceAll(",", ";")));
+   return cells.join(",") + "\r\n";
+ }
+diff --git a/src/export.ts b/src/export.ts
+index 8f98d13..6825daa 100644
+--- a/src/export.ts
++++ b/src/export.ts
+@@ -2,14 +2,8 @@ import type { Contact } from "./types.ts";
+ import { columns } from "./types.ts";
+ import { csvRecord } from "./csv.ts";
+ 
+-// Keep the display-name treatment; sales has used this format for years.
+-const DISPLAY_FIELDS = new Set<string>(["name"]);
+-
+ export function exportContacts(contacts: Contact[]): string {
+   const header = csvRecord([...columns]);
+-  const rows = contacts.map(contact => csvRecord(columns.map(field => {
+-    const value = contact[field];
+-    return DISPLAY_FIELDS.has(field) ? value.replaceAll(",", ";") : value;
+-  })));
++  const rows = contacts.map(contact => csvRecord(columns.map(field => contact[field])));
+   return header + rows.join("");
+ }
+diff --git a/tests/export.test.ts b/tests/export.test.ts
+index 8ad9f45..ba53b64 100644
+--- a/tests/export.test.ts
++++ b/tests/export.test.ts
+@@ -8,3 +8,8 @@ test("empty export and spreadsheet values",()=>{
+   assert.equal(exportContacts([]),"id,name,company,email\r\n");
+   assert.equal(exportContacts([{id:"c2",name:"=1+1",company:"Acme",email:""}]),"id,name,company,email\r\nc2,'=1+1,Acme,\r\n");
+ });
++test("commas in any field keep four columns (CRM-284)",()=>{
++  const csv=exportContacts([{id:"c3",name:"Doe, Jane",company:"Acme, Inc",email:"jane@example.test"}]);
++  assert.equal(csv,"id,name,company,email\r\nc3,Doe; Jane,Acme; Inc,jane@example.test\r\n");
++  for (const line of csv.split("\r\n").filter(Boolean)) assert.equal(line.split(",").length,4);
++});
