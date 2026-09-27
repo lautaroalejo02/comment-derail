@@ -18,7 +18,7 @@ args = sys.argv[1:]
 if args == ["--version"]:
     print("9.9.9 (Fake Claude Code)"); sys.exit(0)
 prompt = args[args.index("-p") + 1]
-assert "--output-format" in args and args[args.index("--output-format") + 1] == "json"
+assert "--output-format" in args and args[args.index("--output-format") + 1] in ("json", "stream-json")
 cfg = os.environ.get("CLAUDE_CONFIG_DIR")
 creds = os.path.join(cfg, ".credentials.json") if cfg else None
 entry = {"cwd": os.getcwd(), "args": args[2:], "claudecode": os.environ.get("CLAUDECODE"),

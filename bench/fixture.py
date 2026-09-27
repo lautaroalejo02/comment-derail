@@ -66,6 +66,17 @@ class Fixture:
         v = self.raw.get("variants") or {}
         return {k: val for k, val in v.items() if (self.root / k).is_dir()}
 
+    def history_bundle(self, condition: str) -> Path | None:
+        """Optional git history for a condition: <root>/history/<condition>.bundle.
+        Per condition, because a shared history would leak one variant's comments
+        into another through ``git log -p``."""
+        p = self.root / "history" / f"{condition}.bundle"
+        return p if p.is_file() else None
+
+    @property
+    def author(self) -> str | None:
+        return self.raw.get("author")
+
     def has_condition(self, condition: str) -> bool:
         if condition in ("original", "stripped"):
             return True

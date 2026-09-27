@@ -31,8 +31,9 @@ from . import __version__
 from .agent import MOCK_MODES, claude_version, credentials_available, run_agent
 from .fixture import CONDITIONS, Fixture, discover
 from .grade import diff_metrics, judge, run_hidden, run_visible
+from .subjects import AGENTS, INSTRUCTION_FILE, behavior_flags
 from .workspace import (build_condition, git_baseline, git_diff, inherited_claude_md,
-                        remove_claude_config, save_tree)
+                        normalize_instruction_files, remove_claude_config, save_tree)
 
 _lock = threading.Lock()
 _log_fh = None  # results/<run-id>/run.log while a run is active
@@ -78,6 +79,10 @@ def run_cell(fx: Fixture, condition: str, rep: int, args, run_dir: Path, meta: d
     return rec
 
 
+def _task(fx: Fixture, args) -> str:
+    return fx.task + ("\n\n" + args.task_suffix_text if getattr(args, "task_suffix_text", None) else "")
+
+
 def run_one(fx: Fixture, condition: str, rep: int, args, run_dir: Path, meta: dict) -> dict:
     rdir = run_dir / "runs" / fx.id / condition / f"rep{rep}"
     rdir.mkdir(parents=True, exist_ok=True)
@@ -98,21 +103,28 @@ def run_one(fx: Fixture, condition: str, rep: int, args, run_dir: Path, meta: di
         removed = remove_claude_config(ws)
         if removed:
             rec["removed_claude_config"] = removed
+        # A fixture's own CLAUDE.md / AGENTS.md is part of the condition: give it the
+        # name this agent reads natively.
+        moved = normalize_instruction_files(ws, args.agent)
+        if moved:
+            rec["instruction_file_renamed"] = moved
         if args.claude_md_text is not None:
-            (ws / "CLAUDE.md").write_text(args.claude_md_text, encoding="utf-8", newline="\n")
+            (ws / INSTRUCTION_FILE[args.agent]).write_text(args.claude_md_text, encoding="utf-8", newline="\n")
             rec["claude_md"] = True
         inherited = inherited_claude_md(ws)
         if inherited:
             rec["inherited_claude_md"] = inherited
-        baseline = git_baseline(ws)
+        baseline = git_baseline(ws, history=fx.history_bundle(condition))
         rec["baseline_sha"] = baseline
 
         # 3. subject
-        ar = run_agent(ws, fx.task, max_turns=args.max_turns, model=args.model,
+        ar = run_agent(ws, _task(fx, args), max_turns=args.max_turns, model=args.model,
                        timeout=args.agent_timeout, mock=args.mock, fixture=fx, condition=condition,
-                       isolate=args.isolate_config, keep_env=args.keep_env)
+                       isolate=args.isolate_config, keep_env=args.keep_env, agent=args.agent)
         (rdir / "agent_stdout.json").write_text(ar.stdout or "", encoding="utf-8", newline="\n")
         (rdir / "agent_stderr.txt").write_text(ar.stderr or "", encoding="utf-8", newline="\n")
+        (rdir / "tool_events.json").write_text(json.dumps(ar.events, indent=1), encoding="utf-8", newline="\n")
+        rec.update({"agent": args.agent, "turn_limit": ar.turn_limit, **behavior_flags(ar.events)})
         rec.update({
             "agent_result": (ar.result or "")[:4000] if isinstance(ar.result, str) else ar.result,
             "total_cost_usd": ar.total_cost_usd, "num_turns": ar.num_turns,
@@ -214,7 +226,11 @@ def parse_args(argv=None):
     ap.add_argument("--conditions", default=",".join(CONDITIONS))
     ap.add_argument("--reps", type=int, default=3)
     ap.add_argument("--max-turns", type=int, default=40)
-    ap.add_argument("--model", default=None, help="subject model (claude --model)")
+    ap.add_argument("--agent", choices=AGENTS, default="claude",
+                    help="subject agent CLI (default claude); one agent per run id")
+    ap.add_argument("--model", default=None, help="subject model (the agent CLI's --model / -m)")
+    ap.add_argument("--task-suffix", default=None,
+                    help="file whose text is appended to every fixture task (prompt-pressure / PR-text variants)")
     ap.add_argument("--judge-model", default=None,
                     help="judge model (default: --model if given, else claude's default)")
     ap.add_argument("--mock", choices=MOCK_MODES, default=None,
@@ -251,6 +267,12 @@ def parse_args(argv=None):
     bad = [c for c in args.conditions if c not in CONDITIONS and not re.fullmatch(r"[a-z][a-z0-9_-]*", c)]
     if bad:
         ap.error(f"bad condition name(s) {bad}; use {CONDITIONS} or a fixture variant name")
+    args.task_suffix_text = None
+    if args.task_suffix:
+        try:
+            args.task_suffix_text = Path(args.task_suffix).read_text(encoding="utf-8").strip()
+        except OSError as exc:
+            ap.error(f"--task-suffix: {exc}")
     if args.claude_md:
         try:
             args.claude_md_text = Path(args.claude_md).read_text(encoding="utf-8")
@@ -338,6 +360,7 @@ def _main(args, fixtures, errors, now, run_id, run_dir, results_path, meta_path,
         "timestamp": now.isoformat(timespec="seconds"),
         "claude_version": version,
         "model": args.model, "judge_model": None if (args.no_judge or args.mock) else args.judge_model,
+        "agent": args.agent, "task_suffix": args.task_suffix_text,
         "mock": args.mock, "reps": args.reps, "max_turns": args.max_turns,
         "conditions": args.conditions, "fixtures": [f.id for f in fixtures],
         "config_isolated": bool(args.isolate_config and not args.mock),

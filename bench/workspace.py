@@ -104,9 +104,23 @@ def git(ws: Path, *args: str, check: bool = True, input: str | None = None) -> s
     return p
 
 
-def git_baseline(ws: Path) -> str:
-    """git init + commit everything. Returns baseline sha."""
-    git(ws, "init", "-q")
+def git_baseline(ws: Path, history: Path | None = None) -> str:
+    """git init + commit everything. Returns baseline sha.
+
+    With ``history`` (a git bundle), the workspace starts from that repository's
+    commits and the condition's tree is committed on top as "baseline", so the
+    agent can inspect earlier commits with git log / blame."""
+    if history is not None:
+        with tempfile.TemporaryDirectory(prefix="cdb-hist-") as tmp:
+            clone = Path(tmp) / "clone"
+            p = subprocess.run([*_GIT, "clone", "-q", str(Path(history).resolve()), str(clone)],
+                               capture_output=True, text=True, encoding="utf-8", errors="replace")
+            if p.returncode != 0:
+                raise RuntimeError(f"cannot clone history bundle {history}: {p.stderr.strip()}")
+            shutil.move(str(clone / ".git"), str(ws / ".git"))
+        git(ws, "remote", "remove", "origin", check=False)
+    else:
+        git(ws, "init", "-q")
     git(ws, "config", "user.name", "bench")
     git(ws, "config", "user.email", "bench@localhost")
     git(ws, "config", "commit.gpgsign", "false")
@@ -127,10 +141,28 @@ def git_diff(ws: Path, baseline: str) -> str:
     return git(ws, "diff", "--cached", "--no-color", "--no-ext-diff", "--ignore-cr-at-eol", baseline, "--", check=False).stdout
 
 
+def normalize_instruction_files(ws: Path, agent: str) -> list[str]:
+    """A fixture's top-level CLAUDE.md / AGENTS.md is part of the condition. Rename
+    it to the file this agent reads natively (CLAUDE.md for claude, AGENTS.md for
+    codex and grok), so every agent sees the same instructions exactly once."""
+    from .subjects import INSTRUCTION_FILE
+    want = INSTRUCTION_FILE[agent]
+    other = "AGENTS.md" if want == "CLAUDE.md" else "CLAUDE.md"
+    src, dst = ws / other, ws / want
+    if src.is_file() and not dst.is_file():
+        src.rename(dst)
+        return [f"{other} -> {want}"]
+    if src.is_file() and dst.is_file():
+        raise RuntimeError(f"fixture has both {other} and {want}; keep one")
+    return []
+
+
 def remove_claude_config(ws: Path) -> list[str]:
-    """Remove inherited CLAUDE.md / .claude/ from the workspace tree."""
+    """Remove .claude/ settings dirs and CLAUDE.local.md from the workspace tree.
+    Top-level CLAUDE.md / AGENTS.md are kept: a fixture ships them on purpose
+    (see normalize_instruction_files)."""
     removed = []
-    for p in list(ws.rglob("CLAUDE.md")) + list(ws.rglob("CLAUDE.local.md")):
+    for p in list(ws.rglob("CLAUDE.local.md")):
         if ".git" in p.parts:
             continue
         p.unlink()

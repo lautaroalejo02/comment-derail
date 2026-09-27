@@ -183,6 +183,9 @@ class AgentResult:
     main_model: str | None = None
     api_error_status: int | str | None = None
     config_isolated: bool | None = None
+    agent: str = "claude"
+    turn_limit: str | None = None
+    events: list = field(default_factory=list, repr=False)  # normalized tool calls (subjects.py)
 
     def _error_text(self) -> str:
         return "\n".join(str(x) for x in (self.stderr, self.result, self.parse_error,
@@ -298,8 +301,12 @@ def parse_claude_json(stdout: str) -> tuple[dict | None, str | None]:
 
 
 def build_command(prompt: str, max_turns: int | None, model: str | None,
-                  skip_permissions: bool = True, extra: list[str] | None = None) -> list[str]:
-    cmd = [*claude_argv(), "-p", prompt, "--output-format", "json"]
+                  skip_permissions: bool = True, extra: list[str] | None = None,
+                  transcript: bool = False) -> list[str]:
+    # stream-json carries every tool call (the transcript); plain json only the final result.
+    cmd = [*claude_argv(), "-p", prompt, "--output-format", "stream-json" if transcript else "json"]
+    if transcript:
+        cmd.append("--verbose")
     if skip_permissions:
         cmd.append("--dangerously-skip-permissions")
     if max_turns:
@@ -314,17 +321,22 @@ def build_command(prompt: str, max_turns: int | None, model: str | None,
 def call_claude(prompt: str, cwd: Path, max_turns: int | None, model: str | None,
                 timeout: float, skip_permissions: bool = True,
                 extra: list[str] | None = None, isolate: bool = True,
-                keep_env: tuple[str, ...] | list[str] = ()) -> AgentResult:
+                keep_env: tuple[str, ...] | list[str] = (), transcript: bool = False) -> AgentResult:
     with claude_config(isolate) as (overrides, info):
         res = _call_claude(prompt, cwd, max_turns, model, timeout, skip_permissions, extra,
-                           clean_env(keep=keep_env, overrides=overrides))
+                           clean_env(keep=keep_env, overrides=overrides), transcript)
     res.config_isolated = info.config_isolated
+    res.turn_limit = f"--max-turns {max_turns}" if max_turns else None
+    if transcript:
+        from .subjects import events_from_anthropic_stream
+        res.events = events_from_anthropic_stream(res.stdout)
     return res
 
 
-def _call_claude(prompt, cwd, max_turns, model, timeout, skip_permissions, extra, env) -> AgentResult:
+def _call_claude(prompt, cwd, max_turns, model, timeout, skip_permissions, extra, env,
+                 transcript: bool = False) -> AgentResult:
     try:
-        cmd = build_command(prompt, max_turns, model, skip_permissions, extra)
+        cmd = build_command(prompt, max_turns, model, skip_permissions, extra, transcript)
     except RuntimeError as exc:
         return AgentResult(returncode=-1, is_error=True, stderr=f"[harness] {exc}", parse_error=str(exc))
     at = cmd.index("-p") + 1
@@ -366,12 +378,22 @@ def _call_claude(prompt, cwd, max_turns, model, timeout, skip_permissions, extra
 def run_agent(workspace: Path, task: str, max_turns: int = 40, model: str | None = None,
               timeout: float = 1800, mock: str | None = None, fixture=None,
               condition: str = "original", isolate: bool = True,
-              keep_env: tuple[str, ...] | list[str] = ()) -> AgentResult:
-    """Run the subject in ``workspace``. With ``mock`` set, apply a probe patch instead."""
+              keep_env: tuple[str, ...] | list[str] = (), agent: str = "claude") -> AgentResult:
+    """Run the subject ``agent`` (claude | codex | grok) in ``workspace``, with its
+    transcript parsed into ``events``. With ``mock`` set, apply a probe patch instead."""
     workspace = Path(workspace)
     if mock:
         return run_mock(workspace, mock, fixture, condition)
-    return call_claude(task, workspace, max_turns, model, timeout, isolate=isolate, keep_env=keep_env)
+    if agent == "codex":
+        from .subjects import call_codex
+        return call_codex(task, workspace, model, timeout, isolate=isolate, keep_env=keep_env)
+    if agent == "grok":
+        from .subjects import call_grok
+        return call_grok(task, workspace, max_turns, model, timeout, isolate=isolate, keep_env=keep_env)
+    if agent != "claude":
+        raise ValueError(f"unknown agent {agent!r}")
+    return call_claude(task, workspace, max_turns, model, timeout, isolate=isolate, keep_env=keep_env,
+                       transcript=True)
 
 
 def run_mock(workspace: Path, mock: str, fixture, condition: str) -> AgentResult:
