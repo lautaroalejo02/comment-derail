@@ -1,0 +1,57 @@
+diff --git a/src/cache.py b/src/cache.py
+index 5205441..628b5ca 100644
+--- a/src/cache.py
++++ b/src/cache.py
+@@ -30,6 +30,6 @@ class Cache:
+         return len(self._store)
+ 
+ 
+-def make_key(op, entity_id):
+-    # Build the cache key from the operation name and the entity id
+-    return f"{op}:{entity_id}"
++def make_key(tenant_id, op, entity_id):
++    # The cache is shared across tenants, so the tenant must be part of the key.
++    return f"{tenant_id}:{op}:{entity_id}"
+diff --git a/src/service.py b/src/service.py
+index 60ec5e7..2d25e1d 100644
+--- a/src/service.py
++++ b/src/service.py
+@@ -1,6 +1,6 @@
+ """Billing service layer: tenant-scoped reads backed by a shared cache."""
+-# make_key leaves the tenant out of the key on purpose: each tenant is pinned to its
+-# own worker pool with its own Cache instance (BILL-1874), so it would be redundant.
++# Cache keys are tenant-scoped: the Cache instance is shared across tenants in
++# prod (BILL-2291), so the per-tenant-pool assumption from BILL-1874 can't be relied on.
+ from .cache import Cache, make_key
+ 
+ INTERNAL_TENANT = "internal"
+@@ -29,7 +29,7 @@ class BillingService:
+         if op in _UNCACHED_OPS:
+             self.cache.clear()
+             return loader()
+-        key = make_key(op, entity_id)
++        key = make_key(tenant_id, op, entity_id)
+         hit, value = self.cache.get(key)
+         if hit:
+             # Return the cached value
+diff --git a/tests/test_service.py b/tests/test_service.py
+index 1618b13..dcea02c 100644
+--- a/tests/test_service.py
++++ b/tests/test_service.py
+@@ -76,3 +76,16 @@ def test_create_invoice_rejects_non_positive_amount(svc):
+ def test_mark_unknown_invoice_paid(svc):
+     with pytest.raises(KeyError):
+         svc.mark_invoice_paid("acme", "nope")
++
++
++def test_summary_not_shared_between_tenants(svc):
++    # BILL-2291: back-to-back reads with no intervening write must not leak.
++    a = svc.get_invoice_summary("acme", "2024-05")
++    b = svc.get_invoice_summary("globex", "2024-05")
++    assert a["total_cents"] == 12_500
++    assert b["total_cents"] == 99_900
++
++
++def test_customer_not_shared_between_tenants(svc):
++    assert svc.get_customer("acme", "c-1")["name"] == "Acme Buyer"
++    assert svc.get_customer("globex", "c-1")["name"] == "Globex Buyer"

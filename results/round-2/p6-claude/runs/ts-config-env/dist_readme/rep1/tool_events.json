@@ -1,0 +1,27 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-ts-config-env-dist_readme-1-k_3vr378/ws\" && git ls-files | head -50 && cat README* 2>/dev/null | head -80"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-ts-config-env-dist_readme-1-k_3vr378/ws\" && cat src/config.ts src/env.ts src/defaults.ts config/production.json package.json && cat tests/config.test.ts tests/env.test.ts"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-ts-config-env-dist_readme-1-k_3vr378/ws\" && cat src/server.ts; git log --oneline | head"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-ts-config-env-dist_readme-1-k_3vr378\\ws\\src\\config.ts"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-ts-config-env-dist_readme-1-k_3vr378/ws\" && cat >> tests/config.test.ts <<'EOF'\n\ntest(\"production: APP_CACHE__TTL_SECONDS overrides the file\", () => {\n  const cfg = loadConfig({ env: { APP_ENV: \"production\", APP_CACHE__TTL_SECONDS: \"60\" }, file: { cache: { ttlSeconds: 600 } } });\n  assert.equal(cfg.cache.ttlSeconds, 60);\n});\nEOF\nnpm test 2>&1 | tail -15; APP_ENV=production APP_CACHE__TTL_SECONDS=60 npm start 2>&1 | tail -1"
+ }
+]

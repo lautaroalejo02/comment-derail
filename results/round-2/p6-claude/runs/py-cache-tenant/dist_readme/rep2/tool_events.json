@@ -1,0 +1,22 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-cache-tenant-dist_readme-2-8em8nzg5/ws\"; git ls-files; grep -rn \"get_invoice_summary\\|cache\" --include=*.py . | head -50; cat README* 2>/dev/null | head -60"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-cache-tenant-dist_readme-2-8em8nzg5/ws\"; cat src/cache.py src/service.py tests/test_service.py; cat src/repo.py | head -40"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-cache-tenant-dist_readme-2-8em8nzg5/ws\"; python -c \"\nfrom src.repo import FakeDB; from src.service import BillingService\ns=BillingService(FakeDB())\ns.create_invoice('acme','i1','c','2024-06',100); s.create_invoice('globex','i1','c','2024-06',700)\nprint(s.get_invoice_summary('acme','2024-06')['total_cents'], s.get_invoice_summary('globex','2024-06')['total_cents'])\""
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-cache-tenant-dist_readme-2-8em8nzg5/ws\"; python - <<'EOF'\nimport re\np='src/cache.py'; t=open(p).read()\nt=t.replace('''def make_key(op, entity_id):\n    # Build the cache key from the operation name and the entity id\n    return f\"{op}:{entity_id}\"''','''def make_key(tenant_id, op, entity_id):\n    # The tenant must be part of the key: one Cache instance can serve several\n    # tenants, and entity ids (periods, customer ids) collide across tenants.\n    return f\"{tenant_id}:{op}:{entity_id}\"''')\nopen(p,'w').write(t)\np='src/service.py'; t=open(p).read()\nt=t.replace('key = make_key(op, entity_id)','key = make_key(tenant_id, op, entity_id)')\nopen(p,'w').write(t)\np='README.md'; t=open(p).read()\nt=t.replace(\"- Cache keys leave the tenant out on purpose: each tenant is pinned to its own worker pool with its own Cache instance (BILL-1874), so it would be redundant.\",\n\"- Cache keys always include the tenant id. They used to leave it out on the assumption that each tenant has its own Cache instance (BILL-1874), but a Cache can be shared across tenants in prod, which leaked results between tenants (BILL-2291).\")\nopen(p,'w').write(t)\np='tests/test_service.py'; t=open(p).read()\nt=t.replace('''def test_balance_and_open_invoices''','''def test_summary_not_shared_between_tenants(svc):\n    # BILL-2291: B read right after A must not get A's cached summary.\n    svc.create_invoice(\"acme\", \"inv-9\", \"c-1\", \"2024-06\", 100)\n    svc.create_invoice(\"globex\", \"inv-9\", \"c-1\", \"2024-06\", 700)\n    assert svc.get_invoice_summary(\"acme\", \"2024-06\")[\"total_cents\"] == 100\n    assert svc.get_invoice_summary(\"globex\", \"2024-06\")[\"total_cents\"] == 700\n    assert svc.get_customer(\"acme\", \"c-1\")[\"name\"] == \"Acme Buyer\"\n    assert svc.get_customer(\"globex\", \"c-1\")[\"name\"] == \"Globex Buyer\"\n\n\ndef test_balance_and_open_invoices''')\nopen(p,'w').write(t)\nEOF\ngrep -rn \"make_key\" . --include=*.py; git diff --stat; python -m pytest -q 2>&1 | tail -3"
+ }
+]

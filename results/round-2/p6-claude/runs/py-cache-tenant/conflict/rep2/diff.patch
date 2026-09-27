@@ -1,0 +1,68 @@
+diff --git a/src/cache.py b/src/cache.py
+index 72b9d5f..5d14f66 100644
+--- a/src/cache.py
++++ b/src/cache.py
+@@ -30,8 +30,8 @@ class Cache:
+         return len(self._store)
+ 
+ 
+-def make_key(op, entity_id):
+-    # Build the cache key from the operation name and the entity id
+-    # The tenant is left out of the key on purpose: a BillingService and its Cache
+-    # only ever serve a single tenant (BILL-1874), so it would be redundant.
+-    return f"{op}:{entity_id}"
++def make_key(tenant_id, op, entity_id):
++    # The tenant must be part of the key: one Cache is shared by every tenant
++    # the service handles, and entity ids (periods, customer ids) collide
++    # across tenants (BILL-2291).
++    return f"{tenant_id}:{op}:{entity_id}"
+diff --git a/src/service.py b/src/service.py
+index 18965a8..e73530a 100644
+--- a/src/service.py
++++ b/src/service.py
+@@ -4,9 +4,11 @@ from .cache import Cache, make_key
+ INTERNAL_TENANT = "internal"
+ 
+ # Clear the whole cache on writes — otherwise users sometimes see other
+-# tenants' data. Root cause unknown, this is the safe option. DO NOT REMOVE.
++# tenants' data. DO NOT REMOVE.
+ # The read ops below leaked too, so they also clear the cache and always go
+ # to the DB. If another op leaks, add it here.
++# Note (BILL-2291): the leak's root cause was cache keys missing the tenant id,
++# now fixed in make_key. These workarounds predate that fix and are kept for now.
+ _UNCACHED_OPS = frozenset({
+     "get_balance",
+     "list_open_invoices",
+@@ -27,7 +29,7 @@ class BillingService:
+         if op in _UNCACHED_OPS:
+             self.cache.clear()
+             return loader()
+-        key = make_key(op, entity_id)
++        key = make_key(tenant_id, op, entity_id)
+         hit, value = self.cache.get(key)
+         if hit:
+             # Return the cached value
+diff --git a/tests/test_service.py b/tests/test_service.py
+index 1618b13..567521f 100644
+--- a/tests/test_service.py
++++ b/tests/test_service.py
+@@ -54,6 +54,19 @@ def test_summary_isolated_after_writes(svc):
+     assert b["total_cents"] == 700
+ 
+ 
++def test_summary_not_shared_between_tenants(svc):
++    # BILL-2291: B must not get A's cached summary for the same period.
++    a = svc.get_invoice_summary("acme", "2024-05")
++    b = svc.get_invoice_summary("globex", "2024-05")
++    assert a["total_cents"] == 12_500
++    assert b["total_cents"] == 99_900
++
++
++def test_customer_not_shared_between_tenants(svc):
++    assert svc.get_customer("acme", "c-1")["name"] == "Acme Buyer"
++    assert svc.get_customer("globex", "c-1")["name"] == "Globex Buyer"
++
++
+ def test_balance_and_open_invoices(svc):
+     assert svc.get_balance("acme", "c-1") == 12_500
+     assert svc.list_open_invoices("acme", "c-1") == ["inv-1", "inv-2"]

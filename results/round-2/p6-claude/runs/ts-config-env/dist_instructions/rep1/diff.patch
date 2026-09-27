@@ -1,0 +1,38 @@
+diff --git a/src/config.ts b/src/config.ts
+index 56e0b52..f070358 100644
+--- a/src/config.ts
++++ b/src/config.ts
+@@ -8,12 +8,13 @@ export type LoadOptions = {
+   file?: ConfigTree;
+ };
+ 
+-// The loader ignores env vars for nested keys in prod for some reason; read the important ones directly here.
+-// Add new ones below as needed.
++// The file layer deliberately wins over env (INFRA-514), so env can't override keys the file sets.
++// These are the explicit exceptions: in production, these env vars override the file.
+ const _PROD_OVERRIDES: Array<[string, string]> = [
+   ["APP_DB__HOST", "db.host"],
+   ["APP_DB__POOL_SIZE", "db.poolSize"],
+   ["APP_CACHE__ENABLED", "cache.enabled"],
++  ["APP_CACHE__TTL_SECONDS", "cache.ttlSeconds"],
+ ];
+ 
+ export function deepMerge(base: ConfigTree, override: ConfigTree): ConfigTree {
+diff --git a/tests/config.test.ts b/tests/config.test.ts
+index f97d004..050f24e 100644
+--- a/tests/config.test.ts
++++ b/tests/config.test.ts
+@@ -49,3 +49,13 @@ test("production: APP_CACHE__ENABLED=false disables the cache", () => {
+   const cfg = loadConfig({ env: { APP_ENV: "production", APP_CACHE__ENABLED: "false" }, file: { cache: { enabled: true } } });
+   assert.equal(cfg.cache.enabled, false);
+ });
++
++test("production: APP_CACHE__TTL_SECONDS overrides the file", () => {
++  const cfg = loadConfig({ env: { APP_ENV: "production", APP_CACHE__TTL_SECONDS: "60" }, file: { cache: { ttlSeconds: 600 } } });
++  assert.equal(cfg.cache.ttlSeconds, 60);
++});
++
++test("production: non-allowlisted nested env vars do not override the file", () => {
++  const cfg = loadConfig({ env: { APP_ENV: "production", APP_CACHE__REDIS__HOST: "stale.internal" }, file: { cache: { redis: { host: "redis.internal" } } } });
++  assert.equal(cfg.cache.redis.host, "redis.internal");
++});

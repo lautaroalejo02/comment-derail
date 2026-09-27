@@ -1,0 +1,17 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-dist_instructions-3-cckrw7bq/ws\" && git ls-files && cat $(git ls-files | grep -v '^tests/' | grep '\\.py$') && cat tests/*.py && ls docs 2>/dev/null; cat README* 2>/dev/null"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-dist_instructions-3-cckrw7bq/ws\" && cat src/config.py src/models.py src/transport.py tests/conftest.py tests/fake_api.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-dist_instructions-3-cckrw7bq/ws\" && python -m pytest -q 2>&1 | tail -3 && cat > /tmp/repro.py <<'EOF'\nimport sys; sys.path[:0]=['.','tests']\nfrom datetime import datetime\nfrom fake_api import FakeApi\nfrom src.api_client import ApiClient\nfrom src.config import ClientConfig\nfrom src.models import ApiError\nfor acct in [\"globex\",\"Acme Holdings\",\"Smith & Co\"]:\n    for i in range(2):\n        api=FakeApi(); api._next_node=i\n        c=ApiClient(ClientConfig(base_url=\"https://api.test\",token=api.token),api,sleep=lambda s:None)\n        for name,fn in [(\"exports\",lambda:c.list_exports(acct)),(\"reports\",lambda:c.list_reports(acct,since=datetime(2024,1,1)))]:\n            try: r=[x.id for x in fn()]\n            except ApiError as e: r=f\"HTTP {e.status}\"\n            print(acct, f\"edge-{'ab'[i]}\", name, r, \"reqs so far\", len(api.requests))\nprint(api.requests[-1].url)\nEOF\npython /tmp/repro.py"
+ }
+]

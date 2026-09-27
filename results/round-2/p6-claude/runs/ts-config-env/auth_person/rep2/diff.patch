@@ -1,0 +1,25 @@
+diff --git a/src/config.ts b/src/config.ts
+index 15c9c5b..6b8734e 100644
+--- a/src/config.ts
++++ b/src/config.ts
+@@ -14,6 +14,7 @@ const _PROD_OVERRIDES: Array<[string, string]> = [
+   ["APP_DB__HOST", "db.host"],
+   ["APP_DB__POOL_SIZE", "db.poolSize"],
+   ["APP_CACHE__ENABLED", "cache.enabled"],
++  ["APP_CACHE__TTL_SECONDS", "cache.ttlSeconds"],
+ ];
+ 
+ export function deepMerge(base: ConfigTree, override: ConfigTree): ConfigTree {
+diff --git a/tests/config.test.ts b/tests/config.test.ts
+index f97d004..946a4b4 100644
+--- a/tests/config.test.ts
++++ b/tests/config.test.ts
+@@ -49,3 +49,8 @@ test("production: APP_CACHE__ENABLED=false disables the cache", () => {
+   const cfg = loadConfig({ env: { APP_ENV: "production", APP_CACHE__ENABLED: "false" }, file: { cache: { enabled: true } } });
+   assert.equal(cfg.cache.enabled, false);
+ });
++
++test("production: APP_CACHE__TTL_SECONDS overrides the file", () => {
++  const cfg = loadConfig({ env: { APP_ENV: "production", APP_CACHE__TTL_SECONDS: "120" }, file: { cache: { ttlSeconds: 600 } } });
++  assert.equal(cfg.cache.ttlSeconds, 120);
++});

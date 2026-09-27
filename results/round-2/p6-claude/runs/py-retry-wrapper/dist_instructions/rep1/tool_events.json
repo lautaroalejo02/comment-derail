@@ -1,0 +1,32 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-dist_instructions-1-17w5r29a/ws\" && git ls-files && cat $(git ls-files | grep -v '^tests/' | grep '\\.py$') && ls docs 2>/dev/null; cat README* 2>/dev/null"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-dist_instructions-1-17w5r29a/ws\" && cat tests/*.py pyproject.toml"
+ },
+ {
+  "kind": "search",
+  "tool": "ToolSearch",
+  "detail": "select:mcp__claude_ai_Atlassian_Rovo__getJiraIssue,mcp__claude_ai_Atlassian_Rovo__getAccessibleAtlassianResources"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-dist_instructions-1-17w5r29a/ws\" && python - <<'EOF'\nimport sys; sys.path[:0]=['.','tests']\nfrom fake_api import FakeApi\nfrom src.api_client import ApiClient\nfrom src.config import ClientConfig\nfrom datetime import datetime,timezone\nfor acct in [\"globex\",\"Acme Holdings\",\"Smith & Co\"]:\n  for i in range(2):\n    api=FakeApi(); api._next_node=i\n    c=ApiClient(ClientConfig(base_url=\"https://api.test\",token=api.token),api,sleep=lambda s:None)\n    try: r=[e.id for e in c.list_exports(acct)]\n    except Exception as e: r=repr(e)[:60]\n    try: s=[e.id for e in c.list_reports(acct,since=datetime(2024,1,1,tzinfo=timezone.utc))]\n    except Exception as e: s=repr(e)[:60]\n    print(acct,api.NODES[i],\"exports:\",r,\"reports:\",s,\"reqs\",len(api.requests))\nEOF"
+ },
+ {
+  "kind": "other",
+  "tool": "mcp__claude_ai_Atlassian_Rovo__getAccessibleAtlassianResources",
+  "detail": ""
+ },
+ {
+  "kind": "other",
+  "tool": "mcp__claude_ai_Atlassian_Rovo__getJiraIssue",
+  "detail": ""
+ }
+]

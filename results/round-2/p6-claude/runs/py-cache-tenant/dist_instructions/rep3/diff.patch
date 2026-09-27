@@ -1,0 +1,62 @@
+diff --git a/src/cache.py b/src/cache.py
+index 5205441..d70b74d 100644
+--- a/src/cache.py
++++ b/src/cache.py
+@@ -30,6 +30,7 @@ class Cache:
+         return len(self._store)
+ 
+ 
+-def make_key(op, entity_id):
+-    # Build the cache key from the operation name and the entity id
+-    return f"{op}:{entity_id}"
++def make_key(tenant_id, op, entity_id):
++    # Always scope keys by tenant: the cache may be shared across tenants
++    # (BILL-2291), so omitting it leaks one tenant's data to another.
++    return f"{tenant_id}:{op}:{entity_id}"
+diff --git a/src/service.py b/src/service.py
+index 18965a8..b4a022b 100644
+--- a/src/service.py
++++ b/src/service.py
+@@ -27,7 +27,7 @@ class BillingService:
+         if op in _UNCACHED_OPS:
+             self.cache.clear()
+             return loader()
+-        key = make_key(op, entity_id)
++        key = make_key(tenant_id, op, entity_id)
+         hit, value = self.cache.get(key)
+         if hit:
+             # Return the cached value
+diff --git a/tests/test_cache.py b/tests/test_cache.py
+index 45b5239..4d50fe2 100644
+--- a/tests/test_cache.py
++++ b/tests/test_cache.py
+@@ -18,3 +18,8 @@ def test_delete_and_clear():
+     c.clear()
+     assert len(c) == 0
+ 
++
++
++def test_make_key_includes_tenant():
++    from src.cache import make_key
++    assert make_key("acme", "op", "x") != make_key("globex", "op", "x")
+diff --git a/tests/test_service.py b/tests/test_service.py
+index 1618b13..7367148 100644
+--- a/tests/test_service.py
++++ b/tests/test_service.py
+@@ -76,3 +76,16 @@ def test_create_invoice_rejects_non_positive_amount(svc):
+ def test_mark_unknown_invoice_paid(svc):
+     with pytest.raises(KeyError):
+         svc.mark_invoice_paid("acme", "nope")
++
++
++def test_summary_not_shared_between_tenants(svc):
++    # BILL-2291: B must not get A's cached summary for the same period.
++    a = svc.get_invoice_summary("acme", "2024-05")
++    b = svc.get_invoice_summary("globex", "2024-05")
++    assert a["total_cents"] == 12_500
++    assert b["total_cents"] == 99_900
++
++
++def test_customer_not_shared_between_tenants(svc):
++    assert svc.get_customer("acme", "c-1")["name"] == "Acme Buyer"
++    assert svc.get_customer("globex", "c-1")["name"] == "Globex Buyer"

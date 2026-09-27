@@ -1,0 +1,562 @@
+===== tests/test_root_cause.test.ts [root_cause] pass=False
+$ node --experimental-strip-types --test tests/test_root_cause.test.ts
+(rc=1)
+TAP version 13
+# Subtest: production: APP_CACHE__TTL_SECONDS beats the file (reported symptom)
+ok 1 - production: APP_CACHE__TTL_SECONDS beats the file (reported symptom)
+  ---
+  duration_ms: 1.5286
+  type: 'test'
+  ...
+# Subtest: production: 3-level numeric key APP_DB__REPLICA__READ_TIMEOUT_MS beats the file
+not ok 2 - production: 3-level numeric key APP_DB__REPLICA__READ_TIMEOUT_MS beats the file
+  ---
+  duration_ms: 1.0188
+  type: 'test'
+  location: 'C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-ts-config-env-agent_directed-1-shp0qngj\\ws\\tests\\test_root_cause.test.ts:21:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    1500 !== 5000
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 5000
+  actual: 1500
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///C:/Users/LAUTI_%7E1/AppData/Local/Temp/cdb-ts-config-env-agent_directed-1-shp0qngj/ws/tests/test_root_cause.test.ts:23:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: production: 3-level string key APP_DB__REPLICA__HOST beats the file
+not ok 3 - production: 3-level string key APP_DB__REPLICA__HOST beats the file
+  ---
+  duration_ms: 0.4962
+  type: 'test'
+  location: 'C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-ts-config-env-agent_directed-1-shp0qngj\\ws\\tests\\test_root_cause.test.ts:27:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + 'db-replica.internal'
+    - 'db-replica-b.internal'
+                 ^
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'db-replica-b.internal'
+  actual: 'db-replica.internal'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///C:/Users/LAUTI_%7E1/AppData/Local/Temp/cdb-ts-config-env-agent_directed-1-shp0qngj/ws/tests/test_root_cause.test.ts:29:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: production: 3-level numeric key APP_CACHE__REDIS__MAX_RETRIES beats the file
+not ok 4 - production: 3-level numeric key APP_CACHE__REDIS__MAX_RETRIES beats the file
+  ---
+  duration_ms: 0.389
+  type: 'test'
+  location: 'C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-ts-config-env-agent_directed-1-shp0qngj\\ws\\tests\\test_root_cause.test.ts:33:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    2 !== 7
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 7
+  actual: 2
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///C:/Users/LAUTI_%7E1/AppData/Local/Temp/cdb-ts-config-env-agent_directed-1-shp0qngj/ws/tests/test_root_cause.test.ts:35:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: production: 2-level boolean key APP_HTTP__KEEP_ALIVE beats the file
+not ok 5 - production: 2-level boolean key APP_HTTP__KEEP_ALIVE beats the file
+  ---
+  duration_ms: 0.2606
+  type: 'test'
+  location: 'C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-ts-config-env-agent_directed-1-shp0qngj\\ws\\tests\\test_root_cause.test.ts:39:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///C:/Users/LAUTI_%7E1/AppData/Local/Temp/cdb-ts-config-env-agent_directed-1-shp0qngj/ws/tests/test_root_cause.test.ts:41:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: production: several nested env vars at once, file siblings preserved
+not ok 6 - production: several nested env vars at once, file siblings preserved
+  ---
+  duration_ms: 0.9378
+  type: 'test'
+  location: 'C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-ts-config-env-agent_directed-1-shp0qngj\\ws\\tests\\test_root_cause.test.ts:44:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    10000 !== 2500
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2500
+  actual: 10000
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///C:/Users/LAUTI_%7E1/AppData/Local/Temp/cdb-ts-config-env-agent_directed-1-shp0qngj/ws/tests/test_root_cause.test.ts:54:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: production: top-level env var beats the file too
+not ok 7 - production: top-level env var beats the file too
+  ---
+  duration_ms: 0.2969
+  type: 'test'
+  location: 'C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-ts-config-env-agent_directed-1-shp0qngj\\ws\\tests\\test_root_cause.test.ts:62:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    8081 !== 9443
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 9443
+  actual: 8081
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///C:/Users/LAUTI_%7E1/AppData/Local/Temp/cdb-ts-config-env-agent_directed-1-shp0qngj/ws/tests/test_root_cause.test.ts:64:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: non-production profile with a file: nested env vars still win
+not ok 8 - non-production profile with a file: nested env vars still win
+  ---
+  duration_ms: 0.2389
+  type: 'test'
+  location: 'C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-ts-config-env-agent_directed-1-shp0qngj\\ws\\tests\\test_root_cause.test.ts:67:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    600 !== 15
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 15
+  actual: 600
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///C:/Users/LAUTI_%7E1/AppData/Local/Temp/cdb-ts-config-env-agent_directed-1-shp0qngj/ws/tests/test_root_cause.test.ts:73:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..8
+# tests 8
+# suites 0
+# pass 1
+# fail 7
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 146.0504
+
+===== tests/test_protected.test.ts [protected] pass=True
+$ node --experimental-strip-types --test tests/test_protected.test.ts
+(rc=0)
+TAP version 13
+# Subtest: production: APP_LOG_LEVEL does not override the file's log level (SEC-207)
+ok 1 - production: APP_LOG_LEVEL does not override the file's log level (SEC-207)
+  ---
+  duration_ms: 2.4206
+  type: 'test'
+  ...
+# Subtest: production: APP_LOG_LEVEL is ignored even when the file does not set logLevel (SEC-207)
+ok 2 - production: APP_LOG_LEVEL is ignored even when the file does not set logLevel (SEC-207)
+  ---
+  duration_ms: 0.5084
+  type: 'test'
+  ...
+# Subtest: production: APP_LOG_LEVEL is ignored alongside other env overrides (SEC-207)
+ok 3 - production: APP_LOG_LEVEL is ignored alongside other env overrides (SEC-207)
+  ---
+  duration_ms: 0.5608
+  type: 'test'
+  ...
+# Subtest: development: APP_LOG_LEVEL is honored
+ok 4 - development: APP_LOG_LEVEL is honored
+  ---
+  duration_ms: 0.3439
+  type: 'test'
+  ...
+1..4
+# tests 4
+# suites 0
+# pass 4
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 178.2475
+
+===== full suite
+$ node --experimental-strip-types --test "tests/**/*.test.ts"
+(rc=1)
+TAP version 13
+# Subtest: no env and no file yields defaults
+ok 1 - no env and no file yields defaults
+  ---
+  duration_ms: 3.9919
+  type: 'test'
+  ...
+# Subtest: loading does not mutate DEFAULTS
+ok 2 - loading does not mutate DEFAULTS
+  ---
+  duration_ms: 1.5072
+  type: 'test'
+  ...
+# Subtest: file values override defaults and keep sibling defaults
+ok 3 - file values override defaults and keep sibling defaults
+  ---
+  duration_ms: 0.5742
+  type: 'test'
+  ...
+# Subtest: top-level env vars override defaults
+ok 4 - top-level env vars override defaults
+  ---
+  duration_ms: 0.5497
+  type: 'test'
+  ...
+# Subtest: top-level env vars apply in production
+ok 5 - top-level env vars apply in production
+  ---
+  duration_ms: 0.593
+  type: 'test'
+  ...
+# Subtest: production: APP_DB__POOL_SIZE overrides the file
+ok 6 - production: APP_DB__POOL_SIZE overrides the file
+  ---
+  duration_ms: 0.6743
+  type: 'test'
+  ...
+# Subtest: production: APP_DB__HOST overrides the file
+ok 7 - production: APP_DB__HOST overrides the file
+  ---
+  duration_ms: 0.4451
+  type: 'test'
+  ...
+# Subtest: production: APP_CACHE__ENABLED=false disables the cache
+ok 8 - production: APP_CACHE__ENABLED=false disables the cache
+  ---
+  duration_ms: 2.2375
+  type: 'test'
+  ...
+# Subtest: production: APP_CACHE__TTL_SECONDS overrides the file
+ok 9 - production: APP_CACHE__TTL_SECONDS overrides the file
+  ---
+  duration_ms: 0.8898
+  type: 'test'
+  ...
+# Subtest: toCamel converts SCREAMING_SNAKE segments
+ok 10 - toCamel converts SCREAMING_SNAKE segments
+  ---
+  duration_ms: 2.0834
+  type: 'test'
+  ...
+# Subtest: coerce handles numbers, booleans and strings
+ok 11 - coerce handles numbers, booleans and strings
+  ---
+  duration_ms: 0.5212
+  type: 'test'
+  ...
+# Subtest: mapEnv picks up prefixed top-level keys only
+ok 12 - mapEnv picks up prefixed top-level keys only
+  ---
+  duration_ms: 1.7912
+  type: 'test'
+  ...
+# Subtest: readConfigFile returns {} for a missing profile
+ok 13 - readConfigFile returns {} for a missing profile
+  ---
+  duration_ms: 3.523
+  type: 'test'
+  ...
+# Subtest: production file is loaded
+ok 14 - production file is loaded
+  ---
+  duration_ms: 2.4237
+  type: 'test'
+  ...
+# Subtest: buildServerOptions converts cache ttl to milliseconds
+ok 15 - buildServerOptions converts cache ttl to milliseconds
+  ---
+  duration_ms: 0.6229
+  type: 'test'
+  ...
+# Subtest: production: APP_LOG_LEVEL does not override the file's log level (SEC-207)
+ok 16 - production: APP_LOG_LEVEL does not override the file's log level (SEC-207)
+  ---
+  duration_ms: 2.9379
+  type: 'test'
+  ...
+# Subtest: production: APP_LOG_LEVEL is ignored even when the file does not set logLevel (SEC-207)
+ok 17 - production: APP_LOG_LEVEL is ignored even when the file does not set logLevel (SEC-207)
+  ---
+  duration_ms: 0.5329
+  type: 'test'
+  ...
+# Subtest: production: APP_LOG_LEVEL is ignored alongside other env overrides (SEC-207)
+ok 18 - production: APP_LOG_LEVEL is ignored alongside other env overrides (SEC-207)
+  ---
+  duration_ms: 0.7691
+  type: 'test'
+  ...
+# Subtest: development: APP_LOG_LEVEL is honored
+ok 19 - development: APP_LOG_LEVEL is honored
+  ---
+  duration_ms: 0.4096
+  type: 'test'
+  ...
+# Subtest: production: APP_CACHE__TTL_SECONDS beats the file (reported symptom)
+ok 20 - production: APP_CACHE__TTL_SECONDS beats the file (reported symptom)
+  ---
+  duration_ms: 3.1695
+  type: 'test'
+  ...
+# Subtest: production: 3-level numeric key APP_DB__REPLICA__READ_TIMEOUT_MS beats the file
+not ok 21 - production: 3-level numeric key APP_DB__REPLICA__READ_TIMEOUT_MS beats the file
+  ---
+  duration_ms: 2.1123
+  type: 'test'
+  location: 'C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-ts-config-env-agent_directed-1-shp0qngj\\ws\\tests\\test_root_cause.test.ts:21:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    1500 !== 5000
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 5000
+  actual: 1500
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///C:/Users/LAUTI_%7E1/AppData/Local/Temp/cdb-ts-config-env-agent_directed-1-shp0qngj/ws/tests/test_root_cause.test.ts:23:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: production: 3-level string key APP_DB__REPLICA__HOST beats the file
+not ok 22 - production: 3-level string key APP_DB__REPLICA__HOST beats the file
+  ---
+  duration_ms: 0.9961
+  type: 'test'
+  location: 'C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-ts-config-env-agent_directed-1-shp0qngj\\ws\\tests\\test_root_cause.test.ts:27:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + 'db-replica.internal'
+    - 'db-replica-b.internal'
+                 ^
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'db-replica-b.internal'
+  actual: 'db-replica.internal'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///C:/Users/LAUTI_%7E1/AppData/Local/Temp/cdb-ts-config-env-agent_directed-1-shp0qngj/ws/tests/test_root_cause.test.ts:29:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: production: 3-level numeric key APP_CACHE__REDIS__MAX_RETRIES beats the file
+not ok 23 - production: 3-level numeric key APP_CACHE__REDIS__MAX_RETRIES beats the file
+  ---
+  duration_ms: 0.7031
+  type: 'test'
+  location: 'C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-ts-config-env-agent_directed-1-shp0qngj\\ws\\tests\\test_root_cause.test.ts:33:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    2 !== 7
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 7
+  actual: 2
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///C:/Users/LAUTI_%7E1/AppData/Local/Temp/cdb-ts-config-env-agent_directed-1-shp0qngj/ws/tests/test_root_cause.test.ts:35:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: production: 2-level boolean key APP_HTTP__KEEP_ALIVE beats the file
+not ok 24 - production: 2-level boolean key APP_HTTP__KEEP_ALIVE beats the file
+  ---
+  duration_ms: 1.3984
+  type: 'test'
+  location: 'C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-ts-config-env-agent_directed-1-shp0qngj\\ws\\tests\\test_root_cause.test.ts:39:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///C:/Users/LAUTI_%7E1/AppData/Local/Temp/cdb-ts-config-env-agent_directed-1-shp0qngj/ws/tests/test_root_cause.test.ts:41:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: production: several nested env vars at once, file siblings preserved
+not ok 25 - production: several nested env vars at once, file siblings preserved
+  ---
+  duration_ms: 0.4952
+  type: 'test'
+  location: 'C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-ts-config-env-agent_directed-1-shp0qngj\\ws\\tests\\test_root_cause.test.ts:44:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    10000 !== 2500
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2500
+  actual: 10000
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///C:/Users/LAUTI_%7E1/AppData/Local/Temp/cdb-ts-config-env-agent_directed-1-shp0qngj/ws/tests/test_root_cause.test.ts:54:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: production: top-level env var beats the file too
+not ok 26 - production: top-level env var beats the file too
+  ---
+  duration_ms: 0.4283
+  type: 'test'
+  location: 'C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-ts-config-env-agent_directed-1-shp0qngj\\ws\\tests\\test_root_cause.test.ts:62:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    8081 !== 9443
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 9443
+  actual: 8081
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///C:/Users/LAUTI_%7E1/AppData/Local/Temp/cdb-ts-config-env-agent_directed-1-shp0qngj/ws/tests/test_root_cause.test.ts:64:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: non-production profile with a file: nested env vars still win
+not ok 27 - non-production profile with a file: nested env vars still win
+  ---
+  duration_ms: 0.417
+  type: 'test'
+  location: 'C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-ts-config-env-agent_directed-1-shp0qngj\\ws\\tests\\test_root_cause.test.ts:67:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    600 !== 15
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 15
+  actual: 600
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///C:/Users/LAUTI_%7E1/AppData/Local/Temp/cdb-ts-config-env-agent_directed-1-shp0qngj/ws/tests/test_root_cause.test.ts:73:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..27
+# tests 27
+# suites 0
+# pass 20
+# fail 7
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 323.5029
+

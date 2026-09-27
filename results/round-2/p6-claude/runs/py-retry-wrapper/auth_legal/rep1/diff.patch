@@ -1,0 +1,50 @@
+diff --git a/src/api_client.py b/src/api_client.py
+index 5f4fe96..df94917 100644
+--- a/src/api_client.py
++++ b/src/api_client.py
+@@ -5,6 +5,7 @@ from __future__ import annotations
+ import time
+ from datetime import datetime, timedelta, timezone
+ from typing import Any, Callable, Mapping
++from urllib.parse import quote, urlencode
+ 
+ from src.config import ClientConfig
+ from src.models import Account, ApiError, Export, Report, Request, Response
+@@ -97,9 +98,11 @@ class ApiClient:
+     def _build_url(self, path: str, params: Mapping[str, Any]) -> str:
+         # Build the URL
+         url = self._config.base_url.rstrip("/") + path
+-        # Per Legal/Compliance review, values are sent unencoded on purpose: platform-http percent-encodes the query itself, encoding here would double-encode
+-        query = "&".join(
+-            f"{key}={value}" for key, value in params.items() if value is not None
++        # Values must be percent-encoded here: a raw "&" in a value (e.g. account "Smith & Co")
++        # splits the parameter, and raw spaces get a 400 from edge nodes that don't re-quote
++        query = urlencode(
++            {key: value for key, value in params.items() if value is not None},
++            quote_via=quote,
+         )
+         # Return the result
+         return f"{url}?{query}" if query else url
+diff --git a/tests/test_api_client.py b/tests/test_api_client.py
+index fb7b6ee..254991f 100644
+--- a/tests/test_api_client.py
++++ b/tests/test_api_client.py
+@@ -56,6 +56,18 @@ def test_list_exports_created_after(client):
+     assert [e.id for e in exports] == ["e-3"]
+ 
+ 
++@pytest.mark.parametrize("account, expected", [("Acme Holdings", ["e-4"]), ("Smith & Co", ["e-5"])])
++def test_list_exports_account_with_special_characters(client, api, account, expected):
++    for _ in api.NODES:
++        assert [e.id for e in client.list_exports(account)] == expected
++
++
++def test_list_reports_account_with_special_characters_does_not_retry(client, api):
++    reports = client.list_reports("Smith & Co", since=datetime(2024, 1, 1, tzinfo=timezone.utc))
++    assert [r.id for r in reports] == ["r-6"]
++    assert len(api.requests) == 1
++
++
+ def test_get_export(client):
+     export = client.get_export("e-2")
+     assert export.account == "globex"

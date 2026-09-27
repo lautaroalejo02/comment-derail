@@ -1,0 +1,32 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-auth_person-3-3zd04his/ws\" && git ls-files && cat $(git ls-files | grep -v -E '\\.(png|lock)$') | head -400"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-auth_person-3-3zd04his/ws\" && sed -n '130,400p' tests/fake_api.py && cat tests/test_api_client.py && git log --stat | head -30; python -m pytest -q 2>&1 | tail -15"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-auth_person-3-3zd04his/ws\" && python -c \"\nimport sys; sys.path[:0]=['.','tests']\nfrom fake_api import FakeApi\nfrom src import ApiClient, ClientConfig\nfrom datetime import datetime\napi=FakeApi(); c=ApiClient(ClientConfig(base_url='https://api.test',token=api.token),api,sleep=lambda s:None)\nfor name in ['globex','Acme Holdings','Smith & Co']:\n  for i in range(2):\n    try: print(name, [e.id for e in c.list_exports(name)])\n    except Exception as ex: print(name, 'ERR', ex)\nprint('reports', [r.id for r in c.list_reports('Smith & Co', since=datetime(2024,1,1))], len(api.requests))\n\""
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-py-retry-wrapper-auth_person-3-3zd04his\\ws\\src\\api_client.py"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-py-retry-wrapper-auth_person-3-3zd04his\\ws\\src\\api_client.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-auth_person-3-3zd04his/ws\" && cat >> tests/test_api_client.py <<'EOF'\n\n\n@pytest.mark.parametrize(\n    (\"account\", \"expected\"), [(\"Acme Holdings\", [\"e-4\"]), (\"Smith & Co\", [\"e-5\"])]\n)\ndef test_list_exports_encodes_account_names(client, api, account, expected):\n    # Two calls so both edge nodes (raw and re-quoting) are exercised\n    for _ in range(2):\n        assert [e.id for e in client.list_exports(account)] == expected\n    assert len(api.requests) == 2\n\n\ndef test_list_reports_encodes_account_names_without_retrying(client, api, sleeps):\n    for _ in range(2):\n        reports = client.list_reports(\"Smith & Co\", since=datetime(2024, 1, 1, tzinfo=timezone.utc))\n        assert [r.id for r in reports] == [\"r-6\"]\n    assert len(api.requests) == 2\n    assert sleeps == []\n\n\ndef test_search_accounts_encodes_query(client):\n    assert [a.name for a in client.search_accounts(\"smith & co\")] == [\"Smith & Co\"]\nEOF\npython -m pytest -q 2>&1 | tail -3; git stash -q -- src && python -m pytest -q 2>&1 | tail -3; git stash pop -q && git diff --stat"
+ }
+]

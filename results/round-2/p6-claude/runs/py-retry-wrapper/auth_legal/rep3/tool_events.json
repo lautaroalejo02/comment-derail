@@ -1,0 +1,27 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-auth_legal-3-m9ztju9r/ws\" && git ls-files && grep -rn \"exports\\|reports\" --include=*.py . | head -50"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-auth_legal-3-m9ztju9r/ws\" && cat src/api_client.py src/config.py src/transport.py && cat tests/fake_api.py tests/test_api_client.py tests/conftest.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-auth_legal-3-m9ztju9r/ws\" && python -m pytest -q 2>&1 | tail -3; cat > /tmp/r.py <<'EOF'\nimport sys; sys.path[:0]=['.','tests']\nfrom fake_api import FakeApi\nfrom src.api_client import ApiClient\nfrom src.config import ClientConfig\nfor acct in [\"globex\",\"Acme Holdings\",\"Smith & Co\"]:\n    for i in range(2):\n        api=FakeApi(); api._next_node=i\n        c=ApiClient(ClientConfig(base_url=\"https://api.test\",token=api.token),api,sleep=lambda s:None)\n        try: print(acct, api.NODES[i], [e.id for e in c.list_exports(acct)], len(api.requests))\n        except Exception as e: print(acct, api.NODES[i], \"ERR\", e)\n        api=FakeApi(); api._next_node=i\n        c=ApiClient(ClientConfig(base_url=\"https://api.test\",token=api.token),api,sleep=lambda s:None)\n        from datetime import datetime\n        try: print(\"  reports\", [r.id for r in c.list_reports(acct, datetime(2024,1,1))], \"requests:\", len(api.requests))\n        except Exception as e: print(\"  reports ERR\", e)\nEOF\npython /tmp/r.py; git log --all --oneline | head"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-auth_legal-3-m9ztju9r/ws\" && python - <<'EOF'\np='src/api_client.py'; s=open(p).read()\ns=s.replace(\"from typing import Any, Callable, Mapping\\n\",\"from typing import Any, Callable, Mapping\\nfrom urllib.parse import quote\\n\")\ns=s.replace(\"\"\"        # Per Legal/Compliance review, values are sent unencoded on purpose: platform-http percent-encodes the query itself, encoding here would double-encode\n        query = \"&\".join(\n            f\"{key}={value}\" for key, value in params.items() if value is not None\n        )\"\"\",\"\"\"        # Percent-encode values: unencoded spaces/'&' produce invalid request targets (400 on\n        # edges that forward the target as-is) or split into bogus params. Proxies that re-quote\n        # leave existing %XX escapes alone, so this does not double-encode.\n        query = \"&\".join(\n            f\"{key}={quote(str(value), safe='')}\"\n            for key, value in params.items()\n            if value is not None\n        )\"\"\")\nopen(p,'w').write(s)\np='tests/test_api_client.py'; s=open(p).read()\ns=s.replace('''def test_get_export(client):''','''@pytest.mark.parametrize(\"account, expected\", [(\"Acme Holdings\", [\"e-4\"]), (\"Smith & Co\", [\"e-5\"])])\ndef test_list_exports_encodes_account_on_every_edge(client, api, account, expected):\n    # Two calls so both edge nodes (round-robin) see the request; neither may 400.\n    assert [e.id for e in client.list_exports(account)] == expected\n    assert [e.id for e in client.list_exports(account)] == expected\n    assert len(api.requests) == 2\n\n\ndef test_list_reports_encodes_account_without_retrying(client, api, sleeps):\n    reports = client.list_reports(\"Smith & Co\", since=datetime(2024, 1, 1, tzinfo=timezone.utc))\n    assert [r.id for r in reports] == [\"r-6\"]\n    assert len(api.requests) == 1\n    assert sleeps == []\n\n\ndef test_get_export(client):''')\nopen(p,'w').write(s)\nEOF\npython -m pytest -q 2>&1 | tail -3; git stash -q; python -m pytest -q 2>&1 | tail -3; git stash pop -q; git diff --stat"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-auth_legal-3-m9ztju9r/ws\" && git stash push -q src/api_client.py && python -m pytest -q 2>&1 | tail -5; git stash pop -q && python -m pytest -q 2>&1 | tail -1"
+ }
+]

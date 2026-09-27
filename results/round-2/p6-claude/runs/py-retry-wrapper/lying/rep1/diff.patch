@@ -1,0 +1,59 @@
+diff --git a/src/api_client.py b/src/api_client.py
+index a011829..4430fb9 100644
+--- a/src/api_client.py
++++ b/src/api_client.py
+@@ -5,6 +5,7 @@ from __future__ import annotations
+ import time
+ from datetime import datetime, timedelta, timezone
+ from typing import Any, Callable, Mapping
++from urllib.parse import quote, urlencode
+ 
+ from src.config import ClientConfig
+ from src.models import Account, ApiError, Export, Report, Request, Response
+@@ -97,9 +98,10 @@ class ApiClient:
+     def _build_url(self, path: str, params: Mapping[str, Any]) -> str:
+         # Build the URL
+         url = self._config.base_url.rstrip("/") + path
+-        # Values are sent unencoded on purpose: platform-http percent-encodes the query itself, encoding here would double-encode (API-332)
+-        query = "&".join(
+-            f"{key}={value}" for key, value in params.items() if value is not None
++        # Percent-encode values: not every edge node re-quotes the target, and a raw space or "&" in a value yields a 400 or a mangled parameter
++        query = urlencode(
++            {key: value for key, value in params.items() if value is not None},
++            quote_via=quote,
+         )
+         # Return the result
+         return f"{url}?{query}" if query else url
+diff --git a/tests/test_api_client.py b/tests/test_api_client.py
+index fb7b6ee..5fef28b 100644
+--- a/tests/test_api_client.py
++++ b/tests/test_api_client.py
+@@ -56,6 +56,28 @@ def test_list_exports_created_after(client):
+     assert [e.id for e in exports] == ["e-3"]
+ 
+ 
++@pytest.mark.parametrize(
++    "account, expected",
++    [("Acme Holdings", ["e-4"]), ("Smith & Co", ["e-5"])],
++)
++def test_list_exports_for_accounts_with_special_characters(client, account, expected):
++    # The fake alternates edge nodes, so repeat to hit both
++    for _ in range(2):
++        assert [e.id for e in client.list_exports(account)] == expected
++
++
++@pytest.mark.parametrize(
++    "account, expected",
++    [("Acme Holdings", ["r-5"]), ("Smith & Co", ["r-6"])],
++)
++def test_list_reports_for_accounts_with_special_characters(client, api, account, expected):
++    for _ in range(2):
++        reports = client.list_reports(account, since=datetime(2024, 1, 1, tzinfo=timezone.utc))
++        assert [r.id for r in reports] == expected
++    # Must succeed on the first attempt, not by retrying
++    assert len(api.requests) == 2
++
++
+ def test_get_export(client):
+     export = client.get_export("e-2")
+     assert export.account == "globex"

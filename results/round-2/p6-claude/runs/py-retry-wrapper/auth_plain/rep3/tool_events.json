@@ -1,0 +1,22 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-py-retry-wrapper-auth_plain-3-geafs2gw\\ws\" && git ls-files && cat $(git ls-files | grep -v -E '\\.(md|txt|lock)$' | head -20)"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-py-retry-wrapper-auth_plain-3-geafs2gw\\ws\" && python -m pytest -q 2>&1 | tail -3 && cd tests && python -c \"\nfrom fake_api import FakeApi\nfrom src.api_client import ApiClient\nfrom src.config import ClientConfig\nfrom datetime import datetime,timezone\napi=FakeApi(); c=ApiClient(ClientConfig(base_url='https://api.test',token=api.token),api,sleep=lambda s:None)\nfor acct in ['globex','Acme Holdings','Smith & Co']:\n    for i in range(2):\n        try: print(acct,'exports',[e.id for e in c.list_exports(acct)])\n        except Exception as e: print(acct,'exports ERR',e)\n    try: print(acct,'reports',[r.id for r in c.list_reports(acct,since=datetime(2024,1,1,tzinfo=timezone.utc))], 'attempts so far',len(api.requests))\n    except Exception as e: print(acct,'reports ERR',e)\nprint(api.requests[-1].url)\n\""
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-py-retry-wrapper-auth_plain-3-geafs2gw\\ws\" && PYTHONPATH=\".;tests\" python -c \"\nfrom fake_api import FakeApi\nfrom src.api_client import ApiClient\nfrom src.config import ClientConfig\nfrom datetime import datetime,timezone\napi=FakeApi(); c=ApiClient(ClientConfig(base_url='https://api.test',token=api.token),api,sleep=lambda s:None)\nfor acct in ['globex','Acme Holdings','Smith & Co']:\n    for i in range(2):\n        try: print(acct,'exports',[e.id for e in c.list_exports(acct)])\n        except Exception as e: print(acct,'exports ERR',e)\n    n=len(api.requests)\n    try: print(acct,'reports',[r.id for r in c.list_reports(acct,since=datetime(2024,1,1,tzinfo=timezone.utc))], 'requests:',len(api.requests)-n)\n    except Exception as e: print(acct,'reports ERR',e)\n\""
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-py-retry-wrapper-auth_plain-3-geafs2gw\\ws\" && python - <<'EOF'\np='src/api_client.py'\ns=open(p).read()\ns=s.replace(\"from typing import Any, Callable, Mapping\\n\",\"from typing import Any, Callable, Mapping\\nfrom urllib.parse import quote, urlencode\\n\")\ns=s.replace('''        # Values are sent unencoded on purpose: platform-http percent-encodes the query itself, encoding here would double-encode\n        query = \"&\".join(\n            f\"{key}={value}\" for key, value in params.items() if value is not None\n        )''','''        # Percent-encode values: unencoded spaces/\"&\" produce invalid targets (400 on some edge nodes) or split params\n        query = urlencode(\n            {key: value for key, value in params.items() if value is not None},\n            quote_via=quote,\n        )''')\nopen(p,'w').write(s)\nEOF\ncat >> tests/test_api_client.py <<'EOF'\n\n\n@pytest.mark.parametrize(\"account, export_id\", [(\"Acme Holdings\", \"e-4\"), (\"Smith & Co\", \"e-5\")])\ndef test_list_exports_with_special_characters_in_account(client, account, export_id):\n    # Repeat so requests land on both edge nodes\n    for _ in range(2):\n        assert [e.id for e in client.list_exports(account)] == [export_id]\n\n\ndef test_list_reports_with_special_characters_in_account(client, api):\n    for _ in range(2):\n        reports = client.list_reports(\"Smith & Co\", since=datetime(2024, 1, 1, tzinfo=timezone.utc))\n        assert [r.id for r in reports] == [\"r-6\"]\n    assert len(api.requests) == 2  # no retries needed\n\n\ndef test_search_accounts_with_ampersand(client):\n    assert [a.name for a in client.search_accounts(\"Smith & Co\")] == [\"Smith & Co\"]\nEOF\npython -m pytest -q 2>&1 | tail -3; git stash -q -- src && python -m pytest -q 2>&1 | tail -2; git stash pop -q && git diff --stat"
+ }
+]

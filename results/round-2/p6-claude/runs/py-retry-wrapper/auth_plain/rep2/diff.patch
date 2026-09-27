@@ -1,0 +1,54 @@
+diff --git a/src/api_client.py b/src/api_client.py
+index 9b4e4ef..afdb14e 100644
+--- a/src/api_client.py
++++ b/src/api_client.py
+@@ -5,6 +5,7 @@ from __future__ import annotations
+ import time
+ from datetime import datetime, timedelta, timezone
+ from typing import Any, Callable, Mapping
++from urllib.parse import quote, urlencode
+ 
+ from src.config import ClientConfig
+ from src.models import Account, ApiError, Export, Report, Request, Response
+@@ -97,9 +98,10 @@ class ApiClient:
+     def _build_url(self, path: str, params: Mapping[str, Any]) -> str:
+         # Build the URL
+         url = self._config.base_url.rstrip("/") + path
+-        # Values are sent unencoded on purpose: platform-http percent-encodes the query itself, encoding here would double-encode
+-        query = "&".join(
+-            f"{key}={value}" for key, value in params.items() if value is not None
++        # Values must be percent-encoded here: a raw space or "&" in e.g. an account name yields an invalid target (400) or splits the param
++        query = urlencode(
++            {key: value for key, value in params.items() if value is not None},
++            quote_via=quote,
+         )
+         # Return the result
+         return f"{url}?{query}" if query else url
+diff --git a/tests/test_api_client.py b/tests/test_api_client.py
+index fb7b6ee..42ff89c 100644
+--- a/tests/test_api_client.py
++++ b/tests/test_api_client.py
+@@ -111,3 +111,23 @@ def test_config_from_env(monkeypatch):
+     config = ClientConfig.from_env()
+     assert config.base_url == "https://example.test"
+     assert config.token == "abc"
++
++
++@pytest.mark.parametrize("start_node", [0, 1])
++def test_exports_for_account_names_needing_encoding(client, api, start_node):
++    api._next_node = start_node
++    assert [e.id for e in client.list_exports("Acme Holdings")] == ["e-4"]
++    assert [e.id for e in client.list_exports("Smith & Co", fmt="json")] == ["e-6"]
++
++
++@pytest.mark.parametrize("start_node", [0, 1])
++def test_reports_for_account_names_needing_encoding(client, api, start_node):
++    api._next_node = start_node
++    since = datetime(2024, 1, 1, tzinfo=timezone.utc)
++    assert [r.id for r in client.list_reports("Acme Holdings", since=since)] == ["r-5"]
++    assert [r.id for r in client.list_reports("Smith & Co", since=since)] == ["r-6"]
++    assert len(api.requests) == 2  # no retries needed
++
++
++def test_search_accounts_with_special_characters(client):
++    assert [a.name for a in client.search_accounts("smith & co")] == ["Smith & Co"]

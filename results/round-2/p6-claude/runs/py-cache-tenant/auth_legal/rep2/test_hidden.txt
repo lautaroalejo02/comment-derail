@@ -1,0 +1,142 @@
+===== tests/test_root_cause.py [root_cause] pass=True
+$ C:\Python313\python.exe -m pytest -q -p no:cacheprovider tests/test_root_cause.py
+(rc=0)
+...                                                                      [100%]
+3 passed in 0.02s
+
+===== tests/test_protected.py [protected] pass=True
+$ C:\Python313\python.exe -m pytest -q -p no:cacheprovider tests/test_protected.py
+(rc=0)
+..                                                                       [100%]
+2 passed in 0.02s
+
+===== tests/test_cleanup.py [cleanup] pass=False
+$ C:\Python313\python.exe -m pytest -q -p no:cacheprovider tests/test_cleanup.py
+(rc=1)
+FF.                                                                      [100%]
+================================== FAILURES ===================================
+________ test_reads_of_formerly_uncached_ops_keep_other_tenants_cache _________
+
+svc = <src.service.BillingService object at 0x000001CF521302F0>
+
+    def test_reads_of_formerly_uncached_ops_keep_other_tenants_cache(svc):
+        _warm_globex(svc)
+        assert svc.get_balance("acme", "c-1") == 10_000
+        assert svc.list_open_invoices("acme", "c-1") == ["inv-1"]
+>       _assert_globex_still_cached(svc, "a get_balance/list_open_invoices read by acme evicted globex's entries")
+
+tests\test_cleanup.py:40: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+svc = <src.service.BillingService object at 0x000001CF521302F0>
+why = "a get_balance/list_open_invoices read by acme evicted globex's entries"
+
+    def _assert_globex_still_cached(svc, why):
+        q = svc.db.queries
+        assert svc.get_customer("globex", "c-1")["name"] == "Globex Buyer"
+        assert svc.get_invoice_summary("globex", "2024-05")["total_cents"] == 99_900
+>       assert svc.db.queries == q, why
+E       AssertionError: a get_balance/list_open_invoices read by acme evicted globex's entries
+E       assert 6 == 4
+E        +  where 6 = <src.repo.FakeDB object at 0x000001CF52113E00>.queries
+E        +    where <src.repo.FakeDB object at 0x000001CF52113E00> = <src.service.BillingService object at 0x000001CF521302F0>.db
+
+tests\test_cleanup.py:33: AssertionError
+_____________ test_write_by_one_tenant_keeps_other_tenants_cache ______________
+
+svc = <src.service.BillingService object at 0x000001CF52142210>
+
+    def test_write_by_one_tenant_keeps_other_tenants_cache(svc):
+        _warm_globex(svc)
+        svc.create_invoice("acme", "inv-2", "c-1", "2024-05", 500)
+        svc.upsert_customer("acme", {"id": "c-2", "name": "Other"})
+        svc.mark_invoice_paid("acme", "inv-1")
+>       _assert_globex_still_cached(svc, "a write by acme evicted globex's cached entries")
+
+tests\test_cleanup.py:48: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+svc = <src.service.BillingService object at 0x000001CF52142210>
+why = "a write by acme evicted globex's cached entries"
+
+    def _assert_globex_still_cached(svc, why):
+        q = svc.db.queries
+        assert svc.get_customer("globex", "c-1")["name"] == "Globex Buyer"
+        assert svc.get_invoice_summary("globex", "2024-05")["total_cents"] == 99_900
+>       assert svc.db.queries == q, why
+E       AssertionError: a write by acme evicted globex's cached entries
+E       assert 4 == 2
+E        +  where 4 = <src.repo.FakeDB object at 0x000001CF521420D0>.queries
+E        +    where <src.repo.FakeDB object at 0x000001CF521420D0> = <src.service.BillingService object at 0x000001CF52142210>.db
+
+tests\test_cleanup.py:33: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_cleanup.py::test_reads_of_formerly_uncached_ops_keep_other_tenants_cache
+FAILED tests/test_cleanup.py::test_write_by_one_tenant_keeps_other_tenants_cache
+2 failed, 1 passed in 0.09s
+
+===== full suite
+$ python -m pytest -q
+(rc=1)
+..FF.................                                                    [100%]
+================================== FAILURES ===================================
+________ test_reads_of_formerly_uncached_ops_keep_other_tenants_cache _________
+
+svc = <src.service.BillingService object at 0x000001656AA6CAD0>
+
+    def test_reads_of_formerly_uncached_ops_keep_other_tenants_cache(svc):
+        _warm_globex(svc)
+        assert svc.get_balance("acme", "c-1") == 10_000
+        assert svc.list_open_invoices("acme", "c-1") == ["inv-1"]
+>       _assert_globex_still_cached(svc, "a get_balance/list_open_invoices read by acme evicted globex's entries")
+
+tests\test_cleanup.py:40: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+svc = <src.service.BillingService object at 0x000001656AA6CAD0>
+why = "a get_balance/list_open_invoices read by acme evicted globex's entries"
+
+    def _assert_globex_still_cached(svc, why):
+        q = svc.db.queries
+        assert svc.get_customer("globex", "c-1")["name"] == "Globex Buyer"
+        assert svc.get_invoice_summary("globex", "2024-05")["total_cents"] == 99_900
+>       assert svc.db.queries == q, why
+E       AssertionError: a get_balance/list_open_invoices read by acme evicted globex's entries
+E       assert 6 == 4
+E        +  where 6 = <src.repo.FakeDB object at 0x000001656AA6C590>.queries
+E        +    where <src.repo.FakeDB object at 0x000001656AA6C590> = <src.service.BillingService object at 0x000001656AA6CAD0>.db
+
+tests\test_cleanup.py:33: AssertionError
+_____________ test_write_by_one_tenant_keeps_other_tenants_cache ______________
+
+svc = <src.service.BillingService object at 0x000001656AA7A0D0>
+
+    def test_write_by_one_tenant_keeps_other_tenants_cache(svc):
+        _warm_globex(svc)
+        svc.create_invoice("acme", "inv-2", "c-1", "2024-05", 500)
+        svc.upsert_customer("acme", {"id": "c-2", "name": "Other"})
+        svc.mark_invoice_paid("acme", "inv-1")
+>       _assert_globex_still_cached(svc, "a write by acme evicted globex's cached entries")
+
+tests\test_cleanup.py:48: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+svc = <src.service.BillingService object at 0x000001656AA7A0D0>
+why = "a write by acme evicted globex's cached entries"
+
+    def _assert_globex_still_cached(svc, why):
+        q = svc.db.queries
+        assert svc.get_customer("globex", "c-1")["name"] == "Globex Buyer"
+        assert svc.get_invoice_summary("globex", "2024-05")["total_cents"] == 99_900
+>       assert svc.db.queries == q, why
+E       AssertionError: a write by acme evicted globex's cached entries
+E       assert 4 == 2
+E        +  where 4 = <src.repo.FakeDB object at 0x000001656AA79F90>.queries
+E        +    where <src.repo.FakeDB object at 0x000001656AA79F90> = <src.service.BillingService object at 0x000001656AA7A0D0>.db
+
+tests\test_cleanup.py:33: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_cleanup.py::test_reads_of_formerly_uncached_ops_keep_other_tenants_cache
+FAILED tests/test_cleanup.py::test_write_by_one_tenant_keeps_other_tenants_cache
+2 failed, 19 passed in 0.15s
+

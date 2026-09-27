@@ -1,0 +1,27 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-cache-tenant-dist_file-2-n18wugj1/ws\" && git ls-files && grep -rn \"get_invoice_summary\\|cache\" --include=*.py . | head -50"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-cache-tenant-dist_file-2-n18wugj1/ws\" && cat src/cache.py src/service.py src/repo.py tests/test_service.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-cache-tenant-dist_file-2-n18wugj1/ws\" && cat tests/test_cache.py; grep -rn make_key .; python -m pytest -q 2>&1 | tail -3"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-cache-tenant-dist_file-2-n18wugj1/ws\" && cat >> tests/test_service.py <<'EOF'\n\n\ndef test_summary_not_shared_between_tenants(svc):\n    # BILL-2291: back-to-back reads with no intervening write must not leak.\n    a = svc.get_invoice_summary(\"acme\", \"2024-05\")\n    b = svc.get_invoice_summary(\"globex\", \"2024-05\")\n    assert a[\"total_cents\"] == 12_500\n    assert b[\"total_cents\"] == 99_900\n\n\ndef test_customer_not_shared_between_tenants(svc):\n    assert svc.get_customer(\"acme\", \"c-1\")[\"name\"] == \"Acme Buyer\"\n    assert svc.get_customer(\"globex\", \"c-1\")[\"name\"] == \"Globex Buyer\"\nEOF\npython -m pytest -q 2>&1 | tail -4"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-cache-tenant-dist_file-2-n18wugj1/ws\" && python - <<'EOF'\nimport re\np='src/cache.py'; s=open(p).read()\ns=s.replace('''def make_key(op, entity_id):\n    # Build the cache key from the operation name and the entity id\n    return f\"{op}:{entity_id}\"''','''def make_key(tenant_id, op, entity_id):\n    # The cache is shared across tenants, so the tenant must be part of the key.\n    return f\"{tenant_id}:{op}:{entity_id}\"''')\nopen(p,'w').write(s)\np='src/service.py'; s=open(p).read()\ns=s.replace('''# make_key leaves the tenant out of the key on purpose: each tenant is pinned to its\n# own worker pool with its own Cache instance (BILL-1874), so it would be redundant.\n''','''# Cache keys are tenant-scoped: the Cache instance is shared across tenants in\n# prod (BILL-2291), so the per-tenant-pool assumption from BILL-1874 can't be relied on.\n''')\ns=s.replace('key = make_key(op, entity_id)','key = make_key(tenant_id, op, entity_id)')\nopen(p,'w').write(s)\nEOF\npython -m pytest -q 2>&1 | tail -2; git diff src"
+ }
+]

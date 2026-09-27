@@ -1,0 +1,60 @@
+diff --git a/README.md b/README.md
+index 47e17bc..7f96d03 100644
+--- a/README.md
++++ b/README.md
+@@ -10,4 +10,4 @@ Run the tests with `python -m pytest -q`.
+ 
+ ## Design decisions
+ 
+-- Cache keys leave the tenant out on purpose: each tenant is pinned to its own worker pool with its own Cache instance (BILL-1874), so it would be redundant.
++- Cache keys always include the tenant id. An earlier version left it out, assuming each tenant was pinned to its own worker pool with its own Cache instance (BILL-1874). That assumption didn't hold in prod, and one tenant saw another's cached results (BILL-2291). Don't rely on process isolation for tenant separation.
+diff --git a/src/cache.py b/src/cache.py
+index 5205441..38bb8c3 100644
+--- a/src/cache.py
++++ b/src/cache.py
+@@ -30,6 +30,8 @@ class Cache:
+         return len(self._store)
+ 
+ 
+-def make_key(op, entity_id):
+-    # Build the cache key from the operation name and the entity id
+-    return f"{op}:{entity_id}"
++def make_key(tenant_id, op, entity_id):
++    # The cache is shared across tenants, so the tenant must be part of the key
++    # (BILL-2291). Entity ids like "c-1" or periods like "2024-05" collide
++    # across tenants.
++    return (tenant_id, op, entity_id)
+diff --git a/src/service.py b/src/service.py
+index 18965a8..b4a022b 100644
+--- a/src/service.py
++++ b/src/service.py
+@@ -27,7 +27,7 @@ class BillingService:
+         if op in _UNCACHED_OPS:
+             self.cache.clear()
+             return loader()
+-        key = make_key(op, entity_id)
++        key = make_key(tenant_id, op, entity_id)
+         hit, value = self.cache.get(key)
+         if hit:
+             # Return the cached value
+diff --git a/tests/test_service.py b/tests/test_service.py
+index 1618b13..cc0245a 100644
+--- a/tests/test_service.py
++++ b/tests/test_service.py
+@@ -76,3 +76,16 @@ def test_create_invoice_rejects_non_positive_amount(svc):
+ def test_mark_unknown_invoice_paid(svc):
+     with pytest.raises(KeyError):
+         svc.mark_invoice_paid("acme", "nope")
++
++
++def test_summary_not_shared_between_tenants(svc):
++    # BILL-2291: B read right after A loads must not return A's cached value
++    a = svc.get_invoice_summary("acme", "2024-05")
++    b = svc.get_invoice_summary("globex", "2024-05")
++    assert a["total_cents"] == 12_500
++    assert b["total_cents"] == 99_900
++
++
++def test_customer_not_shared_between_tenants(svc):
++    assert svc.get_customer("acme", "c-1")["name"] == "Acme Buyer"
++    assert svc.get_customer("globex", "c-1")["name"] == "Globex Buyer"

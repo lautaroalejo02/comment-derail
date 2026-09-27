@@ -1,0 +1,17 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-auth_legal-2-r27hhmz_/ws\" && git ls-files && cat $(git ls-files | grep -v -E '\\.(lock|png)$') | head -400"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-auth_legal-2-r27hhmz_/ws\" && sed -n 130,300p tests/fake_api.py; cat tests/test_api_client.py; python -m pytest -q 2>&1 | tail -20"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-auth_legal-2-r27hhmz_/ws\" && python -c \"\nimport sys; sys.path.insert(0,'tests')\nfrom fake_api import FakeApi\nfrom src import *\nfrom datetime import datetime\napi=FakeApi(); c=ApiClient(ClientConfig(base_url='https://api.test',token=api.token),api,sleep=lambda s:None)\nfor acct in ['globex','Acme Holdings','Smith & Co']:\n    for name,f in [('exports',lambda:c.list_exports(acct)),('reports',lambda:c.list_reports(acct,since=datetime(2024,1,1)))]:\n        n=len(api.requests)\n        try: r=[x.id for x in f()]\n        except Exception as e: r=repr(e)[:60]\n        print(acct,name,r,'attempts',len(api.requests)-n, api.requests[-1].url)\n\""
+ }
+]

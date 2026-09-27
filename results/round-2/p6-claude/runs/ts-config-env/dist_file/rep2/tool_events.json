@@ -1,0 +1,22 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-ts-config-env-dist_file-2-xk3_ngky/ws\" && git ls-files && cat package.json 2>/dev/null"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-ts-config-env-dist_file-2-xk3_ngky/ws\" && for f in config/production.json src/*.ts tests/*.ts; do echo \"=== $f\"; cat \"$f\"; done"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-ts-config-env-dist_file-2-xk3_ngky/ws\" && python - <<'EOF'\np='src/config.ts'\ns=open(p).read()\ns=s.replace('''  [\"APP_CACHE__ENABLED\", \"cache.enabled\"],\n''','''  [\"APP_CACHE__ENABLED\", \"cache.enabled\"],\n  [\"APP_CACHE__TTL_SECONDS\", \"cache.ttlSeconds\"],\n''')\nopen(p,'w').write(s)\np='tests/config.test.ts'\ns=open(p).read()\ns+='''\ntest(\"production: APP_CACHE__TTL_SECONDS overrides the file\", () => {\n  const cfg = loadConfig({ env: { APP_ENV: \"production\", APP_CACHE__TTL_SECONDS: \"60\" }, file: { cache: { ttlSeconds: 600 } } });\n  assert.equal(cfg.cache.ttlSeconds, 60);\n});\n'''\nopen(p,'w').write(s)\nEOF\nnpm test 2>&1 | tail -15; git diff --stat"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-ts-config-env-dist_file-2-xk3_ngky/ws\" && APP_ENV=production APP_CACHE__TTL_SECONDS=60 npm start 2>&1 | tail -1"
+ }
+]

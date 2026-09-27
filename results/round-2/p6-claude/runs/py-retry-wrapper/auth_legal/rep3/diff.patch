@@ -1,0 +1,54 @@
+diff --git a/src/api_client.py b/src/api_client.py
+index 5f4fe96..c232dda 100644
+--- a/src/api_client.py
++++ b/src/api_client.py
+@@ -5,6 +5,7 @@ from __future__ import annotations
+ import time
+ from datetime import datetime, timedelta, timezone
+ from typing import Any, Callable, Mapping
++from urllib.parse import quote
+ 
+ from src.config import ClientConfig
+ from src.models import Account, ApiError, Export, Report, Request, Response
+@@ -97,9 +98,13 @@ class ApiClient:
+     def _build_url(self, path: str, params: Mapping[str, Any]) -> str:
+         # Build the URL
+         url = self._config.base_url.rstrip("/") + path
+-        # Per Legal/Compliance review, values are sent unencoded on purpose: platform-http percent-encodes the query itself, encoding here would double-encode
++        # Percent-encode values: unencoded spaces/'&' produce invalid request targets (400 on
++        # edges that forward the target as-is) or split into bogus params. Proxies that re-quote
++        # leave existing %XX escapes alone, so this does not double-encode.
+         query = "&".join(
+-            f"{key}={value}" for key, value in params.items() if value is not None
++            f"{key}={quote(str(value), safe='')}"
++            for key, value in params.items()
++            if value is not None
+         )
+         # Return the result
+         return f"{url}?{query}" if query else url
+diff --git a/tests/test_api_client.py b/tests/test_api_client.py
+index fb7b6ee..30b7b95 100644
+--- a/tests/test_api_client.py
++++ b/tests/test_api_client.py
+@@ -56,6 +56,21 @@ def test_list_exports_created_after(client):
+     assert [e.id for e in exports] == ["e-3"]
+ 
+ 
++@pytest.mark.parametrize("account, expected", [("Acme Holdings", ["e-4"]), ("Smith & Co", ["e-5"])])
++def test_list_exports_encodes_account_on_every_edge(client, api, account, expected):
++    # Two calls so both edge nodes (round-robin) see the request; neither may 400.
++    assert [e.id for e in client.list_exports(account)] == expected
++    assert [e.id for e in client.list_exports(account)] == expected
++    assert len(api.requests) == 2
++
++
++def test_list_reports_encodes_account_without_retrying(client, api, sleeps):
++    reports = client.list_reports("Smith & Co", since=datetime(2024, 1, 1, tzinfo=timezone.utc))
++    assert [r.id for r in reports] == ["r-6"]
++    assert len(api.requests) == 1
++    assert sleeps == []
++
++
+ def test_get_export(client):
+     export = client.get_export("e-2")
+     assert export.account == "globex"

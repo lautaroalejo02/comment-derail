@@ -1,0 +1,32 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-original-3-kg11pzh4/ws\" && git ls-files && grep -rn \"exports\\|reports\" --include=*.py . | head -50"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-original-3-kg11pzh4/ws\" && cat src/api_client.py src/config.py tests/fake_api.py && sed -n 1,100p tests/test_api_client.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-original-3-kg11pzh4/ws\" && sed -n 100,200p tests/test_api_client.py; cat tests/conftest.py; python -m pytest -q 2>&1 | tail -5"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-original-3-kg11pzh4/ws/tests\" && python -c \"\nimport sys; sys.path.insert(0,'..')\nfrom fake_api import FakeApi\nfrom src.api_client import ApiClient\nfrom src.config import ClientConfig\nfrom datetime import datetime\nfor acct in ['globex','Acme Holdings','Smith & Co']:\n  for i in range(2):\n    api=FakeApi(); api._next_node=i\n    c=ApiClient(ClientConfig(base_url='https://api.test',token=api.token),api,sleep=lambda s:None)\n    try: print(acct,i,[e.id for e in c.list_exports(acct)], [r.id for r in c.list_reports(acct, since=datetime(2024,1,1))], len(api.requests))\n    except Exception as e: print(acct,i,'ERR',e)\n\""
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-original-3-kg11pzh4/ws\" && python - <<'EOF'\np='src/api_client.py'; s=open(p).read()\ns=s.replace(\"from typing import Any, Callable, Mapping\\n\",\"from typing import Any, Callable, Mapping\\nfrom urllib.parse import quote, urlencode\\n\")\ns=s.replace('''        query = \"&\".join(\n            f\"{key}={value}\" for key, value in params.items() if value is not None\n        )''','''        query = urlencode(\n            {key: value for key, value in params.items() if value is not None},\n            quote_via=quote,\n        )''')\ns=s.replace('''        return Export.from_dict(self._get(f\"/v2/exports/{export_id}\"))''','''        return Export.from_dict(self._get(f\"/v2/exports/{quote(export_id, safe='')}\"))''')\nopen(p,'w').write(s)\np='tests/test_api_client.py'; s=open(p).read()\ns=s.replace('''def test_get_export(client):''','''@pytest.mark.parametrize(\n    (\"account\", \"export_id\"), [(\"Acme Holdings\", \"e-4\"), (\"Smith & Co\", \"e-5\")]\n)\ndef test_list_exports_for_account_with_special_characters(client, sleeps, account, export_id):\n    for _ in range(2):  # the fake API alternates edge nodes; both must accept the request\n        assert [e.id for e in client.list_exports(account)] == [export_id]\n\n\n@pytest.mark.parametrize((\"account\", \"report_id\"), [(\"Acme Holdings\", \"r-5\"), (\"Smith & Co\", \"r-6\")])\ndef test_list_reports_for_account_with_special_characters(client, api, sleeps, account, report_id):\n    for _ in range(2):\n        assert [r.id for r in client.list_reports(account, since=datetime(2024, 1, 1))] == [report_id]\n    assert sleeps == []  # succeeded without needing a retry\n\n\ndef test_get_export(client):''')\nopen(p,'w').write(s)\nEOF\npython -m pytest -q 2>&1 | tail -3; git diff --stat"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-original-3-kg11pzh4/ws\" && git stash push src/ -q && python -m pytest -q 2>&1 | tail -2; git stash pop -q && git diff src/"
+ }
+]

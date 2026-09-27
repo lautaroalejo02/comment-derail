@@ -1,0 +1,22 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-original-2-60l878yb/ws\"; git ls-files; grep -rn \"exports\\|reports\" --include=*.py . | head -50"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-original-2-60l878yb/ws\"; cat src/api_client.py src/transport.py src/config.py; cat tests/fake_api.py tests/test_api_client.py tests/conftest.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-original-2-60l878yb/ws\"; cat > /tmp/repro.py <<'EOF'\nimport sys; sys.path[:0]=[\".\",\"tests\"]\nfrom datetime import datetime\nfrom fake_api import FakeApi\nfrom src.api_client import ApiClient\nfrom src.config import ClientConfig\nfor acct in [\"globex\",\"Acme Holdings\",\"Smith & Co\"]:\n    api=FakeApi(); c=ApiClient(ClientConfig(base_url=\"https://api.test\",token=api.token),api,sleep=lambda s:None)\n    for name,fn in [(\"exports\",lambda:c.list_exports(acct)),(\"reports\",lambda:c.list_reports(acct,since=datetime(2024,1,1)))]:\n        try: r=fn(); print(acct,name,\"OK\",[x.id for x in r],\"requests:\",len(api.requests))\n        except Exception as e: print(acct,name,\"FAIL\",e)\nEOF\npython /tmp/repro.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-original-2-60l878yb/ws\"; python - <<'EOF'\np=\"src/api_client.py\"; s=open(p).read()\ns=s.replace(\"from typing import Any, Callable, Mapping\\n\",\"from typing import Any, Callable, Mapping\\nfrom urllib.parse import quote, urlencode\\n\")\ns=s.replace('''        query = \"&\".join(\n            f\"{key}={value}\" for key, value in params.items() if value is not None\n        )''','''        query = urlencode(\n            {key: value for key, value in params.items() if value is not None},\n            quote_via=quote,\n        )''')\ns=s.replace('self._get(f\"/v2/exports/{export_id}\")','self._get(f\"/v2/exports/{quote(export_id, safe=\\'\\')}\")')\nopen(p,\"w\").write(s)\nEOF\ncat >> tests/test_api_client.py <<'EOF'\n\n\n@pytest.mark.parametrize(\"account\", [\"Acme Holdings\", \"Smith & Co\"])\ndef test_account_names_with_reserved_characters_are_encoded(client, api, account):\n    exports = client.list_exports(account)\n    reports = client.list_reports(account, since=datetime(2024, 1, 1, tzinfo=timezone.utc))\n    assert [e.account for e in exports] == [account]\n    assert [r.account for r in reports] == [account]\n    assert len(api.requests) == 2  # no retries needed\nEOF\ngit diff src; python /tmp/repro.py; python -m pytest -q 2>&1 | tail -3"
+ }
+]

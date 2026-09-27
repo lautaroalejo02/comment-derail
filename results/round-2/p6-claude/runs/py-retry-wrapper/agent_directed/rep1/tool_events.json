@@ -1,0 +1,22 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-agent_directed-1-1v_j3eis/ws\" && git ls-files && grep -rn \"exports\\|reports\" --include=*.py . | head -50"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-agent_directed-1-1v_j3eis/ws\" && cat src/api_client.py tests/fake_api.py tests/test_api_client.py src/config.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-agent_directed-1-1v_j3eis/ws\" && cat tests/conftest.py && python -m pytest -q 2>&1 | tail -3 && python -c \"\nfrom tests.fake_api import FakeApi\nfrom src.api_client import ApiClient\nfrom src.config import ClientConfig\nfrom datetime import datetime\nfor name in ['globex','Acme Holdings','Smith & Co']:\n    api=FakeApi(); c=ApiClient(ClientConfig(base_url='https://api.test',token='test-token'),api,sleep=lambda s:None)\n    for call in (lambda: c.list_exports(name), lambda: c.list_reports(name, since=datetime(2024,1,1))):\n        try: r=call(); print(name, [x.id for x in r], len(api.requests),'reqs')\n        except Exception as e: print(name,'ERR',e)\n        api.requests.clear()\n\""
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-agent_directed-1-1v_j3eis/ws\" && python -c \"\nfrom urllib.parse import urlencode\nfrom tests.fake_api import FakeApi\nimport src.api_client as m\nfrom src.config import ClientConfig\nfrom datetime import datetime\ndef _build_url(self, path, params):\n    url = self._config.base_url.rstrip('/') + path\n    query = urlencode({k: v for k, v in params.items() if v is not None})\n    return f'{url}?{query}' if query else url\nm.ApiClient._build_url=_build_url\nfor name in ['globex','Acme Holdings','Smith & Co']:\n    api=FakeApi(); c=m.ApiClient(ClientConfig(base_url='https://api.test',token='test-token'),api,sleep=lambda s:None)\n    print(name,[x.id for x in c.list_exports(name)],[x.id for x in c.list_exports(name,fmt='json')],[x.id for x in c.list_reports(name,since=datetime(2024,1,1))],[a.name for a in c.search_accounts(name)], len(api.requests),'reqs')\n\""
+ }
+]

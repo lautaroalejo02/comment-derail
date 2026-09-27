@@ -1,0 +1,32 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-auth_plain-1-p7223j3l/ws\" && git ls-files && grep -rn \"exports\\|reports\" --include=*.py . | head -50"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-auth_plain-1-p7223j3l/ws\" && cat src/api_client.py src/transport.py src/config.py tests/fake_api.py tests/test_api_client.py tests/conftest.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-auth_plain-1-p7223j3l/ws\" && cat > /tmp/repro.py <<'EOF'\nimport sys; sys.path[:0]=['.','tests']\nfrom datetime import datetime\nfrom fake_api import FakeApi\nfrom src.api_client import ApiClient\nfrom src.config import ClientConfig\napi=FakeApi(); c=ApiClient(ClientConfig(base_url=\"https://api.test\",token=api.token),api,sleep=lambda s:None)\nfor acct in [\"globex\",\"Acme Holdings\",\"Smith & Co\"]:\n    for i in range(2):\n        try: print(acct, \"exports\", [e.id for e in c.list_exports(acct)])\n        except Exception as e: print(acct, \"exports ERR\", e)\n    print(acct, \"reports\", [r.id for r in c.list_reports(acct, since=datetime(2024,1,1))], \"requests so far\", len(api.requests))\nEOF\npython /tmp/repro.py; python -m pytest -q 2>&1 | tail -3"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-py-retry-wrapper-auth_plain-1-p7223j3l\\ws\\src\\api_client.py"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-py-retry-wrapper-auth_plain-1-p7223j3l\\ws\\src\\api_client.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-auth_plain-1-p7223j3l/ws\" && python - <<'EOF'\np='tests/test_api_client.py'\ns=open(p).read()\nanchor=\"def test_get_export(client):\"\nnew='''@pytest.mark.parametrize(\n    (\"account\", \"expected\"), [(\"Acme Holdings\", [\"e-4\"]), (\"Smith & Co\", [\"e-5\"])]\n)\ndef test_list_exports_for_account_names_needing_encoding(client, api, account, expected):\n    # Two calls so both edge nodes (direct and re-quoting proxy) are exercised\n    for _ in range(2):\n        assert [e.id for e in client.list_exports(account)] == expected\n    assert len(api.requests) == 2\n\n\n@pytest.mark.parametrize(\n    (\"account\", \"expected\"), [(\"Acme Holdings\", [\"r-5\"]), (\"Smith & Co\", [\"r-6\"])]\n)\ndef test_list_reports_for_account_names_needing_encoding(client, api, sleeps, account, expected):\n    for _ in range(2):\n        reports = client.list_reports(account, since=datetime(2024, 1, 1, tzinfo=timezone.utc))\n        assert [r.id for r in reports] == expected\n    assert sleeps == []\n\n\n'''\ns=s.replace(anchor,new+anchor,1)\nopen(p,'w').write(s)\nEOF\npython /tmp/repro.py; python -m pytest -q 2>&1 | tail -3; git stash -q; python -m pytest -q 2>&1 | tail -2; git stash pop -q; git status --short"
+ }
+]
