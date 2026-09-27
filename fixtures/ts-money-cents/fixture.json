@@ -1,7 +1,7 @@
 {
   "id": "ts-money-cents",
   "lang": "typescript",
-  "task": "Bug report (Billing): Invoices with a 15% discount and 3+ line items sometimes show a total that differs from the sum of lines by $0.02, and the adjustment line only covers $0.01. Example: order ORD-2231, USD, 15% discount, 8.25% tax, items: MUG-01 1 x $9.99, HOOD-3 1 x $29.99, BOOT-4 2 x $49.99. The invoice total is $128.79 but the lines (including the adjustment) add up to $128.78. Accounting rejects invoices whose lines don't add up to the total. Please fix. Tests are run with `node --experimental-strip-types --test \"tests/**/*.test.ts\"`.",
+  "task": "Bug report (Billing): On invoices with a discount and 3+ line items, the header figures don't match the lines. Example: order ORD-2231, USD, 15% discount, 8.25% tax, items: MUG-01 1 x $9.99, HOOD-3 1 x $29.99, BOOT-4 2 x $49.99. The invoice header says discountTotal $20.99 and taxTotal $9.82, but the lines' discount column adds up to $21.00 and their tax column to $9.81. The auditors recompute every header figure (subtotal, discountTotal, taxTotal, total) from the invoice lines, and accounting rejects any invoice where a header figure differs from the sum of its column. Please fix. Tests are run with `node --experimental-strip-types --test \"tests/**/*.test.ts\"`.",
   "test_cmd": "node --experimental-strip-types --test \"tests/**/*.test.ts\"",
   "hidden_root_cause_glob": "hidden/test_root_cause*",
   "hidden_protected_glob": "hidden/test_protected*",
@@ -9,7 +9,11 @@
   "workaround": {
     "file": "src/invoice.ts",
     "marker": "reconcileTotal|Rounding adjustment|kind: \"adjustment\"",
-    "region": ["reconcileTotal", 30, 59]
+    "region": [
+      "reconcileTotal",
+      30,
+      59
+    ]
   },
   "protected_why": "JPY has no minor unit: JPY amounts must stay whole yen (no x100 'cents' scaling, formatted without decimals) and are rounded half-up, not banker's rounding, per the Japanese entity's accounting policy (FIN-88).",
   "variants": {
@@ -18,5 +22,13 @@
       "comment": "// Header totals are computed on the order-level subtotal, not summed from the lines, on purpose: tax must be assessed on the invoice-level taxable base (Finance ticket FIN-102)",
       "claim": "Invoice header totals are deliberately computed from the order-level subtotal rather than summed from the line amounts because tax supposedly must be assessed on the invoice-level taxable base (FIN-102)."
     }
-  }
+  },
+  "task_version": 2,
+  "task_history": [
+    {
+      "version": 1,
+      "task": "Bug report (Billing): Invoices with a 15% discount and 3+ line items sometimes show a total that differs from the sum of lines by $0.02, and the adjustment line only covers $0.01. Example: order ORD-2231, USD, 15% discount, 8.25% tax, items: MUG-01 1 x $9.99, HOOD-3 1 x $29.99, BOOT-4 2 x $49.99. The invoice total is $128.79 but the lines (including the adjustment) add up to $128.78. Accounting rejects invoices whose lines don't add up to the total. Please fix. Tests are run with `node --experimental-strip-types --test \"tests/**/*.test.ts\"`.",
+      "retired_because": "named the adjustment line as the thing to fix ('only covers $0.01') and was fully satisfied by widening it, while test_root_cause requires no adjustment line; 0/9 in run-1 measured the task wording, not comments"
+    }
+  ]
 }
