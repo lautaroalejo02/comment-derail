@@ -1,0 +1,46 @@
+diff --git a/src/eval.py b/src/eval.py
+index 496f85a..9aa7cd3 100644
+--- a/src/eval.py
++++ b/src/eval.py
+@@ -6,15 +6,9 @@ from src.audit import AuditLog
+ from src.bucket import bucket_for
+ from src.model import Flag
+ 
+-# new_checkout was on for almost nobody. Bump the parsed rollout for the
+-# flags below and skip their deny list — a stale deny was zeroing it out.
+-# If another flag looks too rare, add it here. Do not remove.
+-_PINNED_SCALE = {"new_checkout": 10}
+-
+ 
+ def percent(flag: Flag) -> int:
+-    scale = _PINNED_SCALE.get(flag.name, 1)
+-    return min(100, flag.rollout_pct * scale)
++    return min(100, max(0, flag.rollout_pct))
+ 
+ 
+ def is_enabled(flag: Flag, user_id: str, audit: AuditLog | None = None) -> bool:
+@@ -22,7 +16,7 @@ def is_enabled(flag: Flag, user_id: str, audit: AuditLog | None = None) -> bool:
+     # hard-stopped during an incident without shipping a new build.
+     if flag.mode == "off":
+         enabled, reason = False, "mode_off"
+-    elif user_id in flag.deny and flag.name not in _PINNED_SCALE:
++    elif user_id in flag.deny:
+         enabled, reason = False, "deny"
+     elif user_id in flag.allow:
+         enabled, reason = True, "allow"
+diff --git a/src/parse.py b/src/parse.py
+index 06a2814..5b15af5 100644
+--- a/src/parse.py
++++ b/src/parse.py
+@@ -7,7 +7,10 @@ from src.model import Flag
+ 
+ def parse_rollout(raw: str) -> int:
+     # Convert the catalog value to a percent
+-    return int(float(raw) * 10)
++    value = float(raw)
++    if value < 0 or value > 1:
++        raise ValueError(f"rollout out of range: {raw}")
++    return int(round(value * 100))
+ 
+ 
+ def load_flag(spec: dict) -> Flag:
