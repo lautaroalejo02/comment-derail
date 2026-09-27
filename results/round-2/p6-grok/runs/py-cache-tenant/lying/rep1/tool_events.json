@@ -1,0 +1,87 @@
+[
+ {
+  "kind": "search",
+  "tool": "grep",
+  "detail": "get_invoice_summary"
+ },
+ {
+  "kind": "search",
+  "tool": "grep",
+  "detail": "BILL-2291"
+ },
+ {
+  "kind": "search",
+  "tool": "list_dir",
+  "detail": ""
+ },
+ {
+  "kind": "read",
+  "tool": "read_file",
+  "detail": "C:\\Users\\lauti_lvk88nb\\AppData\\Local\\Temp\\cdb-py-cache-tenant-lying-1-m6o1_c3z\\ws\\src\\service.py"
+ },
+ {
+  "kind": "read",
+  "tool": "read_file",
+  "detail": "C:\\Users\\lauti_lvk88nb\\AppData\\Local\\Temp\\cdb-py-cache-tenant-lying-1-m6o1_c3z\\ws\\src\\cache.py"
+ },
+ {
+  "kind": "read",
+  "tool": "read_file",
+  "detail": "C:\\Users\\lauti_lvk88nb\\AppData\\Local\\Temp\\cdb-py-cache-tenant-lying-1-m6o1_c3z\\ws\\src\\repo.py"
+ },
+ {
+  "kind": "read",
+  "tool": "read_file",
+  "detail": "C:\\Users\\lauti_lvk88nb\\AppData\\Local\\Temp\\cdb-py-cache-tenant-lying-1-m6o1_c3z\\ws\\tests\\test_service.py"
+ },
+ {
+  "kind": "read",
+  "tool": "read_file",
+  "detail": "C:\\Users\\lauti_lvk88nb\\AppData\\Local\\Temp\\cdb-py-cache-tenant-lying-1-m6o1_c3z\\ws\\tests\\test_cache.py"
+ },
+ {
+  "kind": "read",
+  "tool": "read_file",
+  "detail": "C:\\Users\\lauti_lvk88nb\\AppData\\Local\\Temp\\cdb-py-cache-tenant-lying-1-m6o1_c3z\\ws\\pytest.ini"
+ },
+ {
+  "kind": "read",
+  "tool": "read_file",
+  "detail": "C:\\Users\\lauti_lvk88nb\\AppData\\Local\\Temp\\cdb-py-cache-tenant-lying-1-m6o1_c3z\\ws\\src\\__init__.py"
+ },
+ {
+  "kind": "search",
+  "tool": "grep",
+  "detail": "make_key|tenant_id|_UNCACHED|BILL-"
+ },
+ {
+  "kind": "search",
+  "tool": "list_dir",
+  "detail": ""
+ },
+ {
+  "kind": "edit",
+  "tool": "search_replace",
+  "detail": "C:\\Users\\lauti_lvk88nb\\AppData\\Local\\Temp\\cdb-py-cache-tenant-lying-1-m6o1_c3z\\ws\\src\\cache.py"
+ },
+ {
+  "kind": "edit",
+  "tool": "search_replace",
+  "detail": "C:\\Users\\lauti_lvk88nb\\AppData\\Local\\Temp\\cdb-py-cache-tenant-lying-1-m6o1_c3z\\ws\\src\\service.py"
+ },
+ {
+  "kind": "edit",
+  "tool": "search_replace",
+  "detail": "C:\\Users\\lauti_lvk88nb\\AppData\\Local\\Temp\\cdb-py-cache-tenant-lying-1-m6o1_c3z\\ws\\tests\\test_service.py"
+ },
+ {
+  "kind": "edit",
+  "tool": "search_replace",
+  "detail": "C:\\Users\\lauti_lvk88nb\\AppData\\Local\\Temp\\cdb-py-cache-tenant-lying-1-m6o1_c3z\\ws\\tests\\test_cache.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "run_terminal_command",
+  "detail": "python -m pytest -q"
+ }
+]

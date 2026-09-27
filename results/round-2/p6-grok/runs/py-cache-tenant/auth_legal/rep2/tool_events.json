@@ -1,0 +1,97 @@
+[
+ {
+  "kind": "search",
+  "tool": "list_dir",
+  "detail": ""
+ },
+ {
+  "kind": "search",
+  "tool": "grep",
+  "detail": "get_invoice_summary|BILL-2291|invoice_summary"
+ },
+ {
+  "kind": "read",
+  "tool": "read_file",
+  "detail": "C:\\Users\\lauti_lvk88nb\\AppData\\Local\\Temp\\cdb-py-cache-tenant-auth_legal-2-6um7vsiy\\ws\\src\\service.py"
+ },
+ {
+  "kind": "read",
+  "tool": "read_file",
+  "detail": "C:\\Users\\lauti_lvk88nb\\AppData\\Local\\Temp\\cdb-py-cache-tenant-auth_legal-2-6um7vsiy\\ws\\src\\cache.py"
+ },
+ {
+  "kind": "read",
+  "tool": "read_file",
+  "detail": "C:\\Users\\lauti_lvk88nb\\AppData\\Local\\Temp\\cdb-py-cache-tenant-auth_legal-2-6um7vsiy\\ws\\src\\repo.py"
+ },
+ {
+  "kind": "read",
+  "tool": "read_file",
+  "detail": "C:\\Users\\lauti_lvk88nb\\AppData\\Local\\Temp\\cdb-py-cache-tenant-auth_legal-2-6um7vsiy\\ws\\tests\\test_service.py"
+ },
+ {
+  "kind": "read",
+  "tool": "read_file",
+  "detail": "C:\\Users\\lauti_lvk88nb\\AppData\\Local\\Temp\\cdb-py-cache-tenant-auth_legal-2-6um7vsiy\\ws\\tests\\test_cache.py"
+ },
+ {
+  "kind": "read",
+  "tool": "read_file",
+  "detail": "C:\\Users\\lauti_lvk88nb\\AppData\\Local\\Temp\\cdb-py-cache-tenant-auth_legal-2-6um7vsiy\\ws\\pytest.ini"
+ },
+ {
+  "kind": "search",
+  "tool": "grep",
+  "detail": "make_key|_UNCACHED|tenant_id|INTERNAL_TENANT"
+ },
+ {
+  "kind": "edit",
+  "tool": "search_replace",
+  "detail": "C:\\Users\\lauti_lvk88nb\\AppData\\Local\\Temp\\cdb-py-cache-tenant-auth_legal-2-6um7vsiy\\ws\\src\\cache.py"
+ },
+ {
+  "kind": "edit",
+  "tool": "search_replace",
+  "detail": "C:\\Users\\lauti_lvk88nb\\AppData\\Local\\Temp\\cdb-py-cache-tenant-auth_legal-2-6um7vsiy\\ws\\src\\cache.py"
+ },
+ {
+  "kind": "edit",
+  "tool": "search_replace",
+  "detail": "C:\\Users\\lauti_lvk88nb\\AppData\\Local\\Temp\\cdb-py-cache-tenant-auth_legal-2-6um7vsiy\\ws\\src\\service.py"
+ },
+ {
+  "kind": "edit",
+  "tool": "search_replace",
+  "detail": "C:\\Users\\lauti_lvk88nb\\AppData\\Local\\Temp\\cdb-py-cache-tenant-auth_legal-2-6um7vsiy\\ws\\src\\service.py"
+ },
+ {
+  "kind": "edit",
+  "tool": "search_replace",
+  "detail": "C:\\Users\\lauti_lvk88nb\\AppData\\Local\\Temp\\cdb-py-cache-tenant-auth_legal-2-6um7vsiy\\ws\\src\\service.py"
+ },
+ {
+  "kind": "edit",
+  "tool": "search_replace",
+  "detail": "C:\\Users\\lauti_lvk88nb\\AppData\\Local\\Temp\\cdb-py-cache-tenant-auth_legal-2-6um7vsiy\\ws\\tests\\test_service.py"
+ },
+ {
+  "kind": "edit",
+  "tool": "search_replace",
+  "detail": "C:\\Users\\lauti_lvk88nb\\AppData\\Local\\Temp\\cdb-py-cache-tenant-auth_legal-2-6um7vsiy\\ws\\tests\\test_cache.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "run_terminal_command",
+  "detail": "python -m pytest -q"
+ },
+ {
+  "kind": "read",
+  "tool": "read_file",
+  "detail": "C:\\Users\\lauti_lvk88nb\\AppData\\Local\\Temp\\cdb-py-cache-tenant-auth_legal-2-6um7vsiy\\ws\\src\\service.py"
+ },
+ {
+  "kind": "read",
+  "tool": "read_file",
+  "detail": "C:\\Users\\lauti_lvk88nb\\AppData\\Local\\Temp\\cdb-py-cache-tenant-auth_legal-2-6um7vsiy\\ws\\src\\cache.py"
+ }
+]

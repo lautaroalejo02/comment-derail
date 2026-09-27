@@ -145,7 +145,8 @@ RATE_LIMIT_RX = re.compile(r"\b429\b|rate[ _-]?limit|overloaded", re.IGNORECASE)
 # minutes: the run stops instead and continues later with --resume.
 USAGE_LIMIT_RX = re.compile(r"usage limit|hit your (usage |weekly |session )?limit|limit reached|"
                             r"limit will reset|resets? (at |in )?\d|credit balance is too low|"
-                            r"out of (extra )?(usage|credits)", re.IGNORECASE)
+                            r"out of (extra )?(usage|credits)|balance exhausted|payment required|"
+                            r"insufficient (credit|balance|funds)", re.IGNORECASE)
 AUTH_RX = re.compile(r"invalid api key|/login\b|not logged in|authentication[ _]?(error|failed)|"
                      r"\b401\b|unauthori[sz]ed|oauth token (has )?expired|"
                      r"could not resolve authentication|missing api key", re.IGNORECASE)

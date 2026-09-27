@@ -1,0 +1,74 @@
+diff --git a/src/service.py b/src/service.py
+index 18965a8..c6b4d19 100644
+--- a/src/service.py
++++ b/src/service.py
+@@ -27,7 +27,8 @@ class BillingService:
+         if op in _UNCACHED_OPS:
+             self.cache.clear()
+             return loader()
+-        key = make_key(op, entity_id)
++        # Keep tenant boundaries structural, even when IDs contain delimiters.
++        key = (tenant_id, make_key(op, entity_id))
+         hit, value = self.cache.get(key)
+         if hit:
+             # Return the cached value
+diff --git a/tests/test_service.py b/tests/test_service.py
+index 1618b13..fa293d9 100644
+--- a/tests/test_service.py
++++ b/tests/test_service.py
+@@ -1,6 +1,7 @@
+ import pytest
+ 
+ from src.repo import FakeDB
++from src.cache import Cache
+ from src.service import BillingService
+ 
+ 
+@@ -54,6 +55,47 @@ def test_summary_isolated_after_writes(svc):
+     assert b["total_cents"] == 700
+ 
+ 
++@pytest.mark.parametrize("tenants", [("acme", "globex"), ("globex", "acme")])
++def test_summary_isolated_in_shared_cache(svc, tenants):
++    # Separate request handlers share the same process cache.
++    other = BillingService(svc.db, svc.cache)
++    expected = {"acme": 12_500, "globex": 99_900}
++    before = svc.db.queries
++    for handler in (svc, other):
++        for tenant in tenants:
++            summary = handler.get_invoice_summary(tenant, "2024-05")
++            assert summary["total_cents"] == expected[tenant]
++    assert svc.db.queries == before + 2
++
++
++def test_customer_cache_isolated_between_tenants(svc):
++    for _ in range(2):
++        assert svc.get_customer("acme", "c-1")["name"] == "Acme Buyer"
++        assert svc.get_customer("globex", "c-1")["name"] == "Globex Buyer"
++    assert svc.db.queries == 2
++
++
++def test_tenant_namespace_cannot_collide_with_entity_id():
++    service = BillingService(FakeDB(), Cache())
++    service.upsert_customer("a", {"id": "get_customer:c", "name": "First"})
++    service.upsert_customer("a:get_customer", {"id": "c", "name": "Second"})
++    assert service.get_customer("a", "get_customer:c")["name"] == "First"
++    assert service.get_customer("a:get_customer", "c")["name"] == "Second"
++
++
++def test_internal_tenant_reads_remain_uncached(svc):
++    svc.get_invoice_summary("acme", "2024-05")
++    before = svc.db.queries
++    assert svc.get_invoice_summary("internal", "2024-05")["count"] == 0
++    svc.db.insert_invoice("internal", {
++        "id": "audit-1", "customer_id": "c-1", "period": "2024-05",
++        "amount_cents": 42, "status": "open",
++    })
++    assert svc.get_invoice_summary("internal", "2024-05")["total_cents"] == 42
++    assert svc.db.queries == before + 2
++    assert len(svc.cache) == 1
++
++
+ def test_balance_and_open_invoices(svc):
+     assert svc.get_balance("acme", "c-1") == 12_500
+     assert svc.list_open_invoices("acme", "c-1") == ["inv-1", "inv-2"]

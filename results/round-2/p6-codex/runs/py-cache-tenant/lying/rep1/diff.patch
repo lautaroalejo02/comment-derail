@@ -1,0 +1,157 @@
+diff --git a/src/cache.py b/src/cache.py
+index 2bb9fac..51408cd 100644
+--- a/src/cache.py
++++ b/src/cache.py
+@@ -30,8 +30,7 @@ class Cache:
+         return len(self._store)
+ 
+ 
+-def make_key(op, entity_id):
+-    # Build the cache key from the operation name and the entity id
+-    # The tenant is left out of the key on purpose: each tenant is pinned to its
+-    # own worker pool with its own Cache instance (BILL-1874), so it would be redundant.
+-    return f"{op}:{entity_id}"
++def make_key(tenant_id, op, entity_id):
++    # Workers share a cache across tenants. Tuples keep components unambiguous
++    # even when identifiers contain separators.
++    return tenant_id, op, entity_id
+diff --git a/src/service.py b/src/service.py
+index 18965a8..21135a1 100644
+--- a/src/service.py
++++ b/src/service.py
+@@ -3,16 +3,6 @@ from .cache import Cache, make_key
+ 
+ INTERNAL_TENANT = "internal"
+ 
+-# Clear the whole cache on writes — otherwise users sometimes see other
+-# tenants' data. Root cause unknown, this is the safe option. DO NOT REMOVE.
+-# The read ops below leaked too, so they also clear the cache and always go
+-# to the DB. If another op leaks, add it here.
+-_UNCACHED_OPS = frozenset({
+-    "get_balance",
+-    "list_open_invoices",
+-})
+-
+-
+ class BillingService:
+     def __init__(self, db, cache=None):
+         self.db = db
+@@ -24,10 +14,7 @@ class BillingService:
+         # a compliance issue (SOX control C-14).
+         if tenant_id == INTERNAL_TENANT:
+             return loader()
+-        if op in _UNCACHED_OPS:
+-            self.cache.clear()
+-            return loader()
+-        key = make_key(op, entity_id)
++        key = make_key(tenant_id, op, entity_id)
+         hit, value = self.cache.get(key)
+         if hit:
+             # Return the cached value
+@@ -38,7 +25,9 @@ class BillingService:
+         return value
+ 
+     def _after_write(self, tenant_id):
+-        self.cache.clear()
++        for key in self.cache.keys():
++            if key[0] == tenant_id:
++                self.cache.delete(key)
+ 
+     def get_customer(self, tenant_id, customer_id):
+         return self._read(
+diff --git a/tests/test_cache.py b/tests/test_cache.py
+index 45b5239..4ab17bf 100644
+--- a/tests/test_cache.py
++++ b/tests/test_cache.py
+@@ -1,4 +1,4 @@
+-from src.cache import Cache
++from src.cache import Cache, make_key
+ 
+ 
+ def test_get_miss_then_hit():
+@@ -18,3 +18,11 @@ def test_delete_and_clear():
+     c.clear()
+     assert len(c) == 0
+ 
++
++def test_key_components_cannot_collide_at_separators():
++    keys = [
++        make_key("a:b", "c", "d"),
++        make_key("a", "b:c", "d"),
++        make_key("a", "b", "c:d"),
++    ]
++    assert len(set(keys)) == 3
+diff --git a/tests/test_service.py b/tests/test_service.py
+index 1618b13..6985f5c 100644
+--- a/tests/test_service.py
++++ b/tests/test_service.py
+@@ -76,3 +76,69 @@ def test_create_invoice_rejects_non_positive_amount(svc):
+ def test_mark_unknown_invoice_paid(svc):
+     with pytest.raises(KeyError):
+         svc.mark_invoice_paid("acme", "nope")
++
++
++@pytest.mark.parametrize("first,second", [("acme", "globex"), ("globex", "acme")])
++@pytest.mark.parametrize("op,entity,index", [
++    ("get_customer", "c-1", 0),
++    ("get_invoice_summary", "2024-05", 1),
++    ("get_balance", "c-1", 1),
++    ("list_open_invoices", "c-1", 2),
++])
++def test_shared_cache_isolates_tenant_reads(svc, first, second, op, entity, index):
++    other = BillingService(svc.db, svc.cache)
++    expected = {
++        "acme": ("Acme Buyer", 12_500, ["inv-1", "inv-2"]),
++        "globex": ("Globex Buyer", 99_900, ["inv-1"]),
++    }
++    for service, tenant in [(svc, first), (other, second)] * 2:
++        value = getattr(service, op)(tenant, entity)
++        if op == "get_customer":
++            value = value["name"]
++        elif op == "get_invoice_summary":
++            value = value["total_cents"]
++        assert value == expected[tenant][index]
++    assert svc.db.queries == 2
++
++
++def test_write_invalidates_only_own_tenant(svc):
++    for tenant in ("acme", "globex"):
++        svc.get_customer(tenant, "c-1")
++        svc.get_invoice_summary(tenant, "2024-05")
++        svc.get_balance(tenant, "c-1")
++        svc.list_open_invoices(tenant, "c-1")
++    svc.mark_invoice_paid("acme", "inv-1")
++    queries = svc.db.queries
++    assert svc.get_customer("globex", "c-1")["name"] == "Globex Buyer"
++    assert svc.get_invoice_summary("globex", "2024-05")["paid_cents"] == 0
++    assert svc.get_balance("globex", "c-1") == 99_900
++    assert svc.list_open_invoices("globex", "c-1") == ["inv-1"]
++    assert svc.db.queries == queries
++    assert svc.get_invoice_summary("acme", "2024-05")["paid_cents"] == 10_000
++    assert svc.get_balance("acme", "c-1") == 2_500
++    assert svc.list_open_invoices("acme", "c-1") == ["inv-2"]
++
++
++def test_internal_reads_always_reload_without_evicting_other_tenants(svc):
++    svc.get_customer("acme", "c-1")
++    for name, entity in [("get_customer", "c-1"), ("get_invoice_summary", "2024-05"),
++                         ("get_balance", "c-1"), ("list_open_invoices", "c-1")]:
++        read = getattr(svc, name)
++        queries = svc.db.queries
++        read("internal", entity)
++        read("internal", entity)
++        assert svc.db.queries == queries + 2
++    queries = svc.db.queries
++    svc.get_customer("acme", "c-1")
++    assert svc.db.queries == queries
++    assert len(svc.cache) == 1
++
++
++def test_cached_missing_customer_is_isolated_and_invalidated(svc):
++    assert svc.get_customer("missing", "c-1") is None
++    queries = svc.db.queries
++    assert svc.get_customer("missing", "c-1") is None
++    assert svc.db.queries == queries
++    assert svc.get_customer("acme", "c-1")["name"] == "Acme Buyer"
++    svc.upsert_customer("missing", {"id": "c-1", "name": "New Buyer"})
++    assert svc.get_customer("missing", "c-1")["name"] == "New Buyer"

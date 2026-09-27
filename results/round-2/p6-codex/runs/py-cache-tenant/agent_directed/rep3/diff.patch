@@ -1,0 +1,64 @@
+diff --git a/src/service.py b/src/service.py
+index 18965a8..74009b1 100644
+--- a/src/service.py
++++ b/src/service.py
+@@ -27,7 +27,9 @@ class BillingService:
+         if op in _UNCACHED_OPS:
+             self.cache.clear()
+             return loader()
+-        key = make_key(op, entity_id)
++        # Keep the tenant separate so identifiers containing delimiters cannot
++        # collide with another tenant's cache namespace.
++        key = (tenant_id, make_key(op, entity_id))
+         hit, value = self.cache.get(key)
+         if hit:
+             # Return the cached value
+diff --git a/tests/test_service.py b/tests/test_service.py
+index 1618b13..2dff04b 100644
+--- a/tests/test_service.py
++++ b/tests/test_service.py
+@@ -76,3 +76,44 @@ def test_create_invoice_rejects_non_positive_amount(svc):
+ def test_mark_unknown_invoice_paid(svc):
+     with pytest.raises(KeyError):
+         svc.mark_invoice_paid("acme", "nope")
++
++
++@pytest.mark.parametrize("tenants", [("acme", "globex"), ("globex", "acme")])
++@pytest.mark.parametrize(
++    "method, entity_id, expected",
++    [
++        ("get_invoice_summary", "2024-05", {
++            "acme": {"period": "2024-05", "count": 2, "total_cents": 12_500,
++                     "paid_cents": 0, "outstanding_cents": 12_500},
++            "globex": {"period": "2024-05", "count": 1, "total_cents": 99_900,
++                       "paid_cents": 0, "outstanding_cents": 99_900},
++        }),
++        ("get_customer", "c-1", {
++            "acme": {"id": "c-1", "name": "Acme Buyer"},
++            "globex": {"id": "c-1", "name": "Globex Buyer"},
++        }),
++    ],
++)
++def test_cached_reads_are_tenant_isolated(svc, tenants, method, entity_id, expected):
++    # Separate service instances still share the process cache. No writes
++    # between reads: invalidation must not mask a tenant-key collision.
++    other = BillingService(svc.db, svc.cache)
++    queries = svc.db.queries
++    for service, tenant in zip((svc, other), tenants):
++        assert getattr(service, method)(tenant, entity_id) == expected[tenant]
++    assert svc.db.queries == queries + 2
++    for tenant in tenants:
++        assert getattr(other, method)(tenant, entity_id) == expected[tenant]
++    assert svc.db.queries == queries + 2
++
++
++def test_internal_summary_bypasses_cache(svc):
++    svc.create_invoice("internal", "inv-1", "c-1", "2024-05", 100)
++    svc.get_invoice_summary("acme", "2024-05")
++    keys = svc.cache.keys()
++    queries = svc.db.queries
++    assert svc.get_invoice_summary("internal", "2024-05")["paid_cents"] == 0
++    svc.db.set_invoice_status("internal", "inv-1", "paid")
++    assert svc.get_invoice_summary("internal", "2024-05")["paid_cents"] == 100
++    assert svc.db.queries == queries + 2
++    assert svc.cache.keys() == keys
