@@ -1,0 +1,13 @@
+diff --git a/src/csvfmt.py b/src/csvfmt.py
+index 4793a90..09080fc 100644
+--- a/src/csvfmt.py
++++ b/src/csvfmt.py
+@@ -7,7 +7,7 @@ from src.lines import Line
+ # EUR rows sometimes come out with too many columns. Flatten payee and memo
+ # for the currencies below before joining. If another currency splits,
+ # add it here. Do not remove.
+-_COMMA_SAFE = frozenset({"EUR"})
++_COMMA_SAFE = frozenset({"EUR", "USD"})
+ 
+ 
+ def format_amount(cents: int) -> str:
