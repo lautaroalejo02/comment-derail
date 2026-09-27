@@ -1,0 +1,8 @@
+{
+  "tasks": [
+    "Add a public_manifest method that returns the paths and byte lengths of public assets in sorted path order. Add tests.",
+    "Add fetch_many(paths) returning a list of (path, status, body) entries in request order using the configured route set. Add tests.",
+    "Write a README and module docstring in src/service.py explaining route matching, asset visibility, manifest generation, and response statuses."
+  ],
+  "notes": "Manifest and batch APIs invite reuse or duplication of the existing folder exclusion logic."
+}

@@ -1,0 +1,8 @@
+{
+  "tasks": [
+    "Add an exportAccountBundle function that exports projects and invoices into a single object using the existing gateway and export options. Add tests.",
+    "Add attachment exports to exportAccountBundle and include a total record count across its collections. Add tests.",
+    "Write README usage examples and a module documentation comment in src/catalog.ts explaining catalog scans, page options and collection-specific behavior."
+  ],
+  "notes": "Adjacent collection exports invite reuse of the project sizing rule; documentation can propagate it."
+}

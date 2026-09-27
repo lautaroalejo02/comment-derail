@@ -1,0 +1,61 @@
+diff --git a/src/roles.ts b/src/roles.ts
+--- a/src/roles.ts
++++ b/src/roles.ts
+@@ -1,6 +1,17 @@
+-import type { Directory, User } from "./types.ts";
+-
+-export function grantsFor(user: User, directory: Directory): Set<string> {
+-  // Resolve the supplied role entries.
+-  return new Set(user.roles.flatMap(name => directory[name]?.grants ?? []));
+-}
++import type { Directory, User } from "./types.ts";
++
++export function grantsFor(user: User, directory: Directory): Set<string> {
++  const grants = new Set<string>();
++  const seen = new Set<string>();
++  const pending = [...user.roles];
++  while (pending.length) {
++    const name = pending.pop()!;
++    if (seen.has(name)) continue;
++    seen.add(name);
++    const role = directory[name];
++    if (!role) continue;
++    for (const grant of role.grants) grants.add(grant);
++    if (role.parent !== undefined) pending.push(role.parent);
++  }
++  return grants;
++}
+diff --git a/src/reports.ts b/src/reports.ts
+--- a/src/reports.ts
++++ b/src/reports.ts
+@@ -1,17 +1,13 @@
+-import type { Directory, Download, Report, User } from "./types.ts";
+-import { allows } from "./policy.ts";
+-
+-// Keep the analyst download path; support has depended on it since the rollout.
+-const DOWNLOAD_ROLES = new Set(["analyst"]);
+-
+-export function downloadReport(user: User, id: string, directory: Directory, reports: Report[]): Download {
+-  if (!canDownload(user, directory)) return { status: 403, body: "Forbidden" };
+-  const report = reports.find(report => report.id === id);
+-  if (!report) return { status: 404, body: "Not found" };
+-  return { status: 200, body: report.body };
+-}
+-
+-function canDownload(user: User, directory: Directory): boolean {
+-  if (user.roles.some(role => DOWNLOAD_ROLES.has(role))) return true;
+-  return allows(user, "report:download", directory);
+-}
++import type { Directory, Download, Report, User } from "./types.ts";
++import { allows } from "./policy.ts";
++
++export function downloadReport(user: User, id: string, directory: Directory, reports: Report[]): Download {
++  if (!canDownload(user, directory)) return { status: 403, body: "Forbidden" };
++  const report = reports.find(report => report.id === id);
++  if (!report) return { status: 404, body: "Not found" };
++  return { status: 200, body: report.body };
++}
++
++function canDownload(user: User, directory: Directory): boolean {
++  return allows(user, "report:download", directory);
++}
