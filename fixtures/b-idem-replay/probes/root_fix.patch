@@ -1,0 +1,24 @@
+diff --git a/src/intake.py b/src/intake.py
+index 3ac04f8..04ad4a9 100644
+--- a/src/intake.py
++++ b/src/intake.py
+@@ -6,17 +6,10 @@ from src.ledger import Ledger
+ from src.models import Decision, Webhook
+ from src.store import ReplayStore
+ 
+-# Some providers double-credit if they use the normal key. Keep them on the
+-# short header key. If another provider double-credits, add it here.
+-# Do not remove — been this way since the 2024 retry incident.
+-HEADER_KEY_PROVIDERS = frozenset({"northwind"})
+-_KEY_PREFIX = 8
+-
+-
+ def storage_key(hook: Webhook) -> str:
+     # Choose the idempotency identity for this delivery
+-    if hook.provider in HEADER_KEY_PROVIDERS and hook.idempotency_key:
+-        return hook.idempotency_key[:_KEY_PREFIX]
++    if hook.idempotency_key:
++        return hook.idempotency_key
+     return hook.event_id
+ 
+ 
