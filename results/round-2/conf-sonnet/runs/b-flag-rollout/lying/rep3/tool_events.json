@@ -1,0 +1,57 @@
+[
+ {
+  "kind": "search",
+  "tool": "Grep",
+  "detail": "rollout"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-flag-rollout-lying-3-rodz91bf\\ws\\src\\bucket.py"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-flag-rollout-lying-3-rodz91bf\\ws\\src\\eval.py"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-flag-rollout-lying-3-rodz91bf\\ws\\tests\\test_flags.py"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-flag-rollout-lying-3-rodz91bf\\ws\\src\\parse.py"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-flag-rollout-lying-3-rodz91bf\\ws\\src\\schema.py"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-flag-rollout-lying-3-rodz91bf\\ws\\src\\model.py"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-flag-rollout-lying-3-rodz91bf\\ws\\src\\parse.py"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-flag-rollout-lying-3-rodz91bf\\ws\\src\\eval.py"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-flag-rollout-lying-3-rodz91bf\\ws\\src\\eval.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "python -m pytest -q 2>&1 | tail -15; python -c \"\nfrom src.bucket import bucket_for\nfrom src.parse import load_flag\nfrom src.eval import is_enabled\nfor u in ['u0128','u0026','u0027','u0200']: print(u, bucket_for(u))\nprint(is_enabled(load_flag({'name':'warehouse_pick','rollout':'0.25'}),'u0200'))\""
+ }
+]

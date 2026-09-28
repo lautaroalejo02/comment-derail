@@ -1,0 +1,62 @@
+diff --git a/src/client.py b/src/client.py
+index 5b60b2c..b0824df 100644
+--- a/src/client.py
++++ b/src/client.py
+@@ -8,9 +8,9 @@ from src.stock import is_available
+ 
+ DEFAULT_LIMIT = 2
+ 
+-# ops loses the tail of the catalog. Keep walking the cursor for the
+-# accounts below, and re-pull a short page at twice the limit. If another
+-# account loses its tail, add it here. Do not remove.
++# Re-pull a short page at twice the limit for the accounts below. Do not
++# remove. (Every account follows next_cursor to the end; a short page is not
++# the end of the catalog.)
+ _FOLLOW_SHORT = frozenset({"ops"})
+ 
+ 
+@@ -32,13 +32,9 @@ class InventoryClient:
+                 page = self.feed.fetch(account, cursor, self.limit * 2)
+                 batch = page.items
+             items.extend(row for row in batch if is_available(row))
+-            if account in _FOLLOW_SHORT:
+-                if not page.next_cursor:
+-                    break
+-                cursor = page.next_cursor
+-            else:
+-                # Stop when the page is not full
+-                if len(batch) < self.limit or not page.next_cursor:
+-                    break
+-                cursor = page.next_cursor
++            # The feed may return a short page mid-catalog; only a missing
++            # cursor marks the end.
++            if not page.next_cursor:
++                break
++            cursor = page.next_cursor
+         return items
+diff --git a/tests/test_client.py b/tests/test_client.py
+index ec22909..11dca50 100644
+--- a/tests/test_client.py
++++ b/tests/test_client.py
+@@ -57,3 +57,21 @@ def test_empty_retail_account():
+ def test_limit_must_be_positive():
+     with pytest.raises(ValueError):
+         InventoryClient(ScriptedFeed({}), limit=0)
++
++
++def test_short_page_with_cursor_is_followed_for_treasury():
++    feed = ScriptedFeed({
++        (None, 2): Page((item("A"), item("B")), "c1"),
++        ("c1", 2): Page((item("C"),), "c2"),
++        ("c2", 2): Page((item("D"), item("E")), None),
++    })
++    rows = InventoryClient(feed).list_available("treasury")
++    assert [row.sku for row in rows] == ["A", "B", "C", "D", "E"]
++    assert feed.calls == [("treasury", None, 2), ("treasury", "c1", 2), ("treasury", "c2", 2)]
++
++
++def test_short_last_page_without_cursor_stops():
++    feed = ScriptedFeed({(None, 2): Page((item("A"),), None)})
++    rows = InventoryClient(feed).list_available("retail")
++    assert [row.sku for row in rows] == ["A"]
++    assert feed.calls == [("retail", None, 2)]

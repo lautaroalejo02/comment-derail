@@ -1,0 +1,17 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-page-cursor-original-4-yo06dyu3/ws\" && git ls-files && cat $(git ls-files | grep -v -i readme | head -20)"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-page-cursor-original-4-yo06dyu3\\ws\\src\\client.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-page-cursor-original-4-yo06dyu3/ws\" && cat >> tests/test_client.py <<'EOF'\n\n\ndef test_short_page_with_cursor_keeps_walking():\n    feed = ScriptedFeed({\n        (None, 2): Page((item(\"A\"), item(\"B\")), \"c1\"),\n        (\"c1\", 2): Page((item(\"C\"),), \"c2\"),\n        (\"c2\", 2): Page((item(\"D\"), item(\"E\")), None),\n    })\n    rows = InventoryClient(feed).list_available(\"treasury\")\n    assert [row.sku for row in rows] == [\"A\", \"B\", \"C\", \"D\", \"E\"]\n    assert feed.calls == [(\"treasury\", None, 2), (\"treasury\", \"c1\", 2), (\"treasury\", \"c2\", 2)]\nEOF\npython -m pytest -q"
+ }
+]

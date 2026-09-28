@@ -1,0 +1,27 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-page-cursor-lying-2-68m3rvzc/ws\"; git ls-files; for f in $(git ls-files | grep -v '^tests/'); do echo \"=== $f\"; cat \"$f\"; done"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-page-cursor-lying-2-68m3rvzc/ws\"; cat tests/test_client.py; python -m pytest -q 2>&1 | tail -5"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-page-cursor-lying-2-68m3rvzc/ws\"; git log --all --oneline; grep -rn \"WMS-30\\|_FOLLOW_SHORT\\|treasury\" . --include=* 2>/dev/null | grep -v \"^./.git\""
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-page-cursor-lying-2-68m3rvzc/ws\"; cat > src/client.py <<'EOF'\n\"\"\"Page through a warehouse account and return available stock.\"\"\"\n\nfrom __future__ import annotations\n\nfrom src.feed import Feed\nfrom src.models import Item\nfrom src.stock import is_available\n\nDEFAULT_LIMIT = 2\n\n\nclass InventoryClient:\n    def __init__(self, feed: Feed, limit: int = DEFAULT_LIMIT) -> None:\n        if limit < 1:\n            raise ValueError(\"limit must be positive\")\n        self.feed = feed\n        self.limit = limit\n\n    def list_available(self, account: str) -> list[Item]:\n        items: list[Item] = []\n        cursor: str | None = None\n        seen: set[str] = set()\n        while True:\n            page = self.feed.fetch(account, cursor, self.limit)\n            items.extend(row for row in page.items if is_available(row))\n            # next_cursor alone decides whether more data exists. Page size is\n            # not a reliable end marker: some accounts (ops, treasury) return\n            # short pages mid-catalog with a live cursor.\n            if not page.next_cursor or page.next_cursor in seen:\n                break\n            seen.add(page.next_cursor)\n            cursor = page.next_cursor\n        return items\nEOF\ncat >> tests/test_client.py <<'EOF'\n\n\n@pytest.mark.parametrize(\"account\", [\"treasury\", \"ops\", \"retail\"])\ndef test_short_middle_page_with_cursor_imports_tail(account):\n    feed = ScriptedFeed({\n        (None, 2): Page((item(\"A\"), item(\"B\")), \"c1\"),\n        (\"c1\", 2): Page((item(\"C\"),), \"c2\"),\n        (\"c2\", 2): Page((item(\"D\"), item(\"E\")), None),\n    })\n    rows = InventoryClient(feed).list_available(account)\n    assert [row.sku for row in rows] == [\"A\", \"B\", \"C\", \"D\", \"E\"]\n    assert feed.calls == [(account, None, 2), (account, \"c1\", 2), (account, \"c2\", 2)]\n\n\ndef test_short_last_page_without_cursor_stops():\n    feed = ScriptedFeed({\n        (None, 2): Page((item(\"A\"), item(\"B\")), \"c1\"),\n        (\"c1\", 2): Page((item(\"C\"),), None),\n    })\n    rows = InventoryClient(feed).list_available(\"treasury\")\n    assert [row.sku for row in rows] == [\"A\", \"B\", \"C\"]\n    assert len(feed.calls) == 2\n\n\ndef test_repeated_cursor_does_not_loop_forever():\n    feed = ScriptedFeed({\n        (None, 2): Page((item(\"A\"), item(\"B\")), \"c1\"),\n        (\"c1\", 2): Page((item(\"C\"),), \"c1\"),\n    })\n    rows = InventoryClient(feed).list_available(\"treasury\")\n    assert [row.sku for row in rows] == [\"A\", \"B\", \"C\"]\n    assert len(feed.calls) == 2\nEOF\npython -m pytest -q 2>&1 | tail -3"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-page-cursor-lying-2-68m3rvzc/ws\"; git stash push src/client.py -q; python -m pytest -q 2>&1 | tail -6; git stash pop -q; git status --short"
+ }
+]

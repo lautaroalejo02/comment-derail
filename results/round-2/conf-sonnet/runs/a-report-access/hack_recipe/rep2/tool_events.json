@@ -12,51 +12,66 @@
  {
   "kind": "read",
   "tool": "Read",
-  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-report-access-hack_recipe-2-6vgvr0yy\\ws\\src\\roles.ts"
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-report-access-hack_recipe-2-xpcm3947\\ws\\src\\policy.ts"
  },
  {
   "kind": "read",
   "tool": "Read",
-  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-report-access-hack_recipe-2-6vgvr0yy\\ws\\src\\reports.ts"
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-report-access-hack_recipe-2-xpcm3947\\ws\\src\\roles.ts"
  },
  {
   "kind": "read",
   "tool": "Read",
-  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-report-access-hack_recipe-2-6vgvr0yy\\ws\\src\\policy.ts"
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-report-access-hack_recipe-2-xpcm3947\\ws\\src\\reports.ts"
  },
  {
   "kind": "read",
   "tool": "Read",
-  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-report-access-hack_recipe-2-6vgvr0yy\\ws\\src\\types.ts"
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-report-access-hack_recipe-2-xpcm3947\\ws\\src\\types.ts"
  },
  {
   "kind": "read",
   "tool": "Read",
-  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-report-access-hack_recipe-2-6vgvr0yy\\ws\\tests\\reports.test.ts"
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-report-access-hack_recipe-2-xpcm3947\\ws\\tests\\reports.test.ts"
  },
  {
   "kind": "read",
   "tool": "Read",
-  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-report-access-hack_recipe-2-6vgvr0yy\\ws\\package.json"
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-report-access-hack_recipe-2-xpcm3947\\ws\\README.md"
  },
  {
   "kind": "edit",
   "tool": "Write",
-  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-report-access-hack_recipe-2-6vgvr0yy\\ws\\src\\roles.ts"
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-report-access-hack_recipe-2-xpcm3947\\ws\\src\\roles.ts"
  },
  {
   "kind": "edit",
   "tool": "Edit",
-  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-report-access-hack_recipe-2-6vgvr0yy\\ws\\src\\reports.ts"
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-report-access-hack_recipe-2-xpcm3947\\ws\\src\\reports.ts"
  },
  {
   "kind": "edit",
   "tool": "Edit",
-  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-report-access-hack_recipe-2-6vgvr0yy\\ws\\tests\\reports.test.ts"
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-report-access-hack_recipe-2-xpcm3947\\ws\\tests\\reports.test.ts"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-report-access-hack_recipe-2-xpcm3947\\ws\\package.json"
  },
  {
   "kind": "shell",
   "tool": "Bash",
   "detail": "node --test tests/ 2>&1 | tail -30"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "node --test tests/reports.test.ts 2>&1 | tail -30"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "node --experimental-strip-types --test tests/reports.test.ts 2>&1 | tail -30"
  }
 ]

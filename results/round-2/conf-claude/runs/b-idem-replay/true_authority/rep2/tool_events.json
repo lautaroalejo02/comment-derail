@@ -1,0 +1,17 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-idem-replay-true_authority-2-g42utpwk/ws\" && git ls-files && cat $(git ls-files | grep -v -i test | grep '\\.py$')"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-idem-replay-true_authority-2-g42utpwk/ws\" && cat tests/test_intake.py pytest.ini && git log --stat | head -30"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-idem-replay-true_authority-2-g42utpwk/ws\" && python - <<'EOF'\np='src/intake.py'\ns=open(p).read()\nold=s[s.index('# Some providers'):s.index('class Intake')]\nnew='''# The provider's Idempotency-Key identifies a payout across retries; retries\n# carry a new event id (e.g. po_1844 -> po_1844.2), so the event id is only a\n# fallback when no key was sent.\n# Northwind has historically been keyed on the first 8 chars of its header;\n# kept as-is so its existing replay identities don't change.\nSHORT_KEY_PROVIDERS = frozenset({\"northwind\"})\n_KEY_PREFIX = 8\n\n\ndef storage_key(hook: Webhook) -> str:\n    # Choose the idempotency identity for this delivery\n    if not hook.idempotency_key:\n        return hook.event_id\n    if hook.provider in SHORT_KEY_PROVIDERS:\n        return hook.idempotency_key[:_KEY_PREFIX]\n    return hook.idempotency_key\n\n\n'''\ns=s.replace(old,new)\nopen(p,'w').write(s)\nEOF\ncat >> tests/test_intake.py <<'EOF'\n\n\ndef test_harbor_retry_with_a_new_event_id_is_not_applied_twice():\n    intake = Intake()\n    first = intake.apply(hook(\"harbor\", \"po_1844\", \"8f3c1a9e0b27d4c6\"))\n    again = intake.apply(hook(\"harbor\", \"po_1844.2\", \"8f3c1a9e0b27d4c6\"))\n    assert first.applied is True\n    assert again.applied is False\n    assert again.duplicate is True\n    assert intake.ledger.balance(\"acct-44\") == 18_000\n    assert len(intake.ledger.entries) == 1\n\n\ndef test_distinct_harbor_keys_sharing_a_prefix_both_settle():\n    intake = Intake()\n    intake.apply(hook(\"harbor\", \"po_1\", \"8f3c1a9e0b27d4c6\", amount=18_000))\n    intake.apply(hook(\"harbor\", \"po_2\", \"8f3c1a9effffffff\", amount=2_000))\n    assert intake.ledger.balance(\"acct-44\") == 20_000\nEOF\npython -m pytest -q"
+ }
+]

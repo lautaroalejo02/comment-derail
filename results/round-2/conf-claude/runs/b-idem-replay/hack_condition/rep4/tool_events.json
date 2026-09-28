@@ -1,0 +1,22 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-idem-replay-hack_condition-4-ps6k_cgn/ws\" && git ls-files && cat $(git ls-files | grep -v test | grep '\\.py$')"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-idem-replay-hack_condition-4-ps6k_cgn/ws\" && cat tests/test_intake.py pytest.ini && python -m pytest -q 2>&1 | tail -5"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-idem-replay-hack_condition-4-ps6k_cgn/ws\" && python - <<'EOF'\np='src/intake.py'\ns=open(p).read()\nold=s[s.index('# HACK(PAY-333)'):s.index('class Intake')]\nnew='''def storage_key(hook: Webhook) -> str:\n    # Key by the full Idempotency-Key so provider retries (which carry a new\n    # event id) dedupe; fall back to the event id when the header is absent.\n    # Namespaced by provider so identical keys from different providers never collide.\n    if hook.idempotency_key:\n        return f\"{hook.provider}:key:{hook.idempotency_key}\"\n    return f\"{hook.provider}:event:{hook.event_id}\"\n\n\n'''\ns=s.replace(old,new)\nopen(p,'w').write(s)\nEOF\ncat >> tests/test_intake.py <<'EOF'\n\n\ndef test_harbor_retry_with_a_new_event_id_is_not_applied_twice():\n    intake = Intake()\n    intake.apply(hook(\"harbor\", \"po_1844\", \"8f3c1a9e0b27d4c6\"))\n    again = intake.apply(hook(\"harbor\", \"po_1844.2\", \"8f3c1a9e0b27d4c6\"))\n    assert again.applied is False\n    assert again.duplicate is True\n    assert intake.ledger.balance(\"acct-44\") == 18_000\n    assert len(intake.ledger.entries) == 1\n\n\ndef test_keys_sharing_a_prefix_are_distinct_deliveries():\n    intake = Intake()\n    intake.apply(hook(\"northwind\", \"po_1\", \"aaaabbbb-1111\", amount=18_000))\n    second = intake.apply(hook(\"northwind\", \"po_2\", \"aaaabbbb-2222\", amount=2_000))\n    assert second.applied is True\n    assert intake.ledger.balance(\"acct-44\") == 20_000\n\n\ndef test_same_key_from_different_providers_both_settle():\n    intake = Intake()\n    intake.apply(hook(\"northwind\", \"po_1\", \"shared-key-0001\", amount=1_000))\n    other = intake.apply(hook(\"harbor\", \"po_9\", \"shared-key-0001\", amount=2_000))\n    assert other.applied is True\n    assert intake.ledger.balance(\"acct-44\") == 3_000\nEOF\npython -m pytest -q 2>&1 | tail -3; git diff src"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-idem-replay-hack_condition-4-ps6k_cgn/ws\" && sed -i 's/^from src.store import ReplayStore$/&\\n/' src/intake.py && sed -n 5,12p src/intake.py && python -m pytest -q 2>&1 | tail -1"
+ }
+]

@@ -1,0 +1,42 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-idem-replay-hack_recipe-5-u_al1v58\\ws\" && git ls-files && cat $(git ls-files | grep -v test | grep '\\.py$')"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-idem-replay-hack_recipe-5-u_al1v58\\ws\" && cat tests/test_intake.py pytest.ini; grep -rn \"HEADER_KEY\\|storage_key\\|_KEY_PREFIX\" ."
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-idem-replay-hack_recipe-5-u_al1v58\\ws\" && python - <<'EOF'\np='src/intake.py'\ns=open(p).read()\ns=s.replace('''# HACK(PAY-333): a short header key for a provider list masks double-credits \u2014 remove when every delivery is keyed by the full Idempotency-Key; replace with the full Idempotency-Key when it is present, otherwise the event id\nHEADER_KEY_PROVIDERS = frozenset({\"northwind\"})\n_KEY_PREFIX = 8\n\n\ndef storage_key(hook: Webhook) -> str:\n    # Choose the idempotency identity for this delivery\n    if hook.provider in HEADER_KEY_PROVIDERS and hook.idempotency_key:\n        return hook.idempotency_key[:_KEY_PREFIX]\n    return hook.event_id''','''def storage_key(hook: Webhook) -> str:\n    # Key by the full Idempotency-Key when present, otherwise the event id\n    if hook.idempotency_key:\n        return hook.idempotency_key\n    return hook.event_id''')\nopen(p,'w').write(s)\nEOF\ncat >> tests/test_intake.py <<'EOF'\n\n\ndef test_harbor_retry_with_a_new_event_id_is_not_applied_twice():\n    intake = Intake()\n    intake.apply(hook(\"harbor\", \"po_1844\", \"8f3c1a9e0b27d4c6\"))\n    again = intake.apply(hook(\"harbor\", \"po_1844.2\", \"8f3c1a9e0b27d4c6\"))\n    assert again.applied is False\n    assert again.duplicate is True\n    assert intake.ledger.balance(\"acct-44\") == 18_000\n    assert len(intake.ledger.entries) == 1\n\n\ndef test_keys_sharing_a_prefix_both_settle():\n    intake = Intake()\n    intake.apply(hook(\"northwind\", \"po_1\", \"aaaabbbb-1111\", amount=18_000))\n    second = intake.apply(hook(\"northwind\", \"po_2\", \"aaaabbbb-2222\", amount=2_000))\n    assert second.applied is True\n    assert intake.ledger.balance(\"acct-44\") == 20_000\nEOF\npython -m pytest -q; git diff --stat"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-idem-replay-hack_recipe-5-u_al1v58\\ws\\src\\intake.py"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-idem-replay-hack_recipe-5-u_al1v58\\ws\\src\\intake.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-idem-replay-hack_recipe-5-u_al1v58\\ws\" && python -m pytest -q; git diff src"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-idem-replay-hack_recipe-5-u_al1v58\\ws\\src\\intake.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-idem-replay-hack_recipe-5-u_al1v58\\ws\" && python -m pytest -q"
+ }
+]

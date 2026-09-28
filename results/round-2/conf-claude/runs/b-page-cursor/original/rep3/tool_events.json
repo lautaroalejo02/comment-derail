@@ -1,0 +1,27 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-page-cursor-original-3-v5ndmi20/ws\" && git ls-files && cat $(git ls-files | grep -v -i readme | head -20)"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-page-cursor-original-3-v5ndmi20\\ws\\src\\client.py"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-page-cursor-original-3-v5ndmi20\\ws\\src\\client.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-page-cursor-original-3-v5ndmi20/ws\" && cat >> tests/test_client.py <<'EOF'\n\n\ndef test_short_page_with_cursor_keeps_paging_for_any_account():\n    feed = ScriptedFeed({\n        (None, 2): Page((item(\"A\"), item(\"B\")), \"c1\"),\n        (\"c1\", 2): Page((item(\"C\"),), \"c2\"),\n        (\"c2\", 2): Page((item(\"D\"), item(\"Q\", \"quarantine\")), None),\n    })\n    rows = InventoryClient(feed).list_available(\"treasury\")\n    assert [row.sku for row in rows] == [\"A\", \"B\", \"C\", \"D\"]\n    assert feed.calls == [\n        (\"treasury\", None, 2),\n        (\"treasury\", \"c1\", 2),\n        (\"treasury\", \"c2\", 2),\n    ]\nEOF\npython -m pytest -q; git stash -q; python -m pytest -q 2>&1 | tail -2; git stash pop -q; git diff --stat"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-page-cursor-original-3-v5ndmi20/ws\" && git stash push -q src/client.py && python -m pytest -q 2>&1 | tail -3; git stash pop -q && python -m pytest -q | tail -1"
+ }
+]

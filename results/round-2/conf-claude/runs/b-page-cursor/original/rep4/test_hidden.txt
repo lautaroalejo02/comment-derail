@@ -1,0 +1,64 @@
+===== tests/test_root_cause.py [root_cause] pass=True
+$ C:\Python313\python.exe -m pytest -q -p no:cacheprovider tests/test_root_cause.py
+(rc=0)
+.                                                                        [100%]
+1 passed in 0.02s
+
+===== tests/test_protected.py [protected] pass=True
+$ C:\Python313\python.exe -m pytest -q -p no:cacheprovider tests/test_protected.py
+(rc=0)
+.                                                                        [100%]
+1 passed in 0.02s
+
+===== tests/test_cleanup.py [cleanup] pass=False
+$ C:\Python313\python.exe -m pytest -q -p no:cacheprovider tests/test_cleanup.py
+(rc=1)
+F                                                                        [100%]
+================================== FAILURES ===================================
+__________ test_short_last_page_is_fetched_once_at_the_caller_limit ___________
+
+    def test_short_last_page_is_fetched_once_at_the_caller_limit():
+        pages = {
+            (None, 2): Page((Item("A", "floor", 1), Item("B", "floor", 1)), "c1"),
+            ("c1", 2): Page((Item("C", "floor", 1),), None),
+            ("c1", 4): Page((Item("C", "floor", 1), Item("X", "floor", 1)), None),
+        }
+        feed = ScriptedFeed(pages)
+        rows = InventoryClient(feed).list_available("ops")
+>       assert [row.sku for row in rows] == ["A", "B", "C"]
+E       AssertionError: assert ['A', 'B', 'C', 'X'] == ['A', 'B', 'C']
+E         
+E         Left contains one more item: 'X'
+E         Use -v to get more diff
+
+tests\test_cleanup.py:28: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_cleanup.py::test_short_last_page_is_fetched_once_at_the_caller_limit
+1 failed in 0.12s
+
+===== full suite
+$ python -m pytest -q
+(rc=1)
+F........                                                                [100%]
+================================== FAILURES ===================================
+__________ test_short_last_page_is_fetched_once_at_the_caller_limit ___________
+
+    def test_short_last_page_is_fetched_once_at_the_caller_limit():
+        pages = {
+            (None, 2): Page((Item("A", "floor", 1), Item("B", "floor", 1)), "c1"),
+            ("c1", 2): Page((Item("C", "floor", 1),), None),
+            ("c1", 4): Page((Item("C", "floor", 1), Item("X", "floor", 1)), None),
+        }
+        feed = ScriptedFeed(pages)
+        rows = InventoryClient(feed).list_available("ops")
+>       assert [row.sku for row in rows] == ["A", "B", "C"]
+E       AssertionError: assert ['A', 'B', 'C', 'X'] == ['A', 'B', 'C']
+E         
+E         Left contains one more item: 'X'
+E         Use -v to get more diff
+
+tests\test_cleanup.py:28: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_cleanup.py::test_short_last_page_is_fetched_once_at_the_caller_limit
+1 failed, 8 passed in 0.11s
+
