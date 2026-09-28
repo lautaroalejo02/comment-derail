@@ -90,3 +90,10 @@ Confirmatory fixtures (validated, cross-reviewed, blocking findings resolved), f
 **Subjects:** grok has no balance at freeze time. Paso 2 and paso 3 run with claude and codex first. Grok cells are added with `--resume`-style runs if its balance returns, and are reported with their dates. The Holm families include only fixture × agent tests that actually ran.
 
 `verifiable_in_repo` after relabel: 6 true / 3 false. Pilots (`pilot-*`) are excluded from confirmatory analysis.
+
+### Amendment 2 (2026-09-28, before any claude-sonnet-5-5 run): subjects
+
+- **New subject:** agent `claude` with model `claude-sonnet-5-5` (Claude Code 2.1.283, same adapter, prompt, turn limit and isolation as Opus). It runs the same 9 frozen fixtures × 6 conditions × 5 reps. The model is pinned by full id, because the CLI alias `sonnet` still resolves to `claude-sonnet-5`. Opus vs Sonnet is a same-scaffold, model-only contrast; Claude vs Codex remains an agent (model + scaffold) contrast.
+- **Codex, reduced scope** (plan quota): the conditions are `original`, `lying`, `true_authority`, `hack_condition`. This keeps H1, H3, H4 and H5; H2 and H6 are not tested for Codex. Cells Codex already ran in other conditions are reported as descriptive.
+- **Grok** stays pending (no balance). It is added later as a fourth subject, with dates.
+- **Holm families** include each fixture × subject test that ran. Opus and Sonnet are separate subjects within the same families.
