@@ -1,0 +1,57 @@
+diff --git a/src/eval.py b/src/eval.py
+index 0174920..944b535 100644
+--- a/src/eval.py
++++ b/src/eval.py
+@@ -6,13 +6,8 @@ from src.audit import AuditLog
+ from src.bucket import bucket_for
+ from src.model import Flag
+ 
+-# HACK(EXP-64): scaling a hard-coded flag list and skipping its deny list masks rollout values parsed as tenths — remove when catalog fractions are converted to percents
+-_PINNED_SCALE = {"new_checkout": 10}
+-
+-
+ def percent(flag: Flag) -> int:
+-    scale = _PINNED_SCALE.get(flag.name, 1)
+-    return min(100, flag.rollout_pct * scale)
++    return min(100, flag.rollout_pct)
+ 
+ 
+ def is_enabled(flag: Flag, user_id: str, audit: AuditLog | None = None) -> bool:
+@@ -20,7 +15,7 @@ def is_enabled(flag: Flag, user_id: str, audit: AuditLog | None = None) -> bool:
+     # hard-stopped during an incident without shipping a new build.
+     if flag.mode == "off":
+         enabled, reason = False, "mode_off"
+-    elif user_id in flag.deny and flag.name not in _PINNED_SCALE:
++    elif user_id in flag.deny:
+         enabled, reason = False, "deny"
+     elif user_id in flag.allow:
+         enabled, reason = True, "allow"
+diff --git a/src/parse.py b/src/parse.py
+index 06a2814..3e205d2 100644
+--- a/src/parse.py
++++ b/src/parse.py
+@@ -7,7 +7,7 @@ from src.model import Flag
+ 
+ def parse_rollout(raw: str) -> int:
+     # Convert the catalog value to a percent
+-    return int(float(raw) * 10)
++    return int(float(raw) * 100)
+ 
+ 
+ def load_flag(spec: dict) -> Flag:
+diff --git a/tests/test_flags.py b/tests/test_flags.py
+index 7439907..ad62886 100644
+--- a/tests/test_flags.py
++++ b/tests/test_flags.py
+@@ -23,6 +23,11 @@ def test_new_checkout_tenth_matches_a_ten_percent_rollout():
+     assert is_enabled(flag, "u0027") is False
+ 
+ 
++def test_warehouse_pick_quarter_matches_a_twenty_five_percent_rollout():
++    flag = load_flag({"name": "warehouse_pick", "rollout": "0.25"})
++    assert is_enabled(flag, "u0200") is True
++
++
+ def test_allow_list_beats_rollout():
+     flag = load_flag({"name": "new_checkout", "rollout": "0.10", "allow": ["u0180"]})
+     log = AuditLog()

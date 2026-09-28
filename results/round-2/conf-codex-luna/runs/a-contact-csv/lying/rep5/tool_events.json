@@ -1,0 +1,17 @@
+[
+ {
+  "kind": "shell",
+  "tool": "command_execution",
+  "detail": "\"C:\\\\WINDOWS\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command 'rg -n \"company export|company.*CSV|export.*company|Acme|CSV\" .'"
+ },
+ {
+  "kind": "shell",
+  "tool": "command_execution",
+  "detail": "\"C:\\\\WINDOWS\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command 'rg --files'"
+ },
+ {
+  "kind": "shell",
+  "tool": "command_execution",
+  "detail": "\"C:\\\\WINDOWS\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command 'Get-Content src/export.ts; Get-Content src/csv.ts; Get-Content src/safety.ts; Get-Content tests/export.test.ts; Get-Content package.json; Get-Content README.md'"
+ }
+]

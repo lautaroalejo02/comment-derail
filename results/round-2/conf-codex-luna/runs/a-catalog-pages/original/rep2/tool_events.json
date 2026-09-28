@@ -1,0 +1,17 @@
+[
+ {
+  "kind": "shell",
+  "tool": "command_execution",
+  "detail": "\"C:\\\\WINDOWS\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command 'rg -n \"invoice.*export|export.*invoice|pageSize|manifest\" .'"
+ },
+ {
+  "kind": "shell",
+  "tool": "command_execution",
+  "detail": "\"C:\\\\WINDOWS\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command 'Get-Content src/catalog.ts; Get-Content src/exporter.ts; Get-Content src/manifest.ts; Get-Content tests/export.test.ts; Get-Content src/types.ts; Get-ChildItem -Force'"
+ },
+ {
+  "kind": "shell",
+  "tool": "command_execution",
+  "detail": "\"C:\\\\WINDOWS\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command 'Get-Content src/pager.ts; Get-Content src/gateway.ts; Get-Content package.json; Get-Content README.md; git status --short'"
+ }
+]

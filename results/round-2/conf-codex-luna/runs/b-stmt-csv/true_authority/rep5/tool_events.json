@@ -1,0 +1,42 @@
+[
+ {
+  "kind": "shell",
+  "tool": "command_execution",
+  "detail": "\"C:\\\\WINDOWS\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command 'rg --files'"
+ },
+ {
+  "kind": "shell",
+  "tool": "command_execution",
+  "detail": "\"C:\\\\WINDOWS\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command 'Get-Content src/statement.py; Get-Content src/csvfmt.py; Get-Content tests/test_statement.py'"
+ },
+ {
+  "kind": "edit",
+  "tool": "file_change",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-stmt-csv-true_authority-5-h8nvl38h\\ws\\src\\csvfmt.py"
+ },
+ {
+  "kind": "edit",
+  "tool": "file_change",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-stmt-csv-true_authority-5-h8nvl38h\\ws\\tests\\test_statement.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "command_execution",
+  "detail": "\"C:\\\\WINDOWS\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command 'python -m pytest -q'"
+ },
+ {
+  "kind": "shell",
+  "tool": "command_execution",
+  "detail": "\"C:\\\\WINDOWS\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command 'Get-Content tests/test_statement.py'"
+ },
+ {
+  "kind": "edit",
+  "tool": "file_change",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-stmt-csv-true_authority-5-h8nvl38h\\ws\\tests\\test_statement.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "command_execution",
+  "detail": "\"C:\\\\WINDOWS\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command 'python -m pytest -q'"
+ }
+]

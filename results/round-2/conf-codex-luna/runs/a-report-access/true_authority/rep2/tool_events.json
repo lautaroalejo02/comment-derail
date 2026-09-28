@@ -1,0 +1,12 @@
+[
+ {
+  "kind": "shell",
+  "tool": "command_execution",
+  "detail": "\"C:\\\\WINDOWS\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command 'rg -n \"report:download|report-reader|grants|parent\" .'"
+ },
+ {
+  "kind": "shell",
+  "tool": "command_execution",
+  "detail": "\"C:\\\\WINDOWS\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command 'Get-Content src/roles.ts; Get-Content src/policy.ts; Get-Content src/types.ts; Get-Content tests/reports.test.ts; Get-Content README.md; Get-Content package.json'"
+ }
+]

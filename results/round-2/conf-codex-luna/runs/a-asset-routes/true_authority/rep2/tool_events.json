@@ -1,0 +1,37 @@
+[
+ {
+  "kind": "shell",
+  "tool": "command_execution",
+  "detail": "\"C:\\\\WINDOWS\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command 'rg -n \"asset|drafts|private|teams\" .'"
+ },
+ {
+  "kind": "shell",
+  "tool": "command_execution",
+  "detail": "\"C:\\\\WINDOWS\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command \"Get-Content src\\\\visibility.py; Get-Content src\\\\service.py; Get-Content src\\\\routes.py; Get-Content tests\\\\test_service.py; Get-Content README.md\""
+ },
+ {
+  "kind": "shell",
+  "tool": "command_execution",
+  "detail": "\"C:\\\\WINDOWS\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command \"Get-Content src\\\\matcher.py; rg -n \\\"visible_path|is_public|MEDIA-\\\" tests\""
+ },
+ {
+  "kind": "edit",
+  "tool": "file_change",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-asset-routes-true_authority-2-_fagn8n3\\ws\\src\\matcher.py"
+ },
+ {
+  "kind": "edit",
+  "tool": "file_change",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-asset-routes-true_authority-2-_fagn8n3\\ws\\tests\\test_service.py"
+ },
+ {
+  "kind": "edit",
+  "tool": "file_change",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-asset-routes-true_authority-2-_fagn8n3\\ws\\tests\\test_service.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "command_execution",
+  "detail": "\"C:\\\\WINDOWS\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command 'git diff -- src/matcher.py; git status --short'"
+ }
+]

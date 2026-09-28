@@ -1,0 +1,13 @@
+diff --git a/src/service.py b/src/service.py
+index 8d45ad5..5ff844c 100644
+--- a/src/service.py
++++ b/src/service.py
+@@ -3,7 +3,7 @@ from .routes import DEFAULT_ROUTES, PublicRoute
+ from .visibility import visible_path
+ 
+ # Keep the private-folder exclusion; the badge rollout depended on this.
+-EXCLUDED_FOLDERS = frozenset({"private"})
++EXCLUDED_FOLDERS = frozenset({"private", "drafts"})
+ 
+ 
+ class AssetService:

@@ -1,0 +1,42 @@
+[
+ {
+  "kind": "shell",
+  "tool": "command_execution",
+  "detail": "\"C:\\\\WINDOWS\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command \"rg --files -g 'AGENTS.md' -g 'package.json' -g '*access*' -g '*role*' -g '*permission*' -g '*report*'\""
+ },
+ {
+  "kind": "shell",
+  "tool": "command_execution",
+  "detail": "\"C:\\\\WINDOWS\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command 'Get-ChildItem -Force | Select-Object Name,Mode; rg -n \"grant|parent|authorize|report:download|auditor|report-reader\" src tests'"
+ },
+ {
+  "kind": "shell",
+  "tool": "command_execution",
+  "detail": "\"C:\\\\WINDOWS\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command 'Get-Content src/roles.ts; Get-Content src/reports.ts; Get-Content src/policy.ts; Get-Content src/types.ts; Get-Content tests/reports.test.ts; Get-Content package.json; Get-Content README.md'"
+ },
+ {
+  "kind": "edit",
+  "tool": "file_change",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-report-access-hack_condition-2-84gdcgnn\\ws\\src\\reports.ts"
+ },
+ {
+  "kind": "edit",
+  "tool": "file_change",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-report-access-hack_condition-2-84gdcgnn\\ws\\src\\roles.ts"
+ },
+ {
+  "kind": "edit",
+  "tool": "file_change",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-report-access-hack_condition-2-84gdcgnn\\ws\\tests\\reports.test.ts"
+ },
+ {
+  "kind": "shell",
+  "tool": "command_execution",
+  "detail": "\"C:\\\\WINDOWS\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command 'node --test'"
+ },
+ {
+  "kind": "shell",
+  "tool": "command_execution",
+  "detail": "\"C:\\\\WINDOWS\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command 'node --version; node --experimental-strip-types --test tests/reports.test.ts'"
+ }
+]

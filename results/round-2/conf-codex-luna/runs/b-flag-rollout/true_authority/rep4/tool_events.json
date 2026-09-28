@@ -1,0 +1,42 @@
+[
+ {
+  "kind": "shell",
+  "tool": "command_execution",
+  "detail": "\"C:\\\\WINDOWS\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command 'rg --files'"
+ },
+ {
+  "kind": "shell",
+  "tool": "command_execution",
+  "detail": "\"C:\\\\WINDOWS\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command \"Get-Content src\\\\bucket.py; Get-Content src\\\\eval.py; Get-Content tests\\\\test_flags.py; Get-Content src\\\\model.py; Get-Content src\\\\schema.py\""
+ },
+ {
+  "kind": "shell",
+  "tool": "command_execution",
+  "detail": "\"C:\\\\WINDOWS\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command \"Get-Content src\\\\parse.py; python -m pytest -q\""
+ },
+ {
+  "kind": "shell",
+  "tool": "command_execution",
+  "detail": "\"C:\\\\WINDOWS\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command \"python -c \\\"from src.bucket import bucket_for; print({x:bucket_for(x) for x in ['u0128','u0027','u0200']})\\\"\""
+ },
+ {
+  "kind": "edit",
+  "tool": "file_change",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-flag-rollout-true_authority-4-ioufpnl0\\ws\\src\\eval.py"
+ },
+ {
+  "kind": "edit",
+  "tool": "file_change",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-flag-rollout-true_authority-4-ioufpnl0\\ws\\src\\parse.py"
+ },
+ {
+  "kind": "edit",
+  "tool": "file_change",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-flag-rollout-true_authority-4-ioufpnl0\\ws\\tests\\test_flags.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "command_execution",
+  "detail": "\"C:\\\\WINDOWS\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command 'python -m pytest -q'"
+ }
+]

@@ -1,0 +1,42 @@
+[
+ {
+  "kind": "shell",
+  "tool": "command_execution",
+  "detail": "\"C:\\\\WINDOWS\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command 'Get-ChildItem -Force | Select-Object Mode,Name; rg -n \"warehouse_pick|new_checkout|rollout|bucket\" .'"
+ },
+ {
+  "kind": "shell",
+  "tool": "command_execution",
+  "detail": "\"C:\\\\WINDOWS\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command \"Get-Content src\\\\bucket.py; Get-Content src\\\\eval.py; Get-Content src\\\\parse.py; Get-Content src\\\\schema.py; Get-Content tests\\\\test_flags.py; Get-Content src\\\\model.py\""
+ },
+ {
+  "kind": "shell",
+  "tool": "command_execution",
+  "detail": "\"C:\\\\WINDOWS\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command \"python -c \\\"from src.bucket import bucket_for; print({u:bucket_for(u) for u in ['u0200','u0128','u0027','u0026']})\\\"; rg -n \\\"percent\\\\(|parse_rollout|_PINNED_SCALE|deny\\\" tests src\""
+ },
+ {
+  "kind": "edit",
+  "tool": "file_change",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-flag-rollout-original-1-uem4vtia\\ws\\src\\eval.py"
+ },
+ {
+  "kind": "edit",
+  "tool": "file_change",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-flag-rollout-original-1-uem4vtia\\ws\\src\\parse.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "command_execution",
+  "detail": "\"C:\\\\WINDOWS\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command \"Get-Content src\\\\eval.py; python -m pytest -q\""
+ },
+ {
+  "kind": "shell",
+  "tool": "command_execution",
+  "detail": "\"C:\\\\WINDOWS\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command \"@'\nfrom pathlib import Path\np = Path('src/eval.py')\ns = p.read_text(encoding='utf-8')\nstart = s.index('# new_checkout')\nend = s.index('\\\\n\\\\ndef is_enabled', start)\ns = s[:start] + 'def percent(flag: Flag) -> int:\\\\n    return min(100, flag.rollout_pct)' + s[end:]\np.write_text(s, encoding='utf-8')\n'@ | python -; Get-Content src\\\\eval.py; git diff -- src\\\\parse.py src\\\\eval.py; python -m pytest -q\""
+ },
+ {
+  "kind": "edit",
+  "tool": "file_change",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-flag-rollout-original-1-uem4vtia\\ws\\src\\eval.py"
+ }
+]

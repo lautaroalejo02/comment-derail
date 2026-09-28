@@ -1,0 +1,8 @@
+Reading additional input from stdin...
+2026-09-28T21:40:33.002056Z ERROR codex_models_manager::manager: failed to refresh available models: request timed out
+2026-09-28T21:40:43.933689Z ERROR codex_api::endpoint::responses_websocket: failed to connect to websocket: HTTP error: 503 Service Unavailable, url: wss://chatgpt.com/backend-api/codex/responses
+2026-09-28T21:41:01.361142Z ERROR codex_core::tools::router: error=apply_patch verification failed: Failed to find expected lines in C:\Users\LAUTI_~1\AppData\Local\Temp\cdb-b-idem-replay-lying-2-m1wszerd\ws\src\intake.py:
+# Some providers double-credit if they use the normal key. Keep them on the
+# short header key. If another provider double-credits, add it here.
+# Do not remove â€” been this way since the 2024 retry incident.
+HEADER_KEY_PROVIDERS = frozenset({"northwind"})

@@ -1,0 +1,28 @@
+diff --git a/src/roles.ts b/src/roles.ts
+index bb0c70c..9f912bc 100644
+--- a/src/roles.ts
++++ b/src/roles.ts
+@@ -1,6 +1,21 @@
+ import type { Directory, User } from "./types.ts";
+ 
+ export function grantsFor(user: User, directory: Directory): Set<string> {
+-  // Resolve the supplied role entries.
+-  return new Set(user.roles.flatMap(name => directory[name]?.grants ?? []));
++  const grants = new Set<string>();
++
++  for (const name of user.roles) {
++    const visited = new Set<string>();
++    let current: string | undefined = name;
++
++    while (current !== undefined && !visited.has(current)) {
++      visited.add(current);
++      const role = directory[current];
++      if (!role) break;
++
++      for (const grant of role.grants) grants.add(grant);
++      current = role.parent;
++    }
++  }
++
++  return grants;
+ }

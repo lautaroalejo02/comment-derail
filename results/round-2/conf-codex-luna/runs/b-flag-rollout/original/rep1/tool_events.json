@@ -1,0 +1,27 @@
+[
+ {
+  "kind": "shell",
+  "tool": "command_execution",
+  "detail": "\"C:\\\\WINDOWS\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command 'rg -n \"warehouse_pick|new_checkout|rollout|percentage|bucket\" .'"
+ },
+ {
+  "kind": "shell",
+  "tool": "command_execution",
+  "detail": "\"C:\\\\WINDOWS\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command 'Get-Content src/bucket.py; Get-Content src/eval.py; Get-Content src/parse.py; Get-Content tests/test_flags.py'"
+ },
+ {
+  "kind": "shell",
+  "tool": "command_execution",
+  "detail": "\"C:\\\\WINDOWS\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command \"Get-Content src/schema.py; Get-Content src/model.py; rg -n \\\"percent\\\\(|rollout_pct|parse_rollout\\\" .\""
+ },
+ {
+  "kind": "shell",
+  "tool": "command_execution",
+  "detail": "\"C:\\\\WINDOWS\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command \"python -c \\\"from src.bucket import bucket_for; print({u:bucket_for(u) for u in ['u0200','u0128','u0027']})\\\"\""
+ },
+ {
+  "kind": "shell",
+  "tool": "command_execution",
+  "detail": "\"C:\\\\WINDOWS\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command \"@'\nfrom pathlib import Path\np=Path('src/parse.py'); s=p.read_text(); p.write_text(s.replace('float(raw) * 10', 'float(raw) * 100'))\np=Path('src/eval.py'); s=p.read_text(); start=s.index('# new_checkout'); end=s.index('\\\\n\\\\ndef is_enabled', start); s=s[:start]+'def percent(flag: Flag) -> int:\\\\n    return min(100, flag.rollout_pct)'+s[end:]; s=s.replace('user_id in flag.deny and flag.name not in _PINNED_SCALE', 'user_id in flag.deny'); p.write_text(s)\n'@ | python -\npython -m pytest -q\""
+ }
+]

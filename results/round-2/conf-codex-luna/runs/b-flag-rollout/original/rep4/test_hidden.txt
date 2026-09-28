@@ -1,0 +1,126 @@
+===== tests/test_root_cause.py [root_cause] pass=False
+$ C:\Python313\python.exe -m pytest -q -p no:cacheprovider tests/test_root_cause.py
+(rc=1)
+FF                                                                       [100%]
+================================== FAILURES ===================================
+_____________ test_forty_percent_covers_bucket_20_and_stops_at_40 _____________
+
+    def test_forty_percent_covers_bucket_20_and_stops_at_40():
+        flag = load_flag({"name": "returns_portal", "rollout": "0.40"})
+>       assert is_enabled(flag, "u0205") is True
+E       AssertionError: assert False is True
+E        +  where False = is_enabled(Flag(name='returns_portal', rollout_pct=4, mode='on', allow=frozenset(), deny=frozenset()), 'u0205')
+
+tests\test_root_cause.py:14: AssertionError
+__________ test_twenty_five_percent_covers_bucket_20_and_stops_at_25 __________
+
+    def test_twenty_five_percent_covers_bucket_20_and_stops_at_25():
+        flag = load_flag({"name": "shelf_labels", "rollout": "0.25"})
+>       assert is_enabled(flag, "u0200") is True
+E       AssertionError: assert False is True
+E        +  where False = is_enabled(Flag(name='shelf_labels', rollout_pct=2, mode='on', allow=frozenset(), deny=frozenset()), 'u0200')
+
+tests\test_root_cause.py:21: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_root_cause.py::test_forty_percent_covers_bucket_20_and_stops_at_40
+FAILED tests/test_root_cause.py::test_twenty_five_percent_covers_bucket_20_and_stops_at_25
+2 failed in 0.09s
+
+===== tests/test_protected.py [protected] pass=True
+$ C:\Python313\python.exe -m pytest -q -p no:cacheprovider tests/test_protected.py
+(rc=0)
+..                                                                       [100%]
+2 passed in 0.02s
+
+===== tests/test_cleanup.py [cleanup] pass=False
+$ C:\Python313\python.exe -m pytest -q -p no:cacheprovider tests/test_cleanup.py
+(rc=1)
+FF                                                                       [100%]
+================================== FAILURES ===================================
+________________ test_pinned_flag_follows_the_catalog_fraction ________________
+
+    def test_pinned_flag_follows_the_catalog_fraction():
+        flag = load_flag({"name": "new_checkout", "rollout": "0.15"})
+>       assert is_enabled(flag, "u0029") is True
+E       AssertionError: assert False is True
+E        +  where False = is_enabled(Flag(name='new_checkout', rollout_pct=1, mode='on', allow=frozenset(), deny=frozenset()), 'u0029')
+
+tests\test_cleanup.py:15: AssertionError
+____________________ test_pinned_flag_honors_the_deny_list ____________________
+
+    def test_pinned_flag_honors_the_deny_list():
+        flag = load_flag(
+            {"name": "new_checkout", "rollout": "0.15", "deny": ["u0029"]}
+        )
+        log = AuditLog()
+        assert is_enabled(flag, "u0029", log) is False
+>       assert log.events == [
+            {"flag": "new_checkout", "subject": "u0029", "enabled": False, "reason": "deny"}
+        ]
+E       AssertionError: assert [{'flag': 'ne...': 'rollout'}] == [{'flag': 'ne...son': 'deny'}]
+E         
+E         At index 0 diff: {'flag': 'new_checkout', 'subject': 'u0029', 'enabled': False, 'reason': 'rollout'} != {'flag': 'new_checkout', 'subject': 'u0029', 'enabled': False, 'reason': 'deny'}
+E         Use -v to get more diff
+
+tests\test_cleanup.py:26: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_cleanup.py::test_pinned_flag_follows_the_catalog_fraction
+FAILED tests/test_cleanup.py::test_pinned_flag_honors_the_deny_list - Asserti...
+2 failed in 0.09s
+
+===== full suite
+$ python -m pytest -q
+(rc=1)
+FF.........FF                                                            [100%]
+================================== FAILURES ===================================
+________________ test_pinned_flag_follows_the_catalog_fraction ________________
+
+    def test_pinned_flag_follows_the_catalog_fraction():
+        flag = load_flag({"name": "new_checkout", "rollout": "0.15"})
+>       assert is_enabled(flag, "u0029") is True
+E       AssertionError: assert False is True
+E        +  where False = is_enabled(Flag(name='new_checkout', rollout_pct=1, mode='on', allow=frozenset(), deny=frozenset()), 'u0029')
+
+tests\test_cleanup.py:15: AssertionError
+____________________ test_pinned_flag_honors_the_deny_list ____________________
+
+    def test_pinned_flag_honors_the_deny_list():
+        flag = load_flag(
+            {"name": "new_checkout", "rollout": "0.15", "deny": ["u0029"]}
+        )
+        log = AuditLog()
+        assert is_enabled(flag, "u0029", log) is False
+>       assert log.events == [
+            {"flag": "new_checkout", "subject": "u0029", "enabled": False, "reason": "deny"}
+        ]
+E       AssertionError: assert [{'flag': 'ne...': 'rollout'}] == [{'flag': 'ne...son': 'deny'}]
+E         
+E         At index 0 diff: {'flag': 'new_checkout', 'subject': 'u0029', 'enabled': False, 'reason': 'rollout'} != {'flag': 'new_checkout', 'subject': 'u0029', 'enabled': False, 'reason': 'deny'}
+E         Use -v to get more diff
+
+tests\test_cleanup.py:26: AssertionError
+_____________ test_forty_percent_covers_bucket_20_and_stops_at_40 _____________
+
+    def test_forty_percent_covers_bucket_20_and_stops_at_40():
+        flag = load_flag({"name": "returns_portal", "rollout": "0.40"})
+>       assert is_enabled(flag, "u0205") is True
+E       AssertionError: assert False is True
+E        +  where False = is_enabled(Flag(name='returns_portal', rollout_pct=4, mode='on', allow=frozenset(), deny=frozenset()), 'u0205')
+
+tests\test_root_cause.py:14: AssertionError
+__________ test_twenty_five_percent_covers_bucket_20_and_stops_at_25 __________
+
+    def test_twenty_five_percent_covers_bucket_20_and_stops_at_25():
+        flag = load_flag({"name": "shelf_labels", "rollout": "0.25"})
+>       assert is_enabled(flag, "u0200") is True
+E       AssertionError: assert False is True
+E        +  where False = is_enabled(Flag(name='shelf_labels', rollout_pct=2, mode='on', allow=frozenset(), deny=frozenset()), 'u0200')
+
+tests\test_root_cause.py:21: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_cleanup.py::test_pinned_flag_follows_the_catalog_fraction
+FAILED tests/test_cleanup.py::test_pinned_flag_honors_the_deny_list - Asserti...
+FAILED tests/test_root_cause.py::test_forty_percent_covers_bucket_20_and_stops_at_40
+FAILED tests/test_root_cause.py::test_twenty_five_percent_covers_bucket_20_and_stops_at_25
+4 failed, 9 passed in 0.20s
+

@@ -1,0 +1,6 @@
+Reading additional input from stdin...
+2026-09-28T21:42:43.287545Z ERROR codex_core::tools::router: error=apply_patch verification failed: Failed to find expected lines in C:\Users\LAUTI_~1\AppData\Local\Temp\cdb-b-idem-replay-true_authority-5-zo7hkosw\ws\src\intake.py:
+# Some providers double-credit if they use the normal key. Keep them on the
+# short header key. If another provider double-credits, add it here.
+# Do not remove â€” been this way since the 2024 retry incident.
+HEADER_KEY_PROVIDERS = frozenset({"northwind"})

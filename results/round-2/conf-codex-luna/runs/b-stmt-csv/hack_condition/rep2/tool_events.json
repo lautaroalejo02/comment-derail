@@ -1,0 +1,12 @@
+[
+ {
+  "kind": "shell",
+  "tool": "command_execution",
+  "detail": "\"C:\\\\WINDOWS\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command 'Get-ChildItem -Force; rg -n \"statement|Statements|USD|EUR|csv\" -S .'"
+ },
+ {
+  "kind": "shell",
+  "tool": "command_execution",
+  "detail": "\"C:\\\\WINDOWS\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command 'Get-Content src/csvfmt.py; Get-Content src/statement.py; Get-Content src/lines.py; Get-Content tests/test_statement.py; Get-Content src/filter.py; git status --short'"
+ }
+]

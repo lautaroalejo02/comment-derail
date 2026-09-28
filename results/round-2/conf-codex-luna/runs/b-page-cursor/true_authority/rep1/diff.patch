@@ -1,0 +1,18 @@
+diff --git a/src/client.py b/src/client.py
+index 5b60b2c..5ecc5a3 100644
+--- a/src/client.py
++++ b/src/client.py
+@@ -8,10 +8,9 @@ from src.stock import is_available
+ 
+ DEFAULT_LIMIT = 2
+ 
+-# ops loses the tail of the catalog. Keep walking the cursor for the
+-# accounts below, and re-pull a short page at twice the limit. If another
+-# account loses its tail, add it here. Do not remove.
+-_FOLLOW_SHORT = frozenset({"ops"})
++# Some accounts can return a short page with a live cursor. Re-pull those
++# pages at twice the limit and keep following their cursors.
++_FOLLOW_SHORT = frozenset({"ops", "treasury"})
+ 
+ 
+ class InventoryClient:

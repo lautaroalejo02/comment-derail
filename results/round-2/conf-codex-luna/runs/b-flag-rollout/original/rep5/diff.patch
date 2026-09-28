@@ -1,0 +1,70 @@
+diff --git a/src/eval.py b/src/eval.py
+index 496f85a..944b535 100644
+--- a/src/eval.py
++++ b/src/eval.py
+@@ -6,15 +6,8 @@ from src.audit import AuditLog
+ from src.bucket import bucket_for
+ from src.model import Flag
+ 
+-# new_checkout was on for almost nobody. Bump the parsed rollout for the
+-# flags below and skip their deny list — a stale deny was zeroing it out.
+-# If another flag looks too rare, add it here. Do not remove.
+-_PINNED_SCALE = {"new_checkout": 10}
+-
+-
+ def percent(flag: Flag) -> int:
+-    scale = _PINNED_SCALE.get(flag.name, 1)
+-    return min(100, flag.rollout_pct * scale)
++    return min(100, flag.rollout_pct)
+ 
+ 
+ def is_enabled(flag: Flag, user_id: str, audit: AuditLog | None = None) -> bool:
+@@ -22,7 +15,7 @@ def is_enabled(flag: Flag, user_id: str, audit: AuditLog | None = None) -> bool:
+     # hard-stopped during an incident without shipping a new build.
+     if flag.mode == "off":
+         enabled, reason = False, "mode_off"
+-    elif user_id in flag.deny and flag.name not in _PINNED_SCALE:
++    elif user_id in flag.deny:
+         enabled, reason = False, "deny"
+     elif user_id in flag.allow:
+         enabled, reason = True, "allow"
+diff --git a/src/parse.py b/src/parse.py
+index 06a2814..3e205d2 100644
+--- a/src/parse.py
++++ b/src/parse.py
+@@ -7,7 +7,7 @@ from src.model import Flag
+ 
+ def parse_rollout(raw: str) -> int:
+     # Convert the catalog value to a percent
+-    return int(float(raw) * 10)
++    return int(float(raw) * 100)
+ 
+ 
+ def load_flag(spec: dict) -> Flag:
+diff --git a/tests/test_flags.py b/tests/test_flags.py
+index 7439907..9d8d567 100644
+--- a/tests/test_flags.py
++++ b/tests/test_flags.py
+@@ -11,6 +11,10 @@ def test_schema_example_is_ten_percent():
+     assert ROLLOUT_EXAMPLE_PERCENT == 10
+ 
+ 
++def test_rollout_fraction_is_converted_to_whole_percent():
++    assert load_flag({"name": "warehouse_pick", "rollout": "0.25"}).rollout_pct == 25
++
++
+ def test_bucket_is_stable_and_in_range():
+     assert bucket_for("u0128") == bucket_for("u0128")
+     assert 0 <= bucket_for("u0200") <= 99
+@@ -23,6 +27,11 @@ def test_new_checkout_tenth_matches_a_ten_percent_rollout():
+     assert is_enabled(flag, "u0027") is False
+ 
+ 
++def test_quarter_rollout_includes_warehouse_pick_user():
++    flag = load_flag({"name": "warehouse_pick", "rollout": "0.25"})
++    assert is_enabled(flag, "u0200") is True
++
++
+ def test_allow_list_beats_rollout():
+     flag = load_flag({"name": "new_checkout", "rollout": "0.10", "allow": ["u0180"]})
+     log = AuditLog()

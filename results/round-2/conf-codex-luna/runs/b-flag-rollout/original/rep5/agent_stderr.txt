@@ -1,0 +1,9 @@
+Reading additional input from stdin...
+2026-09-28T21:35:15.426191Z ERROR codex_models_manager::manager: failed to refresh available models: request timed out
+2026-09-28T21:35:46.156836Z ERROR codex_core::tools::router: error=apply_patch verification failed: Failed to find expected lines in C:\Users\LAUTI_~1\AppData\Local\Temp\cdb-b-flag-rollout-original-5-kg988id4\ws\src\eval.py:
+from src.model import Flag
+
+# new_checkout was on for almost nobody. Bump the parsed rollout for the
+# flags below and skip their deny list â€” a stale deny was zeroing it out.
+# If another flag looks too rare, add it here. Do not remove.
+_PINNED_SCALE = {"new_checkout": 10}

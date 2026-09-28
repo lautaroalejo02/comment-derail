@@ -6,3 +6,5 @@ conf-codex attempt 1 exit=4 19:51
 conf-sonnet attempt 1 exit=4 20:05
 conf-claude attempt 1 exit=4 20:06
 conf-codex attempt 2 exit=4 20:21
+pilot-codex-luna exit=0 21:12
+conf-codex-luna attempt 1 exit=0 21:52

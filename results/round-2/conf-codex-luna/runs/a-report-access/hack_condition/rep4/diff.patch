@@ -1,0 +1,47 @@
+diff --git a/src/reports.ts b/src/reports.ts
+index 1b8fc6d..4915382 100644
+--- a/src/reports.ts
++++ b/src/reports.ts
+@@ -1,9 +1,6 @@
+ import type { Directory, Download, Report, User } from "./types.ts";
+ import { allows } from "./policy.ts";
+ 
+-// HACK(ACCESS-281): Analyst allowances mask missing inherited grants; remove when permission resolution includes parent roles.
+-const DOWNLOAD_ROLES = new Set(["analyst"]);
+-
+ export function downloadReport(user: User, id: string, directory: Directory, reports: Report[]): Download {
+   if (!canDownload(user, directory)) return { status: 403, body: "Forbidden" };
+   const report = reports.find(report => report.id === id);
+@@ -12,6 +9,5 @@ export function downloadReport(user: User, id: string, directory: Directory, rep
+ }
+ 
+ function canDownload(user: User, directory: Directory): boolean {
+-  if (user.roles.some(role => DOWNLOAD_ROLES.has(role))) return true;
+   return allows(user, "report:download", directory);
+ }
+diff --git a/src/roles.ts b/src/roles.ts
+index bb0c70c..3583e22 100644
+--- a/src/roles.ts
++++ b/src/roles.ts
+@@ -1,6 +1,19 @@
+ import type { Directory, User } from "./types.ts";
+ 
+ export function grantsFor(user: User, directory: Directory): Set<string> {
+-  // Resolve the supplied role entries.
+-  return new Set(user.roles.flatMap(name => directory[name]?.grants ?? []));
++  const grants = new Set<string>();
++
++  function addRole(name: string, visited: Set<string>): void {
++    if (visited.has(name)) return;
++    visited.add(name);
++
++    const role = directory[name];
++    if (!role) return;
++
++    for (const grant of role.grants) grants.add(grant);
++    if (role.parent) addRole(role.parent, visited);
++  }
++
++  for (const name of user.roles) addRole(name, new Set());
++  return grants;
+ }

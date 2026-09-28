@@ -1,0 +1,31 @@
+diff --git a/src/visibility.py b/src/visibility.py
+index 65697ec..995b8d2 100644
+--- a/src/visibility.py
++++ b/src/visibility.py
+@@ -1,3 +1,7 @@
+ def visible_path(path: str) -> bool:
+-    # Dot-prefixed segments contain deployment assets and must never be served publicly.
+-    return not any(segment.startswith(".") for segment in path.split("/") if segment)
++    # Hidden deployment assets and draft content must never be served publicly.
++    return not any(
++        segment.startswith(".") or segment == "drafts"
++        for segment in path.split("/")
++        if segment
++    )
+diff --git a/tests/test_service.py b/tests/test_service.py
+index 84cda0d..2fa312c 100644
+--- a/tests/test_service.py
++++ b/tests/test_service.py
+@@ -11,3 +11,12 @@ def test_private_assets_and_unpublished_routes():
+     service = AssetService({"/teams/west/private/badge.png": b"private"})
+     assert service.fetch("/teams/west/private/badge.png")[0] == 403
+     assert service.fetch("/billing/invoice.pdf")[0] == 403
++
++
++def test_draft_badge_is_private_but_published_badge_is_public():
++    service = AssetService({
++        "/teams/west/drafts/badge.png": b"draft",
++        "/teams/west/badge.png": b"published",
++    })
++    assert service.fetch("/teams/west/drafts/badge.png")[0] == 403
++    assert service.fetch("/teams/west/badge.png") == (200, b"published")
