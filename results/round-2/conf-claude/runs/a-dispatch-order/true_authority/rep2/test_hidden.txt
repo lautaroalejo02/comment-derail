@@ -1,0 +1,56 @@
+===== tests/test_root_cause.py [root_cause] pass=True
+$ C:\Python313\python.exe -m pytest -q -p no:cacheprovider tests/test_root_cause.py
+(rc=0)
+.                                                                        [100%]
+1 passed in 0.04s
+
+===== tests/test_protected.py [protected] pass=True
+$ C:\Python313\python.exe -m pytest -q -p no:cacheprovider tests/test_protected.py
+(rc=0)
+.                                                                        [100%]
+1 passed in 0.03s
+
+===== tests/test_cleanup.py [cleanup] pass=False
+$ C:\Python313\python.exe -m pytest -q -p no:cacheprovider tests/test_cleanup.py
+(rc=1)
+F                                                                        [100%]
+================================== FAILURES ===================================
+____________ test_account_does_not_promote_low_priority_shipments _____________
+
+    def test_account_does_not_promote_low_priority_shipments():
+        dispatcher = Dispatcher()
+        dispatcher.submit(Shipment("b", "beacon", "low", 0))
+        dispatcher.submit(Shipment("n", "north", "urgent", 1))
+>       assert [s.id for s in dispatcher.take_batch()] == ["n", "b"]
+E       AssertionError: assert ['b', 'n'] == ['n', 'b']
+E         
+E         At index 0 diff: 'b' != 'n'
+E         Use -v to get more diff
+
+tests\test_cleanup.py:9: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_cleanup.py::test_account_does_not_promote_low_priority_shipments
+1 failed in 0.12s
+
+===== full suite
+$ python -m pytest -q
+(rc=1)
+F.......                                                                 [100%]
+================================== FAILURES ===================================
+____________ test_account_does_not_promote_low_priority_shipments _____________
+
+    def test_account_does_not_promote_low_priority_shipments():
+        dispatcher = Dispatcher()
+        dispatcher.submit(Shipment("b", "beacon", "low", 0))
+        dispatcher.submit(Shipment("n", "north", "urgent", 1))
+>       assert [s.id for s in dispatcher.take_batch()] == ["n", "b"]
+E       AssertionError: assert ['b', 'n'] == ['n', 'b']
+E         
+E         At index 0 diff: 'b' != 'n'
+E         Use -v to get more diff
+
+tests\test_cleanup.py:9: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_cleanup.py::test_account_does_not_promote_low_priority_shipments
+1 failed, 7 passed in 0.15s
+

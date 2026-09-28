@@ -1,0 +1,53 @@
+diff --git a/src/intake.py b/src/intake.py
+index 3ac04f8..e1c5c04 100644
+--- a/src/intake.py
++++ b/src/intake.py
+@@ -14,9 +14,14 @@ _KEY_PREFIX = 8
+ 
+ 
+ def storage_key(hook: Webhook) -> str:
+-    # Choose the idempotency identity for this delivery
++    # Choose the idempotency identity for this delivery. Retries carry a new
++    # event id but the same Idempotency-Key, so the header key wins when present.
+     if hook.provider in HEADER_KEY_PROVIDERS and hook.idempotency_key:
+         return hook.idempotency_key[:_KEY_PREFIX]
++    if hook.idempotency_key:
++        # Full key, scoped per provider: a prefix would merge distinct payouts
++        # (e.g. "unique-key-0001" / "unique-key-0002").
++        return f"{hook.provider}:{hook.idempotency_key}"
+     return hook.event_id
+ 
+ 
+diff --git a/tests/test_intake.py b/tests/test_intake.py
+index b6e7ffe..3a56b91 100644
+--- a/tests/test_intake.py
++++ b/tests/test_intake.py
+@@ -66,3 +66,28 @@ def test_sandbox_delivery_does_not_move_the_balance():
+     assert decision.duplicate is False
+     assert intake.ledger.balance("acct-44") == 0
+     assert intake.ledger.entries == [("acct-44", "po_s", 0)]
++
++
++def test_harbor_retry_with_a_new_event_id_is_not_applied_twice():
++    intake = Intake()
++    first = intake.apply(hook("harbor", "po_1844", "8f3c1a9e0b27d4c6"))
++    again = intake.apply(hook("harbor", "po_1844.2", "8f3c1a9e0b27d4c6"))
++    assert first.applied is True
++    assert again.applied is False
++    assert again.duplicate is True
++    assert intake.ledger.balance("acct-44") == 18_000
++    assert len(intake.ledger.entries) == 1
++
++
++def test_distinct_keys_sharing_a_prefix_both_settle():
++    intake = Intake()
++    intake.apply(hook("harbor", "po_1", "8f3c1a9e0b27d4c6", amount=18_000))
++    intake.apply(hook("harbor", "po_2", "8f3c1a9e99999999", amount=2_000))
++    assert intake.ledger.balance("acct-44") == 20_000
++
++
++def test_same_key_from_different_providers_both_settle():
++    intake = Intake()
++    intake.apply(hook("harbor", "po_1", "shared-key-0001", amount=100))
++    intake.apply(hook("lumen", "po_9", "shared-key-0001", amount=50))
++    assert intake.ledger.balance("acct-44") == 150

@@ -1,0 +1,32 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-catalog-pages-original-5-sa04kkof/ws\" && git ls-files && cat $(git ls-files | grep -v -i -E 'lock|\\.md$')"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-catalog-pages-original-5-sa04kkof\\ws\\src\\pager.ts"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-catalog-pages-original-5-sa04kkof\\ws\\tests\\export.test.ts"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-catalog-pages-original-5-sa04kkof/ws\" && node --version && node --test --experimental-strip-types tests/ 2>&1 | tail -15"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-catalog-pages-original-5-sa04kkof/ws\" && node --test --experimental-strip-types tests/export.test.ts 2>&1 | tail -15"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-catalog-pages-original-5-sa04kkof/ws\" && git stash push src/pager.ts -q && node --test --experimental-strip-types tests/export.test.ts 2>&1 | grep -E \"^(not )?ok\"; git stash pop -q && git diff --stat"
+ }
+]

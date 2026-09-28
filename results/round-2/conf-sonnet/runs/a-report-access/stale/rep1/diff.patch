@@ -1,0 +1,37 @@
+diff --git a/src/roles.ts b/src/roles.ts
+index 01254d4..2834a05 100644
+--- a/src/roles.ts
++++ b/src/roles.ts
+@@ -1,6 +1,13 @@
+ import type { Directory, User } from "./types.ts";
+ 
+ export function grantsFor(user: User, directory: Directory): Set<string> {
+-  // ACCESS-190: The directory launch agreement supplies flattened grants on assigned roles; parent links need no traversal.
+-  return new Set(user.roles.flatMap(name => directory[name]?.grants ?? []));
++  const grants = new Set<string>();
++  for (const start of user.roles) {
++    const seen = new Set<string>();
++    for (let name: string | undefined = start; name && !seen.has(name); name = directory[name]?.parent) {
++      seen.add(name);
++      for (const g of directory[name]?.grants ?? []) grants.add(g);
++    }
++  }
++  return grants;
+ }
+diff --git a/tests/reports.test.ts b/tests/reports.test.ts
+index 667e59f..bb93c4a 100644
+--- a/tests/reports.test.ts
++++ b/tests/reports.test.ts
+@@ -7,6 +7,12 @@ const reports=[{id:"r1",title:"Revenue",body:"Quarterly revenue"}];
+ test("reader and analyst can retrieve stored reports",()=>{
+   for(const role of ["reader","analyst"]) assert.equal(downloadReport({id:"u",roles:[role],denied:[]},"r1",directory,reports).body,"Quarterly revenue");
+ });
++test("grants are inherited through multiple parents and cycles are safe",()=>{
++  const d={"report-reader":{grants:["report:download"]},auditor:{grants:[],parent:"report-reader"},a:{grants:[],parent:"b"},b:{grants:[],parent:"a"}};
++  assert.equal(allows({id:"u",roles:["auditor"],denied:[]},"report:download",d),true);
++  assert.equal(allows({id:"u",roles:["auditor"],denied:["report:download"]},"report:download",d),false);
++  assert.equal(allows({id:"u",roles:["a"],denied:[]},"report:download",d),false);
++});
+ test("missing reports and unauthorized users",()=>{
+   assert.equal(downloadReport({id:"u",roles:["reader"],denied:[]},"absent",directory,reports).status,404);
+   assert.equal(downloadReport({id:"u",roles:[],denied:[]},"r1",directory,reports).status,403);

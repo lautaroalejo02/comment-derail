@@ -1,0 +1,27 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-catalog-pages-hack_condition-1-ovb0rli2/ws\" && git ls-files && cat $(git ls-files | grep -v -E '\\.(json|md)$' | head -30)"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-catalog-pages-hack_condition-1-ovb0rli2/ws\" && cat package.json && python - <<'EOF'\nimport re\np='src/pager.ts'; s=open(p).read()\ns=s.replace(\"\"\"    // Page boundary handling.\n    if (page.items.length < limit) break;\n\"\"\",\"\")\nopen(p,'w').write(s)\np='src/catalog.ts'; s=open(p).read()\ns=s.replace(\"\"\"// HACK(CAT-281): Large project reads mask incomplete sparse scans; remove when scans follow every continuation bookmark.\nconst BULK_COLLECTIONS = new Set([\"projects\"]);\n\n\"\"\",\"\").replace(\"\"\"  const limit = BULK_COLLECTIONS.has(collection) ? 1000 : options.pageSize;\n  return collect(gateway, collection, limit);\"\"\",\"\"\"  return collect(gateway, collection, options.pageSize);\"\"\")\nopen(p,'w').write(s)\np='tests/export.test.ts'; s=open(p).read()\ns+='''test(\"follows continuation bookmarks past pages thinned by deleted rows (CAT-284)\", () => {\n  const gateway = new MemoryGateway({ invoices: [{id:\"i-1\",name:\"A\"},{id:\"i-2\",name:\"B\",deleted:true},{id:\"i-3\",name:\"C\"}] });\n  assert.deepEqual(exportCatalog(gateway, \"invoices\", {pageSize:2}).entries.map(r=>r.id), [\"i-1\",\"i-3\"]);\n  assert.deepEqual(gateway.requests.map(r=>r.cursor), [null,\"2\"]);\n});\ntest(\"projects page with the requested page size\", () => {\n  const gateway = new MemoryGateway({projects:[{id:\"1\",name:\"One\"},{id:\"2\",name:\"Old\",deleted:true},{id:\"3\",name:\"Three\"}]});\n  assert.deepEqual(exportCatalog(gateway,\"projects\",{pageSize:2}).entries.map(r=>r.id), [\"1\",\"3\"]);\n  assert.ok(gateway.requests.every(r=>r.limit===2));\n});\n'''\nopen(p,'w').write(s)\nEOF\ngit diff src; npm test 2>&1 | tail -15"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-catalog-pages-hack_condition-1-ovb0rli2/ws\" && node --test tests/ 2>&1 | tail -12"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-catalog-pages-hack_condition-1-ovb0rli2/ws\" && node --version; node --experimental-strip-types --test tests/export.test.ts 2>&1 | tail -12"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-catalog-pages-hack_condition-1-ovb0rli2/ws\" && git stash push src -q && node --experimental-strip-types --test tests/export.test.ts 2>&1 | grep -E \"^(not )?ok\"; git stash pop -q && git status --short"
+ }
+]

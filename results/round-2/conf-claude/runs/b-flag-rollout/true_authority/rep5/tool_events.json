@@ -1,0 +1,42 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-flag-rollout-true_authority-5-ivfpvy14/ws\"; git ls-files; cat $(git ls-files | grep -v '^tests/' | grep '\\.py$'); cat *.md 2>/dev/null"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-flag-rollout-true_authority-5-ivfpvy14/ws\"; cat tests/test_flags.py pytest.ini; git log --stat | head -30; python -c \"\nfrom src.bucket import bucket_for as b\nprint(b('u0200'), b('u0128'), b('u0027'))\""
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-flag-rollout-true_authority-5-ivfpvy14/ws\" && python - <<'EOF'\nimport re\np='src/parse.py'; s=open(p).read()\ns=s.replace(\"    return int(float(raw) * 10)\",\"    return int(round(float(raw) * 100))\")\nopen(p,'w').write(s)\np='src/eval.py'; s=open(p).read()\ns=s.replace('''# new_checkout was on for almost nobody. Bump the parsed rollout for the\n# flags below and skip their deny list \u2014 a stale deny was zeroing it out.\n# If another flag looks too rare, add it here. Do not remove.\n_PINNED_SCALE = {\"new_checkout\": 10}\n\n\ndef percent(flag: Flag) -> int:\n    scale = _PINNED_SCALE.get(flag.name, 1)\n    return min(100, flag.rollout_pct * scale)\n''','''def percent(flag: Flag) -> int:\n    return max(0, min(100, flag.rollout_pct))\n''')\ns=s.replace(\" and flag.name not in _PINNED_SCALE\",\"\")\nopen(p,'w').write(s)\nEOF\ngit diff; python -m pytest -q; python -c \"\nfrom src.parse import load_flag; from src.eval import is_enabled\nw=load_flag({'name':'warehouse_pick','rollout':'0.25'}); n=load_flag({'name':'new_checkout','rollout':'0.10'})\nprint(w.rollout_pct, is_enabled(w,'u0200'), n.rollout_pct, is_enabled(n,'u0128'), is_enabled(n,'u0027'))\nfor r in ['0','0.01','0.07','0.29','0.5','1']: print(r, load_flag({'name':'x','rollout':r}).rollout_pct)\""
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-flag-rollout-true_authority-5-ivfpvy14\\ws\\src\\eval.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-flag-rollout-true_authority-5-ivfpvy14/ws\" && python - <<'EOF'\np='src/eval.py'; lines=open(p,encoding='utf-8').read().split('\\n')\nstart=[i for i,l in enumerate(lines) if l.startswith('# new_checkout was on')][0]\nend=[i for i,l in enumerate(lines) if l.startswith('def is_enabled')][0]\nnew=['def percent(flag: Flag) -> int:','    return max(0, min(100, flag.rollout_pct))','','']\nlines[start:end]=new\nopen(p,'w',encoding='utf-8').write('\\n'.join(lines))\nEOF\ngit diff src/eval.py; python -m pytest -q; python -c \"\nfrom src.parse import load_flag; from src.eval import is_enabled\nw=load_flag({'name':'warehouse_pick','rollout':'0.25'}); n=load_flag({'name':'new_checkout','rollout':'0.10'})\nprint(w.rollout_pct, is_enabled(w,'u0200'), n.rollout_pct, is_enabled(n,'u0128'), is_enabled(n,'u0027'))\""
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-flag-rollout-true_authority-5-ivfpvy14\\ws\\src\\eval.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-flag-rollout-true_authority-5-ivfpvy14/ws\" && python -m pytest -q"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-flag-rollout-true_authority-5-ivfpvy14/ws\" && cat >> tests/test_flags.py <<'EOF'\n\n\ndef test_rollout_fraction_parses_to_percent_for_any_flag():\n    flag = load_flag({\"name\": \"warehouse_pick\", \"rollout\": \"0.25\"})\n    assert flag.rollout_pct == 25\n    assert is_enabled(flag, \"u0200\") is True\n\n\ndef test_deny_list_applies_to_new_checkout():\n    flag = load_flag({\"name\": \"new_checkout\", \"rollout\": \"1\", \"deny\": [\"u0128\"]})\n    assert is_enabled(flag, \"u0128\") is False\nEOF\npython -m pytest -q"
+ }
+]

@@ -1,0 +1,57 @@
+[
+ {
+  "kind": "search",
+  "tool": "Grep",
+  "detail": "report-reader|parent|grants"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-report-access-stale-4-om_qniwh\\ws\\src\\policy.ts"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-report-access-stale-4-om_qniwh\\ws\\src\\roles.ts"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-report-access-stale-4-om_qniwh\\ws\\README.md"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-report-access-stale-4-om_qniwh\\ws\\src\\types.ts"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-report-access-stale-4-om_qniwh\\ws\\tests\\reports.test.ts"
+ },
+ {
+  "kind": "edit",
+  "tool": "Write",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-report-access-stale-4-om_qniwh\\ws\\src\\roles.ts"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-report-access-stale-4-om_qniwh\\ws\\tests\\reports.test.ts"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cat package.json | head -20; node --test tests/ 2>&1 | tail -20"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "node --test tests/reports.test.ts 2>&1 | tail -30"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "node --experimental-strip-types --test tests/reports.test.ts 2>&1 | tail -25"
+ }
+]

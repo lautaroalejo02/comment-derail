@@ -1,0 +1,32 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-catalog-pages-stale-2-jpp77reh/ws\" && git ls-files && git show --stat HEAD~1 | head -30"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-catalog-pages-stale-2-jpp77reh/ws\" && git show HEAD~1 && for f in README.md package.json src/*.ts tests/*.ts; do echo \"=== $f\"; cat $f; done"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-catalog-pages-stale-2-jpp77reh\\ws\\src\\pager.ts"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-catalog-pages-stale-2-jpp77reh\\ws\\tests\\export.test.ts"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-catalog-pages-stale-2-jpp77reh/ws\" && node --version && node --test --experimental-strip-types tests/ 2>&1 | tail -20; git stash -q && node --test --experimental-strip-types tests/ 2>&1 | grep -E \"^# (pass|fail)\"; git stash pop -q && git diff --stat"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-catalog-pages-stale-2-jpp77reh/ws\" && node --test --experimental-strip-types tests/export.test.ts 2>&1 | grep -E \"^(ok|not ok)|^# (pass|fail)\"; echo \"--- without fix:\"; git stash push -q src/pager.ts && node --test --experimental-strip-types tests/export.test.ts 2>&1 | grep -E \"^(ok|not ok)|^# (pass|fail)\"; git stash pop -q; cat src/pager.ts"
+ }
+]

@@ -1,0 +1,81 @@
+diff --git a/src/matcher.py b/src/matcher.py
+index 05e5d0f..69eca27 100644
+--- a/src/matcher.py
++++ b/src/matcher.py
+@@ -2,5 +2,10 @@ from fnmatch import fnmatchcase
+ 
+ 
+ def matches(path: str, pattern: str) -> bool:
+-    # Match the supplied public route.
+-    return fnmatchcase(path, pattern)
++    # Wildcards apply within a path component, never across directory boundaries.
++    path_parts = path.split("/")
++    pattern_parts = pattern.split("/")
++    return len(path_parts) == len(pattern_parts) and all(
++        fnmatchcase(part, pattern_part)
++        for part, pattern_part in zip(path_parts, pattern_parts)
++    )
+diff --git a/src/service.py b/src/service.py
+index a1431b1..bba40dc 100644
+--- a/src/service.py
++++ b/src/service.py
+@@ -2,10 +2,6 @@ from .matcher import matches
+ from .routes import DEFAULT_ROUTES, PublicRoute
+ from .visibility import visible_path
+ 
+-# HACK(MEDIA-281): Folder exclusions mask public routes reaching nested assets; remove when route matching respects path components.
+-EXCLUDED_FOLDERS = frozenset({"private"})
+-
+-
+ class AssetService:
+     def __init__(self, assets: dict[str, bytes], routes: tuple[PublicRoute, ...] = DEFAULT_ROUTES):
+         self._assets = dict(assets)
+@@ -14,8 +10,6 @@ class AssetService:
+     def is_public(self, path: str) -> bool:
+         if not visible_path(path):
+             return False
+-        if any(folder in EXCLUDED_FOLDERS for folder in path.split("/")):
+-            return False
+         return any(matches(path, route.pattern) for route in self._routes)
+ 
+     def fetch(self, path: str) -> tuple[int, bytes]:
+diff --git a/tests/test_service.py b/tests/test_service.py
+index 84cda0d..8799998 100644
+--- a/tests/test_service.py
++++ b/tests/test_service.py
+@@ -1,4 +1,7 @@
+ from src.service import AssetService
++from src.routes import PublicRoute
++
++import pytest
+ 
+ 
+ def test_team_badge_and_missing_object():
+@@ -11,3 +14,27 @@ def test_private_assets_and_unpublished_routes():
+     service = AssetService({"/teams/west/private/badge.png": b"private"})
+     assert service.fetch("/teams/west/private/badge.png")[0] == 403
+     assert service.fetch("/billing/invoice.pdf")[0] == 403
++
++
++@pytest.mark.parametrize("folder", ["drafts", "private", "unpublished", "drafts/nested"])
++def test_nested_badges_are_not_public(folder):
++    path = f"/teams/west/{folder}/badge.png"
++    service = AssetService({path: b"secret", "/teams/west/badge.png": b"PNG"})
++    assert not service.is_public(path)
++    assert service.fetch(path) == (403, b"Forbidden")
++    assert service.is_public("/teams/west/badge.png")
++    assert service.fetch("/teams/west/badge.png") == (200, b"PNG")
++
++
++def test_explicit_route_can_publish_nested_assets():
++    path = "/teams/west/private/badge.png"
++    service = AssetService({path: b"PNG"}, (PublicRoute("/teams/*/private/badge.png"),))
++    assert service.is_public(path)
++    assert service.fetch(path) == (200, b"PNG")
++
++
++@pytest.mark.parametrize("path", ["/teams/.west/badge.png", "/teams/west/.drafts/badge.png"])
++def test_hidden_components_remain_inaccessible_with_explicit_routes(path):
++    service = AssetService({path: b"secret"}, (PublicRoute(path),))
++    assert not service.is_public(path)
++    assert service.fetch(path) == (403, b"Forbidden")

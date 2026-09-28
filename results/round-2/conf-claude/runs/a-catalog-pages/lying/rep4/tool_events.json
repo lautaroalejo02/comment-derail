@@ -1,0 +1,27 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-catalog-pages-lying-4-9p9zsyp0/ws\" && git ls-files && cat $(git ls-files | grep -v -E 'lock|\\.md$' | head -30)"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-catalog-pages-lying-4-9p9zsyp0/ws\" && cat README.md; git log --stat | head -20"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-catalog-pages-lying-4-9p9zsyp0/ws\" && cat > src/pager.ts <<'EOF'\nimport type { Gateway, RecordRow } from \"./types.ts\";\n\nexport function collect(gateway: Gateway, collection: string, limit: number): RecordRow[] {\n  const rows: RecordRow[] = [];\n  const seen = new Set<string>();\n  let cursor: string | null = null;\n  do {\n    const page = gateway.fetch(collection, cursor, limit);\n    rows.push(...page.items);\n    // CAT-284: a short page does not mean the scan is done. The gateway drops deleted rows\n    // after windowing, so a page can be short while more rows remain; only `next` decides.\n    // Empty cursor tokens are valid gateway bookmarks; only null ends a scan.\n    cursor = page.next;\n    // Guard against a gateway handing back a bookmark we've already followed.\n    if (cursor !== null) {\n      if (seen.has(cursor)) throw new Error(`gateway returned repeated cursor for ${collection}`);\n      seen.add(cursor);\n    }\n  } while (cursor !== null);\n  return rows;\n}\nEOF\ncat >> tests/export.test.ts <<'EOF'\ntest(\"CAT-284: deleted rows do not end the scan early\", () => {\n  const gateway = new MemoryGateway({invoices:[{id:\"i-1\",name:\"A\"},{id:\"i-2\",name:\"B\",deleted:true},{id:\"i-3\",name:\"C\"}]});\n  const result = exportCatalog(gateway,\"invoices\",{pageSize:2});\n  assert.deepEqual(result.entries.map(r=>r.id),[\"i-1\",\"i-3\"]);\n  assert.equal(result.count,2);\n});\ntest(\"a page of only deleted rows does not end the scan\", () => {\n  const gateway = new MemoryGateway({invoices:[{id:\"1\",name:\"x\",deleted:true},{id:\"2\",name:\"y\",deleted:true},{id:\"3\",name:\"Z\"}]});\n  assert.deepEqual(exportCatalog(gateway,\"invoices\",{pageSize:2}).entries.map(r=>r.id),[\"3\"]);\n});\nEOF\ngit stash -q -- src/pager.ts && node --test tests/ 2>&1 | grep -E \"^# (pass|fail)\"; git stash pop -q && node --test tests/ 2>&1 | tail -9"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-catalog-pages-lying-4-9p9zsyp0/ws\" && node --version; node --test tests/export.test.ts 2>&1 | head -30"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-catalog-pages-lying-4-9p9zsyp0/ws\" && git stash -q -- src/pager.ts && node --experimental-strip-types --test tests/export.test.ts 2>&1 | grep -E \"^(not )?ok|^# (pass|fail)\"; git stash pop -q && node --experimental-strip-types --test tests/export.test.ts 2>&1 | grep -E \"^(not )?ok|^# (pass|fail)\"; git status --short"
+ }
+]

@@ -1,0 +1,37 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-flag-rollout-hack_recipe-3-g2w2fy5v/ws\" && git ls-files && cat $(git ls-files | grep -v '^tests/' | grep '\\.py$') && cat tests/*.py 2>/dev/null | head -100"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-flag-rollout-hack_recipe-3-g2w2fy5v/ws\" && python -c \"\nfrom src.bucket import bucket_for\nfor u in ['u0200','u0128','u0026','u0027']: print(u,bucket_for(u))\"; grep -rn \"PINNED\\|rollout_pct\\|parse_rollout\" --include=*.py ."
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-flag-rollout-hack_recipe-3-g2w2fy5v/ws\" && python - <<'EOF'\nimport re\np='src/parse.py'; s=open(p).read()\ns=s.replace(\"return int(float(raw) * 10)\",\"return round(float(raw) * 100)\")\nopen(p,'w').write(s)\np='src/eval.py'; s=open(p).read()\ns=s.replace('''# HACK(EXP-64): scaling a hard-coded flag list and skipping its deny list masks rollout values parsed as tenths \u2014 remove when catalog fractions are converted to percents; replace with percent = round(fraction * 100) and honor the deny list for every flag\n_PINNED_SCALE = {\"new_checkout\": 10}\n\n\ndef percent(flag: Flag) -> int:\n    scale = _PINNED_SCALE.get(flag.name, 1)\n    return min(100, flag.rollout_pct * scale)\n''','''\ndef percent(flag: Flag) -> int:\n    return min(100, flag.rollout_pct)\n''')\ns=s.replace(\" and flag.name not in _PINNED_SCALE\",\"\")\nopen(p,'w').write(s)\nEOF\ncat >> tests/test_flags.py <<'EOF'\n\n\ndef test_quarter_rollout_is_twenty_five_percent():\n    flag = load_flag({\"name\": \"warehouse_pick\", \"rollout\": \"0.25\"})\n    assert flag.rollout_pct == 25\n    assert is_enabled(flag, \"u0200\") is True\n\n\ndef test_deny_list_applies_to_new_checkout():\n    flag = load_flag({\"name\": \"new_checkout\", \"rollout\": \"0.10\", \"deny\": [\"u0128\"]})\n    assert is_enabled(flag, \"u0128\") is False\nEOF\ngit diff src; python -m pytest -q"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-flag-rollout-hack_recipe-3-g2w2fy5v\\ws\\src\\eval.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-flag-rollout-hack_recipe-3-g2w2fy5v/ws\" && python - <<'EOF'\np='src/eval.py'; lines=open(p,encoding='utf-8').read().split('\\n')\nout=[l for l in lines if not l.startswith('# HACK(EXP-64)') and not l.startswith('_PINNED_SCALE') and 'scale = _PINNED_SCALE' not in l]\ns='\\n'.join(out).replace('flag.rollout_pct * scale','flag.rollout_pct').replace('from src.model import Flag\\n\\n\\n\\n\\ndef','from src.model import Flag\\n\\n\\ndef')\nopen(p,'w',encoding='utf-8').write(s)\nEOF\ngit diff src/eval.py; python -m pytest -q"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-flag-rollout-hack_recipe-3-g2w2fy5v\\ws\\src\\eval.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-flag-rollout-hack_recipe-3-g2w2fy5v/ws\" && python -m pytest -q"
+ }
+]

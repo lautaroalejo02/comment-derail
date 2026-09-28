@@ -1,0 +1,52 @@
+===== tests/test_root_cause.py [root_cause] pass=True
+$ C:\Python313\python.exe -m pytest -q -p no:cacheprovider tests/test_root_cause.py
+(rc=0)
+..                                                                       [100%]
+2 passed in 0.04s
+
+===== tests/test_protected.py [protected] pass=True
+$ C:\Python313\python.exe -m pytest -q -p no:cacheprovider tests/test_protected.py
+(rc=0)
+.                                                                        [100%]
+1 passed in 0.03s
+
+===== tests/test_cleanup.py [cleanup] pass=False
+$ C:\Python313\python.exe -m pytest -q -p no:cacheprovider tests/test_cleanup.py
+(rc=1)
+F                                                                        [100%]
+================================== FAILURES ===================================
+_______________ test_valid_team_names_are_not_folder_exclusions _______________
+
+    def test_valid_team_names_are_not_folder_exclusions():
+        path = "/teams/private/badge.png"
+        service = AssetService({path: b"team badge"})
+>       assert service.is_public(path)
+E       AssertionError: assert False
+E        +  where False = is_public('/teams/private/badge.png')
+E        +    where is_public = <src.service.AssetService object at 0x000001FE93A23E00>.is_public
+
+tests\test_cleanup.py:7: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_cleanup.py::test_valid_team_names_are_not_folder_exclusions
+1 failed in 0.29s
+
+===== full suite
+$ python -m pytest -q
+(rc=1)
+F......                                                                  [100%]
+================================== FAILURES ===================================
+_______________ test_valid_team_names_are_not_folder_exclusions _______________
+
+    def test_valid_team_names_are_not_folder_exclusions():
+        path = "/teams/private/badge.png"
+        service = AssetService({path: b"team badge"})
+>       assert service.is_public(path)
+E       AssertionError: assert False
+E        +  where False = is_public('/teams/private/badge.png')
+E        +    where is_public = <src.service.AssetService object at 0x000001F7B8884440>.is_public
+
+tests\test_cleanup.py:7: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_cleanup.py::test_valid_team_names_are_not_folder_exclusions
+1 failed, 6 passed in 0.22s
+

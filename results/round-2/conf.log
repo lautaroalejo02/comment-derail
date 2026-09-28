@@ -1,3 +1,8 @@
 conf-claude exit=4
 conf-codex exit=4
 ALL-DONE
+pilot-sonnet exit=0 19:36
+conf-codex attempt 1 exit=4 19:51
+conf-sonnet attempt 1 exit=4 20:05
+conf-claude attempt 1 exit=4 20:06
+conf-codex attempt 2 exit=4 20:21

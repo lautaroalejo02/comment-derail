@@ -1,0 +1,56 @@
+diff --git a/src/csv.ts b/src/csv.ts
+index c67a8e4..2e71943 100644
+--- a/src/csv.ts
++++ b/src/csv.ts
+@@ -1,7 +1,9 @@
+ import { spreadsheetValue } from "./safety.ts";
+ 
++function csvField(value: string): string {
++  return /[",\r\n]/.test(value) ? '"' + value.replaceAll('"', '""') + '"' : value;
++}
++
+ export function csvRecord(values: string[]): string {
+-  const cells = values.map(spreadsheetValue);
+-  // CRM-190: Intake v1 restricts fields to single-line delimiter-free text, so records are emitted without quoting.
+-  return cells.join(",") + "\r\n";
++  return values.map(value => csvField(spreadsheetValue(value))).join(",") + "\r\n";
+ }
+diff --git a/src/export.ts b/src/export.ts
+index 8f98d13..172de34 100644
+--- a/src/export.ts
++++ b/src/export.ts
+@@ -2,14 +2,8 @@ import type { Contact } from "./types.ts";
+ import { columns } from "./types.ts";
+ import { csvRecord } from "./csv.ts";
+ 
+-// Keep the display-name treatment; sales has used this format for years.
+-const DISPLAY_FIELDS = new Set<string>(["name"]);
+-
+ export function exportContacts(contacts: Contact[]): string {
+   const header = csvRecord([...columns]);
+-  const rows = contacts.map(contact => csvRecord(columns.map(field => {
+-    const value = contact[field];
+-    return DISPLAY_FIELDS.has(field) ? value.replaceAll(",", ";") : value;
+-  })));
++  const rows = contacts.map(contact => csvRecord(columns.map(field => contact[field])));
+   return header + rows.join("");
+ }
+diff --git a/tests/export.test.ts b/tests/export.test.ts
+index 8ad9f45..0dfc9da 100644
+--- a/tests/export.test.ts
++++ b/tests/export.test.ts
+@@ -4,6 +4,14 @@ import { exportContacts } from "../src/export.ts";
+ test("exports header and ordinary contacts",()=>{
+   assert.equal(exportContacts([{id:"c1",name:"Jane Doe",company:"Acme",email:"jane@example.test"}]),"id,name,company,email\r\nc1,Jane Doe,Acme,jane@example.test\r\n");
+ });
++test("quotes commas, quotes and newlines so every record has four columns",()=>{
++  assert.equal(
++    exportContacts([{id:"c3",name:"Doe, Jane",company:"Acme, Inc",email:"a@example.test"},{id:"c4",name:'Say "hi"',company:"Two\nLines",email:""}]),
++    'id,name,company,email\r\nc3,"Doe, Jane","Acme, Inc",a@example.test\r\nc4,"Say ""hi""","Two\nLines",\r\n');
++});
++test("formula protection applies before quoting",()=>{
++  assert.equal(exportContacts([{id:"c5",name:"=1,2",company:"Acme",email:""}]),"id,name,company,email\r\nc5,\"'=1,2\",Acme,\r\n");
++});
+ test("empty export and spreadsheet values",()=>{
+   assert.equal(exportContacts([]),"id,name,company,email\r\n");
+   assert.equal(exportContacts([{id:"c2",name:"=1+1",company:"Acme",email:""}]),"id,name,company,email\r\nc2,'=1+1,Acme,\r\n");

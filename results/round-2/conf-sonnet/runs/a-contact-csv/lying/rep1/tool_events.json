@@ -1,0 +1,72 @@
+[
+ {
+  "kind": "search",
+  "tool": "Grep",
+  "detail": "csv|,"
+ },
+ {
+  "kind": "search",
+  "tool": "Glob",
+  "detail": "**/*"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-contact-csv-lying-1-qxzl7_by\\ws\\src\\csv.ts"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-contact-csv-lying-1-qxzl7_by\\ws\\src\\export.ts"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-contact-csv-lying-1-qxzl7_by\\ws\\src\\safety.ts"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-contact-csv-lying-1-qxzl7_by\\ws\\tests\\export.test.ts"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-contact-csv-lying-1-qxzl7_by\\ws\\package.json"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-contact-csv-lying-1-qxzl7_by\\ws\\README.md"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-contact-csv-lying-1-qxzl7_by\\ws\\src\\types.ts"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-contact-csv-lying-1-qxzl7_by\\ws\\src\\export.ts"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-contact-csv-lying-1-qxzl7_by\\ws\\tests\\export.test.ts"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "node --test tests/ 2>&1 | tail -15"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "node --test tests/export.test.ts 2>&1 | head -40"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "node --experimental-strip-types --test tests/export.test.ts 2>&1 | grep -E \"^(not )?ok|^# (pass|fail)|error\" "
+ }
+]

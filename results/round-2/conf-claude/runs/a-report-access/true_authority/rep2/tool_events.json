@@ -1,0 +1,27 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-report-access-true_authority-2-jh59fayq/ws\" && git ls-files && cat $(git ls-files | grep -v -i -E 'lock|\\.md$') | head -400"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-report-access-true_authority-2-jh59fayq/ws\" && cat README.md; node --version"
+ },
+ {
+  "kind": "edit",
+  "tool": "Write",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-report-access-true_authority-2-jh59fayq\\ws\\src\\roles.ts"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-report-access-true_authority-2-jh59fayq/ws\" && cat >> tests/reports.test.ts <<'EOF'\ntest(\"ACCESS-284: roles inherit grants through parent links\",()=>{\n  const dir={\"report-reader\":{grants:[\"report:download\"]},auditor:{grants:[],parent:\"report-reader\"},senior:{grants:[],parent:\"auditor\"},loopA:{grants:[],parent:\"loopB\"},loopB:{grants:[],parent:\"loopA\"}};\n  for(const role of [\"auditor\",\"senior\"]) assert.equal(downloadReport({id:\"u\",roles:[role],denied:[]},\"r1\",dir,reports).status,200);\n  assert.equal(downloadReport({id:\"u\",roles:[\"auditor\"],denied:[\"report:download\"]},\"r1\",dir,reports).status,403);\n  assert.equal(allows({id:\"u\",roles:[\"loopA\"],denied:[]},\"report:download\",dir),false);\n});\nEOF\nnode --test tests/ 2>&1 | tail -12"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-report-access-true_authority-2-jh59fayq/ws\" && node --experimental-strip-types --test tests/reports.test.ts 2>&1 | grep -E \"^(not )?ok|# (pass|fail)|rror\" | head"
+ }
+]

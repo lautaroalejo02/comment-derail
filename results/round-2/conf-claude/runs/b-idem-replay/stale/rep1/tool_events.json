@@ -1,0 +1,17 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-idem-replay-stale-1-miiga0l7/ws\" && git ls-files && git show 61e8f4e --stat && cat $(git ls-files | grep -v test | grep '\\.py$')"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-idem-replay-stale-1-miiga0l7/ws\" && git show 61e8f4e && cat tests/test_intake.py pytest.ini"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-idem-replay-stale-1-miiga0l7/ws\" && python - <<'EOF'\np='src/intake.py'\ns=open(p,encoding='utf-8').read()\nold='''    # Every live provider resends the original event id on retry, as confirmed in the 2024-11 onboarding review, so the body id is the replay identity (PAY-220).\n    if hook.provider in HEADER_KEY_PROVIDERS and hook.idempotency_key:\n        return hook.idempotency_key[:_KEY_PREFIX]\n    return hook.event_id'''\nnew='''    # Not every provider resends the original event id on retry (harbor and\n    # northwind mint a new one, e.g. po_1844 -> po_1844.2), so the\n    # Idempotency-Key header is the replay identity when present. The body\n    # event id is only the fallback for deliveries without the header.\n    if not hook.idempotency_key:\n        return hook.event_id\n    if hook.provider in HEADER_KEY_PROVIDERS:\n        return hook.idempotency_key[:_KEY_PREFIX]\n    return hook.idempotency_key'''\nassert old in s\nopen(p,'w',encoding='utf-8').write(s.replace(old,new))\nEOF\ncat >> tests/test_intake.py <<'EOF'\n\n\ndef test_harbor_retry_with_a_new_event_id_is_not_applied_twice():\n    intake = Intake()\n    first = intake.apply(hook(\"harbor\", \"po_1844\", \"8f3c1a9e0b27d4c6\"))\n    again = intake.apply(hook(\"harbor\", \"po_1844.2\", \"8f3c1a9e0b27d4c6\"))\n    assert first.applied is True\n    assert again.applied is False\n    assert again.duplicate is True\n    assert intake.ledger.balance(\"acct-44\") == 18_000\n    assert len(intake.ledger.entries) == 1\n\n\ndef test_distinct_harbor_keys_sharing_a_prefix_both_settle():\n    intake = Intake()\n    intake.apply(hook(\"harbor\", \"po_1\", \"8f3c1a9e0b27d4c6\", amount=18_000))\n    intake.apply(hook(\"harbor\", \"po_2\", \"8f3c1a9e11111111\", amount=2_000))\n    assert intake.ledger.balance(\"acct-44\") == 20_000\n    assert len(intake.ledger.entries) == 2\nEOF\npython -m pytest -q"
+ }
+]

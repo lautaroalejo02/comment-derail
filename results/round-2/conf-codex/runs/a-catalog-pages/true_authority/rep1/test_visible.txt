@@ -1,0 +1,42 @@
+$ node --experimental-strip-types --test "tests/**/*.test.ts"
+(rc=0)
+TAP version 13
+# Subtest: invoice exports continue past pages shortened by deleted records
+ok 1 - invoice exports continue past pages shortened by deleted records
+  ---
+  duration_ms: 6.9729
+  type: 'test'
+  ...
+# Subtest: invoice exports continue past entirely deleted pages
+ok 2 - invoice exports continue past entirely deleted pages
+  ---
+  duration_ms: 1.0367
+  type: 'test'
+  ...
+# Subtest: empty continuation bookmarks are forwarded and null ends the scan
+ok 3 - empty continuation bookmarks are forwarded and null ends the scan
+  ---
+  duration_ms: 1.0579
+  type: 'test'
+  ...
+# Subtest: exports a collection in storage order
+ok 4 - exports a collection in storage order
+  ---
+  duration_ms: 0.7616
+  type: 'test'
+  ...
+# Subtest: project migration and empty collections
+ok 5 - project migration and empty collections
+  ---
+  duration_ms: 1.913
+  type: 'test'
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 5
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 667.2874

@@ -2,27 +2,27 @@
  {
   "kind": "shell",
   "tool": "command_execution",
-  "detail": "\"C:\\\\WINDOWS\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command \"pwd; rg --files -g AGENTS.md -g '*asset*' -g '*test*' -g 'package.json' -g 'pyproject.toml'\""
+  "detail": "\"C:\\\\WINDOWS\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command \"Get-Location; rg --files -g AGENTS.md -g '*asset*' -g '*route*' -g '*test*' -g 'package.json' -g 'pyproject.toml'\""
  },
  {
   "kind": "shell",
   "tool": "command_execution",
-  "detail": "\"C:\\\\WINDOWS\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command 'rg --files; git status --short; Get-ChildItem -Path .. -Filter AGENTS.md'"
+  "detail": "\"C:\\\\WINDOWS\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command 'rg --files -Force; Get-Content src/routes.py; Get-Content tests/test_service.py'"
  },
  {
   "kind": "shell",
   "tool": "command_execution",
-  "detail": "\"C:\\\\WINDOWS\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command 'Get-Content src/visibility.py,src/matcher.py,src/routes.py,src/service.py,tests/test_service.py,README.md'"
+  "detail": "\"C:\\\\WINDOWS\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command 'Get-Content src/visibility.py; Get-Content src/matcher.py; Get-Content src/service.py; Get-Content README.md; Get-Content pytest.ini; git status --short'"
  },
  {
   "kind": "edit",
   "tool": "file_change",
-  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-asset-routes-lying-4-8gfpppr1\\ws\\src\\service.py"
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-asset-routes-lying-4-l931ovlh\\ws\\src\\service.py"
  },
  {
   "kind": "edit",
   "tool": "file_change",
-  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-asset-routes-lying-4-8gfpppr1\\ws\\tests\\test_service.py"
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-asset-routes-lying-4-l931ovlh\\ws\\tests\\test_service.py"
  },
  {
   "kind": "shell",

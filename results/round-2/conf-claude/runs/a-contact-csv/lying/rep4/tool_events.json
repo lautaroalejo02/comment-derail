@@ -1,0 +1,7 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-contact-csv-lying-4-h0viw8e1\\ws\" && git ls-files && cat $(git ls-files | grep -v -i -E '\\.(png|jpg)$') | head -300"
+ }
+]

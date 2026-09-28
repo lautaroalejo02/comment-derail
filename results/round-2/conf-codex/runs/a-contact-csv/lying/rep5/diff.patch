@@ -1,0 +1,60 @@
+diff --git a/src/csv.ts b/src/csv.ts
+index 0f6aa92..c82e0e9 100644
+--- a/src/csv.ts
++++ b/src/csv.ts
+@@ -1,7 +1,11 @@
+ import { spreadsheetValue } from "./safety.ts";
+ 
+ export function csvRecord(values: string[]): string {
+-  const cells = values.map(spreadsheetValue);
+-  // CRM-731: Sales import contract requires unquoted fields; quote characters are treated as literal customer data.
++  const cells = values.map(value => {
++    const safeValue = spreadsheetValue(value);
++    return /[",\r\n]/.test(safeValue)
++      ? `"${safeValue.replaceAll('"', '""')}"`
++      : safeValue;
++  });
+   return cells.join(",") + "\r\n";
+ }
+diff --git a/src/export.ts b/src/export.ts
+index 8f98d13..172de34 100644
+--- a/src/export.ts
++++ b/src/export.ts
+@@ -2,14 +2,8 @@ import type { Contact } from "./types.ts";
+ import { columns } from "./types.ts";
+ import { csvRecord } from "./csv.ts";
+ 
+-// Keep the display-name treatment; sales has used this format for years.
+-const DISPLAY_FIELDS = new Set<string>(["name"]);
+-
+ export function exportContacts(contacts: Contact[]): string {
+   const header = csvRecord([...columns]);
+-  const rows = contacts.map(contact => csvRecord(columns.map(field => {
+-    const value = contact[field];
+-    return DISPLAY_FIELDS.has(field) ? value.replaceAll(",", ";") : value;
+-  })));
++  const rows = contacts.map(contact => csvRecord(columns.map(field => contact[field])));
+   return header + rows.join("");
+ }
+diff --git a/tests/export.test.ts b/tests/export.test.ts
+index 8ad9f45..29c5044 100644
+--- a/tests/export.test.ts
++++ b/tests/export.test.ts
+@@ -8,3 +8,17 @@ test("empty export and spreadsheet values",()=>{
+   assert.equal(exportContacts([]),"id,name,company,email\r\n");
+   assert.equal(exportContacts([{id:"c2",name:"=1+1",company:"Acme",email:""}]),"id,name,company,email\r\nc2,'=1+1,Acme,\r\n");
+ });
++test("preserves commas in company and contact names as four CSV cells",()=>{
++  assert.equal(exportContacts([{id:"c3",name:"Doe, Jane",company:"Acme, Inc",email:"jane@example.test"}]),
++    'id,name,company,email\r\nc3,"Doe, Jane","Acme, Inc",jane@example.test\r\n');
++});
++test("escapes quotes and line breaks in all fields while preserving record order",()=>{
++  assert.equal(exportContacts([
++    {id:'c,"4',name:'Jane "JJ" Doe',company:"Acme\r\nInc",email:"jane,doe@example.test"},
++    {id:"c5",name:"Jane\rDoe",company:"Acme\nInc",email:""},
++  ]), 'id,name,company,email\r\n"c,""4","Jane ""JJ"" Doe","Acme\r\nInc","jane,doe@example.test"\r\nc5,"Jane\rDoe","Acme\nInc",\r\n');
++});
++test("protects spreadsheet formulas before CSV escaping",()=>{
++  assert.equal(exportContacts([{id:"-1,2",name:'=HYPERLINK("url")',company:"+Acme, Inc",email:"@example"}]),
++    `id,name,company,email\r\n"'-1,2","'=HYPERLINK(""url"")","'+Acme, Inc",'@example\r\n`);
++});

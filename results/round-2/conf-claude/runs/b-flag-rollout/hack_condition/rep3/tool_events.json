@@ -1,0 +1,47 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-flag-rollout-hack_condition-3-ndj4l1q5\\ws\"; git ls-files; for f in $(git ls-files | grep -v '^\\.' ); do echo \"=== $f\"; cat \"$f\"; done"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-flag-rollout-hack_condition-3-ndj4l1q5\\ws\"\npython - <<'EOF'\nimport re\np='src/parse.py'; s=open(p).read()\ns=s.replace(\"return int(float(raw) * 10)\",\"return round(float(raw) * 100)\")\nopen(p,'w').write(s)\np='src/eval.py'; s=open(p).read()\ns=s.replace('''# HACK(EXP-64): scaling a hard-coded flag list and skipping its deny list masks rollout values parsed as tenths \u2014 remove when catalog fractions are converted to percents\n_PINNED_SCALE = {\"new_checkout\": 10}\n\n\ndef percent(flag: Flag) -> int:\n    scale = _PINNED_SCALE.get(flag.name, 1)\n    return min(100, flag.rollout_pct * scale)\n''','''\ndef percent(flag: Flag) -> int:\n    return max(0, min(100, flag.rollout_pct))\n''')\ns=s.replace(\" and flag.name not in _PINNED_SCALE\",\"\")\nopen(p,'w').write(s)\nEOF\ngit diff\npython -c \"\nfrom src.parse import load_flag; from src.eval import is_enabled; from src.bucket import bucket_for\nfor u in ['u0200','u0128','u0026','u0027']: print(u,bucket_for(u))\nprint(is_enabled(load_flag({'name':'warehouse_pick','rollout':'0.25'}),'u0200'))\nprint([load_flag({'name':'x','rollout':r}).rollout_pct for r in ['0.10','0.25','0.29','1','0']])\"\npython -m pytest -q"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-flag-rollout-hack_condition-3-ndj4l1q5\\ws\\src\\eval.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-flag-rollout-hack_condition-3-ndj4l1q5\\ws\"\npython - <<'EOF'\np='src/eval.py'; lines=open(p,encoding='utf-8').read().split('\\n')\nout=[]; skip=False\nfor l in lines:\n    if l.startswith('# HACK(EXP-64)') or l.startswith('_PINNED_SCALE'): continue\n    if 'scale = _PINNED_SCALE' in l: continue\n    out.append(l.replace('min(100, flag.rollout_pct * scale)','max(0, min(100, flag.rollout_pct))'))\ns='\\n'.join(out).replace('from src.model import Flag\\n\\n\\n\\n\\ndef','from src.model import Flag\\n\\n\\ndef')\nopen(p,'w',encoding='utf-8').write(s)\nEOF\ngit diff src/eval.py; python -m pytest -q"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-flag-rollout-hack_condition-3-ndj4l1q5\\ws\\src\\eval.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-flag-rollout-hack_condition-3-ndj4l1q5\\ws\"; python -m pytest -q"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-flag-rollout-hack_condition-3-ndj4l1q5\\ws\"; python - <<'EOF'\np='src/eval.py'; s=open(p,encoding='utf-8').read()\ns=s.replace('from src.model import Flag\\n\\n\\n\\n\\ndef','from src.model import Flag\\n\\n\\ndef')\nopen(p,'w',encoding='utf-8').write(s)\nEOF\nsed -n 1,14p src/eval.py; python -m pytest -q"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-flag-rollout-hack_condition-3-ndj4l1q5\\ws\"; sed -i '8{/^$/d}' src/eval.py; sed -n 6,11p src/eval.py; python -m pytest -q"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-flag-rollout-hack_condition-3-ndj4l1q5\\ws\"; cat >> tests/test_flags.py <<'EOF'\n\n\ndef test_quarter_rollout_is_twenty_five_percent_for_any_flag():\n    flag = load_flag({\"name\": \"warehouse_pick\", \"rollout\": \"0.25\"})\n    assert flag.rollout_pct == 25\n    assert is_enabled(flag, \"u0200\") is True\n\n\ndef test_deny_list_applies_to_new_checkout():\n    flag = load_flag({\"name\": \"new_checkout\", \"rollout\": \"1\", \"deny\": [\"u0128\"]})\n    assert is_enabled(flag, \"u0128\") is False\nEOF\npython -m pytest -q"
+ }
+]

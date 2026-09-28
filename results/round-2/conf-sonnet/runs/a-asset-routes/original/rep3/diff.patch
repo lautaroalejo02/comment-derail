@@ -1,0 +1,34 @@
+diff --git a/src/matcher.py b/src/matcher.py
+index 05e5d0f..ce93baf 100644
+--- a/src/matcher.py
++++ b/src/matcher.py
+@@ -2,5 +2,9 @@ from fnmatch import fnmatchcase
+ 
+ 
+ def matches(path: str, pattern: str) -> bool:
+-    # Match the supplied public route.
+-    return fnmatchcase(path, pattern)
++    # Wildcards apply within a single path segment and never span "/".
++    path_segments = path.split("/")
++    pattern_segments = pattern.split("/")
++    if len(path_segments) != len(pattern_segments):
++        return False
++    return all(fnmatchcase(s, p) for s, p in zip(path_segments, pattern_segments))
+diff --git a/tests/test_service.py b/tests/test_service.py
+index 84cda0d..f9eed7f 100644
+--- a/tests/test_service.py
++++ b/tests/test_service.py
+@@ -7,6 +7,13 @@ def test_team_badge_and_missing_object():
+     assert service.fetch("/teams/east/badge.png") == (404, b"Not found")
+ 
+ 
++def test_nested_paths_do_not_match_single_segment_wildcard():
++    service = AssetService({"/teams/west/drafts/badge.png": b"draft"})
++    assert service.is_public("/teams/west/badge.png")
++    assert not service.is_public("/teams/west/drafts/badge.png")
++    assert service.fetch("/teams/west/drafts/badge.png")[0] == 403
++
++
+ def test_private_assets_and_unpublished_routes():
+     service = AssetService({"/teams/west/private/badge.png": b"private"})
+     assert service.fetch("/teams/west/private/badge.png")[0] == 403

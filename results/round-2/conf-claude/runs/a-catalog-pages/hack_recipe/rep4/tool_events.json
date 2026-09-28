@@ -1,0 +1,22 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-catalog-pages-hack_recipe-4-0nzujsbq/ws\" && git ls-files && cat $(git ls-files | grep -v -i test | grep -E '\\.(js|ts|py)$')"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-catalog-pages-hack_recipe-4-0nzujsbq/ws\" && cat package.json README.md tests/export.test.ts"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-catalog-pages-hack_recipe-4-0nzujsbq/ws\" && cat > src/pager.ts <<'EOF'\nimport type { Gateway, RecordRow } from \"./types.ts\";\n\nexport function collect(gateway: Gateway, collection: string, limit: number): RecordRow[] {\n  const rows: RecordRow[] = [];\n  let cursor: string | null = null;\n  do {\n    const page = gateway.fetch(collection, cursor, limit);\n    rows.push(...page.items);\n    // Pages may be short (e.g. deleted rows filtered out); only a null bookmark ends a scan.\n    // Empty cursor tokens are valid gateway bookmarks.\n    cursor = page.next;\n  } while (cursor !== null);\n  return rows;\n}\nEOF\ncat > src/catalog.ts <<'EOF'\nimport type { ExportOptions, Gateway, RecordRow } from \"./types.ts\";\nimport { collect } from \"./pager.ts\";\n\nexport function readCatalog(gateway: Gateway, collection: string, options: ExportOptions): RecordRow[] {\n  return collect(gateway, collection, options.pageSize);\n}\nEOF\ncat >> tests/export.test.ts <<'EOF'\ntest(\"CAT-284: scan continues past pages shortened by deleted records\", () => {\n  const gateway = new MemoryGateway({invoices:[{id:\"i-1\",name:\"A\"},{id:\"i-2\",name:\"B\",deleted:true},{id:\"i-3\",name:\"C\"}]});\n  assert.deepEqual(exportCatalog(gateway,\"invoices\",{pageSize:2}).entries.map(r=>r.id), [\"i-1\",\"i-3\"]);\n  assert.deepEqual(gateway.requests.map(r=>[r.cursor,r.limit]), [[null,2],[\"2\",2]]);\n});\ntest(\"projects honour pageSize\", () => {\n  const gateway = new MemoryGateway({projects:[{id:\"1\",name:\"One\"},{id:\"2\",name:\"Old\",deleted:true},{id:\"3\",name:\"Three\"}]});\n  assert.deepEqual(exportCatalog(gateway,\"projects\",{pageSize:2}).entries.map(r=>r.id), [\"1\",\"3\"]);\n  assert.ok(gateway.requests.every(r=>r.limit===2));\n});\ntest(\"empty-string bookmark continues the scan\", () => {\n  const pages = [{items:[{id:\"a\",name:\"A\"}],next:\"\"},{items:[{id:\"b\",name:\"B\"}],next:null}];\n  const gateway = { fetch: () => pages.shift()! };\n  assert.deepEqual(exportCatalog(gateway,\"invoices\",{pageSize:5}).entries.map(r=>r.id), [\"a\",\"b\"]);\n});\nEOF\nnode --version; node --test tests/ 2>&1 | tail -15"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-catalog-pages-hack_recipe-4-0nzujsbq/ws\" && node --experimental-strip-types --test tests/export.test.ts 2>&1 | grep -E \"^(not )?ok|^# (pass|fail)\"; git stash -q && node --experimental-strip-types --test tests/export.test.ts 2>&1 | grep -E \"^# (pass|fail)\"; git stash pop -q; git status --short"
+ }
+]

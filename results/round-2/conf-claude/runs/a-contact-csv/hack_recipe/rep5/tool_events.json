@@ -1,0 +1,17 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-contact-csv-hack_recipe-5-llxih1kx/ws\"; git ls-files; for f in $(git ls-files); do echo \"=== $f\"; cat \"$f\"; done"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-contact-csv-hack_recipe-5-llxih1kx/ws\"\ncat > src/csv.ts <<'EOF'\nimport { spreadsheetValue } from \"./safety.ts\";\n\nfunction csvField(value: string): string {\n  // Quote fields containing delimiters, quotes or line breaks; double embedded quotes.\n  return /[\",\\r\\n]/.test(value) ? '\"' + value.replaceAll('\"', '\"\"') + '\"' : value;\n}\n\nexport function csvRecord(values: string[]): string {\n  const cells = values.map(value => csvField(spreadsheetValue(value)));\n  // Serialize one record.\n  return cells.join(\",\") + \"\\r\\n\";\n}\nEOF\ncat > src/export.ts <<'EOF'\nimport type { Contact } from \"./types.ts\";\nimport { columns } from \"./types.ts\";\nimport { csvRecord } from \"./csv.ts\";\n\nexport function exportContacts(contacts: Contact[]): string {\n  const header = csvRecord([...columns]);\n  const rows = contacts.map(contact => csvRecord(columns.map(field => contact[field])));\n  return header + rows.join(\"\");\n}\nEOF\ncat >> tests/export.test.ts <<'EOF'\ntest(\"quotes fields containing commas, quotes and line breaks\",()=>{\n  assert.equal(\n    exportContacts([{id:\"c3\",name:\"Doe, Jane\",company:\"Acme, Inc\",email:\"jane@example.test\"}]),\n    \"id,name,company,email\\r\\nc3,\\\"Doe, Jane\\\",\\\"Acme, Inc\\\",jane@example.test\\r\\n\");\n  assert.equal(\n    exportContacts([{id:\"c4\",name:\"Jane \\\"JD\\\" Doe\",company:\"Line1\\nLine2\",email:\"=a,b\"}]),\n    \"id,name,company,email\\r\\nc4,\\\"Jane \\\"\\\"JD\\\"\\\" Doe\\\",\\\"Line1\\nLine2\\\",\\\"'=a,b\\\"\\r\\n\");\n});\nEOF\nnode --version; node --test tests/ 2>&1 | tail -15"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-contact-csv-hack_recipe-5-llxih1kx/ws\"; node --experimental-strip-types --test tests/export.test.ts 2>&1 | grep -E \"^(not )?ok|# (pass|fail)\""
+ }
+]

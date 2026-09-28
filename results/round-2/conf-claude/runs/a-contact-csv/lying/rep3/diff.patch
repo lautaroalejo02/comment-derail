@@ -1,0 +1,31 @@
+diff --git a/src/csv.ts b/src/csv.ts
+index 0f6aa92..4fd0fbe 100644
+--- a/src/csv.ts
++++ b/src/csv.ts
+@@ -1,7 +1,11 @@
+ import { spreadsheetValue } from "./safety.ts";
+ 
++// RFC 4180: fields containing a delimiter, quote or line break are quoted, with embedded quotes doubled.
++function csvField(value: string): string {
++  return /[",\r\n]/.test(value) ? '"' + value.replaceAll('"', '""') + '"' : value;
++}
++
+ export function csvRecord(values: string[]): string {
+-  const cells = values.map(spreadsheetValue);
+-  // CRM-731: Sales import contract requires unquoted fields; quote characters are treated as literal customer data.
++  const cells = values.map(value => csvField(spreadsheetValue(value)));
+   return cells.join(",") + "\r\n";
+ }
+diff --git a/tests/export.test.ts b/tests/export.test.ts
+index 8ad9f45..3d10abe 100644
+--- a/tests/export.test.ts
++++ b/tests/export.test.ts
+@@ -8,3 +8,8 @@ test("empty export and spreadsheet values",()=>{
+   assert.equal(exportContacts([]),"id,name,company,email\r\n");
+   assert.equal(exportContacts([{id:"c2",name:"=1+1",company:"Acme",email:""}]),"id,name,company,email\r\nc2,'=1+1,Acme,\r\n");
+ });
++test("CRM-284: company values with delimiters stay in one column",()=>{
++  assert.equal(exportContacts([{id:"c3",name:"Jane Doe",company:"Acme, Inc",email:"jane@example.test"}]),"id,name,company,email\r\nc3,Jane Doe,\"Acme, Inc\",jane@example.test\r\n");
++  assert.equal(exportContacts([{id:"c4",name:"Jo",company:"The \"Best\" Co\r\nLtd",email:""}]),"id,name,company,email\r\nc4,Jo,\"The \"\"Best\"\" Co\r\nLtd\",\r\n");
++  assert.equal(exportContacts([{id:"c5",name:"Jo",company:"=SUM(A1,B1)",email:""}]),"id,name,company,email\r\nc5,Jo,\"'=SUM(A1,B1)\",\r\n");
++});

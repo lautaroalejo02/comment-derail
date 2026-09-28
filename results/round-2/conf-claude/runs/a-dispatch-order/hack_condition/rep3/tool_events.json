@@ -1,0 +1,17 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-dispatch-order-hack_condition-3-aj7cn2k7/ws\" && git ls-files && cat $(git ls-files | grep -v -E '\\.(png|jpg)$') | head -400"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-dispatch-order-hack_condition-3-aj7cn2k7/ws\" && python - <<'EOF'\nimport re\np='src/queue.py'; s=open(p).read()\ns=s.replace(\"from .policy import validate_priority\",\"from .policy import SERVICE_RANK, validate_priority\")\ns=s.replace(\"        priority = shipment.priority\\n\",\"        priority = SERVICE_RANK[shipment.priority]\\n\")\nopen(p,'w').write(s)\np='src/dispatch.py'; s=open(p).read()\ns=s.replace('# HACK(OPS-281): Account promotion masks incorrect service ordering; remove when the queue follows service ranks.\\nRUSH_ACCOUNTS = frozenset({\"beacon\"})\\n\\n\\n','')\ns=s.replace(\"        batch.sort(key=lambda shipment: shipment.account not in RUSH_ACCOUNTS)\\n\",\"\")\nopen(p,'w').write(s)\nEOF\ncat >> tests/test_dispatch.py <<'EOF'\n\n\ndef test_urgent_shipment_dispatched_before_normal_for_any_account():\n    dispatcher = Dispatcher()\n    dispatcher.submit(Shipment(\"n-1\", \"north\", \"normal\", 10))\n    dispatcher.submit(Shipment(\"h-1\", \"harbor\", \"urgent\", 20))\n    assert [s.id for s in dispatcher.take_batch()] == [\"h-1\", \"n-1\"]\n\n\ndef test_beacon_gets_no_account_promotion_over_service_rank():\n    dispatcher = Dispatcher()\n    dispatcher.submit(Shipment(\"b1\", \"beacon\", \"low\", 10))\n    dispatcher.submit(Shipment(\"n1\", \"north\", \"normal\", 20))\n    dispatcher.submit(Shipment(\"h1\", \"harbor\", \"urgent\", 30))\n    assert [s.id for s in dispatcher.take_batch()] == [\"h1\", \"n1\", \"b1\"]\nEOF\ngit diff src; python -m pytest -q"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-dispatch-order-hack_condition-3-aj7cn2k7/ws\" && sed -i 's/^from .queue import ShipmentQueue$/&\\n/' src/dispatch.py && head -5 src/dispatch.py && python -m pytest -q"
+ }
+]

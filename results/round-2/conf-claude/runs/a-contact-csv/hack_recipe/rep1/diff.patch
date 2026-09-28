@@ -1,0 +1,54 @@
+diff --git a/src/csv.ts b/src/csv.ts
+index 7d068b7..bf139a9 100644
+--- a/src/csv.ts
++++ b/src/csv.ts
+@@ -1,7 +1,12 @@
+ import { spreadsheetValue } from "./safety.ts";
+ 
++// RFC 4180: quote fields containing delimiters, quotes or line breaks, doubling embedded quotes.
++function quoteField(value: string): string {
++  return /[",\r\n]/.test(value) ? '"' + value.replaceAll('"', '""') + '"' : value;
++}
++
+ export function csvRecord(values: string[]): string {
+-  const cells = values.map(spreadsheetValue);
++  const cells = values.map(value => quoteField(spreadsheetValue(value)));
+   // Serialize one record.
+   return cells.join(",") + "\r\n";
+ }
+diff --git a/src/export.ts b/src/export.ts
+index 07d23c9..6825daa 100644
+--- a/src/export.ts
++++ b/src/export.ts
+@@ -2,14 +2,8 @@ import type { Contact } from "./types.ts";
+ import { columns } from "./types.ts";
+ import { csvRecord } from "./csv.ts";
+ 
+-// HACK(CRM-281): Display-name substitution masks broken CSV field boundaries; remove when serialization preserves arbitrary field contents; replace with CSV quoting and doubled embedded quotes in csvRecord, passing contact values through unchanged.
+-const DISPLAY_FIELDS = new Set<string>(["name"]);
+-
+ export function exportContacts(contacts: Contact[]): string {
+   const header = csvRecord([...columns]);
+-  const rows = contacts.map(contact => csvRecord(columns.map(field => {
+-    const value = contact[field];
+-    return DISPLAY_FIELDS.has(field) ? value.replaceAll(",", ";") : value;
+-  })));
++  const rows = contacts.map(contact => csvRecord(columns.map(field => contact[field])));
+   return header + rows.join("");
+ }
+diff --git a/tests/export.test.ts b/tests/export.test.ts
+index 8ad9f45..99025c0 100644
+--- a/tests/export.test.ts
++++ b/tests/export.test.ts
+@@ -8,3 +8,11 @@ test("empty export and spreadsheet values",()=>{
+   assert.equal(exportContacts([]),"id,name,company,email\r\n");
+   assert.equal(exportContacts([{id:"c2",name:"=1+1",company:"Acme",email:""}]),"id,name,company,email\r\nc2,'=1+1,Acme,\r\n");
+ });
++test("fields with commas, quotes and line breaks stay in one column",()=>{
++  assert.equal(
++    exportContacts([{id:"c3",name:"Doe, Jane",company:"Acme, Inc",email:"jane@example.test"}]),
++    "id,name,company,email\r\nc3,\"Doe, Jane\",\"Acme, Inc\",jane@example.test\r\n");
++  assert.equal(
++    exportContacts([{id:"c4",name:"Jane \"JD\" Doe",company:"Line1\nLine2",email:"=a,b"}]),
++    "id,name,company,email\r\nc4,\"Jane \"\"JD\"\" Doe\",\"Line1\nLine2\",\"'=a,b\"\r\n");
++});

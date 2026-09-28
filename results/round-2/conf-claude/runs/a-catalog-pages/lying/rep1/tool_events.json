@@ -1,0 +1,27 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-catalog-pages-lying-1-04nn1rpn/ws\"; git ls-files; cat package.json 2>/dev/null"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-catalog-pages-lying-1-04nn1rpn/ws\"; for f in README.md src/*.ts tests/*.ts; do echo \"=== $f\"; cat -n $f; done"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-catalog-pages-lying-1-04nn1rpn/ws\"; node --version; cat > src/gateway.ts <<'EOF'\nimport type { Gateway, Page, RecordRow } from \"./types.ts\";\n\nexport class MemoryGateway implements Gateway {\n  readonly requests: { collection: string; cursor: string | null; limit: number }[] = [];\n  private collections: Record<string, RecordRow[]>;\n  constructor(collections: Record<string, RecordRow[]>) { this.collections = collections; }\n  fetch(collection: string, cursor: string | null, limit: number): Page {\n    if (!Number.isInteger(limit) || limit < 1) throw new RangeError(\"limit\");\n    this.requests.push({ collection, cursor, limit });\n    const rows = this.collections[collection] ?? [];\n    // Fill the page with live rows so a short page only ever means the end of the collection (CAT-731).\n    const items: RecordRow[] = [];\n    let index = cursor === null ? 0 : Number(cursor);\n    for (; index < rows.length && items.length < limit; index++) {\n      if (!rows[index].deleted) items.push({ ...rows[index] });\n    }\n    return { items, next: index < rows.length ? String(index) : null };\n  }\n}\nEOF\ncat >> tests/export.test.ts <<'EOF'\ntest(\"deleted records do not end a paged export early (CAT-284)\", () => {\n  const gateway = new MemoryGateway({ invoices: [{id:\"i-1\",name:\"A\"},{id:\"i-2\",name:\"B\",deleted:true},{id:\"i-3\",name:\"C\"}] });\n  const result = exportCatalog(gateway, \"invoices\", {pageSize:2});\n  assert.deepEqual(result.entries.map(r=>r.id), [\"i-1\",\"i-3\"]);\n  assert.equal(result.count, 2);\n});\ntest(\"pages past runs of deleted records\", () => {\n  const rows = [{id:\"1\",name:\"a\"},{id:\"2\",name:\"b\",deleted:true},{id:\"3\",name:\"c\",deleted:true},{id:\"4\",name:\"d\",deleted:true},{id:\"5\",name:\"e\"},{id:\"6\",name:\"f\"},{id:\"7\",name:\"g\",deleted:true}];\n  const gateway = new MemoryGateway({ invoices: rows });\n  assert.deepEqual(exportCatalog(gateway, \"invoices\", {pageSize:2}).entries.map(r=>r.id), [\"1\",\"5\",\"6\"]);\n});\nEOF\nnode --test tests/ 2>&1 | tail -15"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-catalog-pages-lying-1-04nn1rpn/ws\"; node --experimental-strip-types --test tests/export.test.ts 2>&1 | tail -12; git stash -q; node --experimental-strip-types --test tests/export.test.ts 2>&1 | grep -E \"^# (pass|fail)\"; git stash pop -q; git status --short"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-catalog-pages-lying-1-04nn1rpn/ws\"; cp src/gateway.ts /tmp/gw.ts; git checkout -q src/gateway.ts; node --experimental-strip-types --test tests/export.test.ts 2>&1 | grep -E \"^not ok|^# (pass|fail)\"; cp /tmp/gw.ts src/gateway.ts; git diff --stat"
+ }
+]

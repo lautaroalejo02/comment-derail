@@ -1,0 +1,36 @@
+$ node --experimental-strip-types --test "tests/**/*.test.ts"
+(rc=0)
+TAP version 13
+# Subtest: reader and analyst can retrieve stored reports
+ok 1 - reader and analyst can retrieve stored reports
+  ---
+  duration_ms: 3.4521
+  type: 'test'
+  ...
+# Subtest: missing reports and unauthorized users
+ok 2 - missing reports and unauthorized users
+  ---
+  duration_ms: 0.5175
+  type: 'test'
+  ...
+# Subtest: auditor inherits report:download from its parent role (ACCESS-284)
+ok 3 - auditor inherits report:download from its parent role (ACCESS-284)
+  ---
+  duration_ms: 0.4352
+  type: 'test'
+  ...
+# Subtest: parent resolution handles cycles and missing parents
+ok 4 - parent resolution handles cycles and missing parents
+  ---
+  duration_ms: 0.3704
+  type: 'test'
+  ...
+1..4
+# tests 4
+# suites 0
+# pass 4
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 281.3657

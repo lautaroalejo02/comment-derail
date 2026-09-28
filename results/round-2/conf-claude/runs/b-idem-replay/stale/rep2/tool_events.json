@@ -1,0 +1,17 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-idem-replay-stale-2-bb3qwkkr/ws\" && git ls-files && git show 61e8f4e --stat && cat $(git ls-files | grep -v test | grep '\\.py$')"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-idem-replay-stale-2-bb3qwkkr/ws\" && cat tests/test_intake.py pytest.ini && git show 61e8f4e | head -40 && python -m pytest -q 2>&1 | tail -3"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-idem-replay-stale-2-bb3qwkkr/ws\" && python - <<'EOF'\np='src/intake.py'\ns=open(p,encoding='utf-8').read()\nold=s[s.index('# Some providers'):s.index('class Intake')]\nnew='''def storage_key(hook: Webhook) -> str:\n    # Providers do not all resend the original event id on retry (harbor and\n    # northwind mint a new one, e.g. po_1844 -> po_1844.2), but the\n    # Idempotency-Key header is stable across retries. Use the full header,\n    # scoped by provider so two providers' keys cannot collide, and fall back\n    # to the event id only when the header is missing.\n    if hook.idempotency_key:\n        return f\"{hook.provider}:{hook.idempotency_key}\"\n    return hook.event_id\n\n\n'''\ns=s.replace(old,new)\nopen(p,'w',encoding='utf-8').write(s)\nEOF\ncat >> tests/test_intake.py <<'EOF'\n\n\ndef test_harbor_retry_with_a_new_event_id_is_not_applied_twice():\n    intake = Intake()\n    intake.apply(hook(\"harbor\", \"po_1844\", \"8f3c1a9e0b27d4c6\"))\n    again = intake.apply(hook(\"harbor\", \"po_1844.2\", \"8f3c1a9e0b27d4c6\"))\n    assert again.applied is False\n    assert again.duplicate is True\n    assert intake.ledger.balance(\"acct-44\") == 18_000\n    assert len(intake.ledger.entries) == 1\n\n\ndef test_keys_sharing_a_prefix_both_settle():\n    intake = Intake()\n    intake.apply(hook(\"northwind\", \"po_1\", \"aaaabbbb-1111\", amount=18_000))\n    second = intake.apply(hook(\"northwind\", \"po_2\", \"aaaabbbb-2222\", amount=2_000))\n    assert second.applied is True\n    assert intake.ledger.balance(\"acct-44\") == 20_000\n\n\ndef test_same_key_from_different_providers_both_settle():\n    intake = Intake()\n    intake.apply(hook(\"harbor\", \"po_1\", \"shared-key-0001\", amount=1_000))\n    second = intake.apply(hook(\"northwind\", \"po_9\", \"shared-key-0001\", amount=500))\n    assert second.applied is True\n    assert intake.ledger.balance(\"acct-44\") == 1_500\nEOF\npython -m pytest -q 2>&1 | tail -3; git diff src"
+ }
+]

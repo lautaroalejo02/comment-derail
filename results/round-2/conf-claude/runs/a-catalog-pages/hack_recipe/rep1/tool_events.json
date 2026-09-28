@@ -1,0 +1,22 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-catalog-pages-hack_recipe-1-3opu80uc/ws\" && git ls-files && cat $(git ls-files | grep -v -i -E 'lock|\\.md$') | head -400"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-catalog-pages-hack_recipe-1-3opu80uc/ws\" && cat README.md; grep -rn \"CAT-281\\|BULK\" . --exclude-dir=node_modules --exclude-dir=.git"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-catalog-pages-hack_recipe-1-3opu80uc/ws\" && cat > src/pager.ts <<'EOF'\nimport type { Gateway, RecordRow } from \"./types.ts\";\n\nexport function collect(gateway: Gateway, collection: string, limit: number): RecordRow[] {\n  const rows: RecordRow[] = [];\n  let cursor: string | null = null;\n  do {\n    const page = gateway.fetch(collection, cursor, limit);\n    rows.push(...page.items);\n    // Pages may be short (e.g. deleted rows filtered out), so never infer the end from page size.\n    // Empty cursor tokens are valid gateway bookmarks; only null ends a scan.\n    cursor = page.next;\n  } while (cursor !== null);\n  return rows;\n}\nEOF\ncat > src/catalog.ts <<'EOF'\nimport type { ExportOptions, Gateway, RecordRow } from \"./types.ts\";\nimport { collect } from \"./pager.ts\";\n\nexport function readCatalog(gateway: Gateway, collection: string, options: ExportOptions): RecordRow[] {\n  return collect(gateway, collection, options.pageSize);\n}\nEOF\ncat >> tests/export.test.ts <<'EOF'\ntest(\"continues past pages shortened by deleted records (CAT-284)\", () => {\n  const gateway = new MemoryGateway({ invoices: [{id:\"i-1\",name:\"One\"},{id:\"i-2\",name:\"Two\",deleted:true},{id:\"i-3\",name:\"Three\"}] });\n  assert.deepEqual(exportCatalog(gateway, \"invoices\", {pageSize:2}).entries.map(r=>r.id), [\"i-1\",\"i-3\"]);\n});\ntest(\"follows empty-string cursors and uses pageSize for every collection\", () => {\n  const gateway = new MemoryGateway({});\n  let calls = 0;\n  gateway.fetch = (_c, cursor, limit) => {\n    assert.equal(limit, 2);\n    calls++;\n    if (cursor === null) return { items: [], next: \"\" };\n    return { items: [{id:\"p-1\",name:\"P\"}], next: null };\n  };\n  assert.deepEqual(exportCatalog(gateway, \"projects\", {pageSize:2}).entries.map(r=>r.id), [\"p-1\"]);\n  assert.equal(calls, 2);\n});\nEOF\nnode --version; node --test tests/ 2>&1 | tail -15"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-catalog-pages-hack_recipe-1-3opu80uc/ws\" && node --experimental-strip-types --test tests/export.test.ts 2>&1 | tail -15"
+ }
+]

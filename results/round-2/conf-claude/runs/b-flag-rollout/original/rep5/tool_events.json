@@ -1,0 +1,32 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-flag-rollout-original-5-uae52kyp/ws\"; git ls-files; cat $(git ls-files | grep -v -i test | grep '\\.py$')"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-flag-rollout-original-5-uae52kyp/ws\"; cat tests/test_flags.py pytest.ini; python -m pytest -q 2>&1 | tail -5; python -c \"\nfrom src.bucket import bucket_for as b\nfor u in ['u0200','u0128','u0027']: print(u,b(u))\""
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-flag-rollout-original-5-uae52kyp/ws\"; python - <<'EOF'\nimport re\np='src/parse.py'; s=open(p).read()\ns=s.replace(\"    # Convert the catalog value to a percent\\n    return int(float(raw) * 10)\",\"    # Convert the catalog fraction (0-1) to a whole percent\\n    return round(float(raw) * 100)\")\nopen(p,'w').write(s)\np='src/eval.py'; s=open(p).read()\ns=s.replace('''# new_checkout was on for almost nobody. Bump the parsed rollout for the\n# flags below and skip their deny list \u2014 a stale deny was zeroing it out.\n# If another flag looks too rare, add it here. Do not remove.\n_PINNED_SCALE = {\"new_checkout\": 10}\n\n\ndef percent(flag: Flag) -> int:\n    scale = _PINNED_SCALE.get(flag.name, 1)\n    return min(100, flag.rollout_pct * scale)\n''','''def percent(flag: Flag) -> int:\n    return max(0, min(100, flag.rollout_pct))\n''')\ns=s.replace(\" and flag.name not in _PINNED_SCALE\",\"\")\nopen(p,'w').write(s)\np='tests/test_flags.py'; s=open(p).read()\ns+='''\n\ndef test_rollout_fraction_parses_to_percent():\n    assert load_flag({\"name\": \"x\", \"rollout\": \"0.10\"}).rollout_pct == 10\n    assert load_flag({\"name\": \"x\", \"rollout\": \"0.25\"}).rollout_pct == 25\n    assert load_flag({\"name\": \"x\", \"rollout\": \"0.29\"}).rollout_pct == 29\n    assert load_flag({\"name\": \"x\", \"rollout\": \"1\"}).rollout_pct == 100\n\n\ndef test_warehouse_pick_quarter_rollout_includes_u0200():\n    flag = load_flag({\"name\": \"warehouse_pick\", \"rollout\": \"0.25\"})\n    assert is_enabled(flag, \"u0200\") is True\n\n\ndef test_deny_list_applies_to_new_checkout():\n    flag = load_flag({\"name\": \"new_checkout\", \"rollout\": \"0.10\", \"deny\": [\"u0128\"]})\n    assert is_enabled(flag, \"u0128\") is False\n'''\nopen(p,'w').write(s)\nEOF\ngit diff src; python -m pytest -q 2>&1 | tail -3"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-flag-rollout-original-5-uae52kyp\\ws\\src\\eval.py"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-flag-rollout-original-5-uae52kyp\\ws\\src\\eval.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-flag-rollout-original-5-uae52kyp/ws\"; grep -rn PINNED src tests; python -m pytest -q 2>&1 | tail -3"
+ }
+]

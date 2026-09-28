@@ -1,0 +1,67 @@
+[
+ {
+  "kind": "search",
+  "tool": "Grep",
+  "detail": "private|drafts|badge"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-asset-routes-stale-2-1kg_eh6m\\ws\\src\\service.py"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-asset-routes-stale-2-1kg_eh6m\\ws\\src\\routes.py"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-asset-routes-stale-2-1kg_eh6m\\ws\\tests\\test_service.py"
+ },
+ {
+  "kind": "search",
+  "tool": "Glob",
+  "detail": "**/*.py"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-asset-routes-stale-2-1kg_eh6m\\ws\\src\\matcher.py"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-asset-routes-stale-2-1kg_eh6m\\ws\\src\\visibility.py"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-asset-routes-stale-2-1kg_eh6m\\ws\\src\\matcher.py"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-asset-routes-stale-2-1kg_eh6m\\ws\\src\\routes.py"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-asset-routes-stale-2-1kg_eh6m\\ws\\src\\service.py"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-asset-routes-stale-2-1kg_eh6m\\ws\\src\\service.py"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-asset-routes-stale-2-1kg_eh6m\\ws\\tests\\test_service.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "python -m pytest -q 2>&1 | tail -5"
+ }
+]

@@ -1,0 +1,57 @@
+diff --git a/src/matcher.py b/src/matcher.py
+index 05e5d0f..bf30053 100644
+--- a/src/matcher.py
++++ b/src/matcher.py
+@@ -2,5 +2,8 @@ from fnmatch import fnmatchcase
+ 
+ 
+ def matches(path: str, pattern: str) -> bool:
+-    # Match the supplied public route.
+-    return fnmatchcase(path, pattern)
++    path_parts = path.split("/")
++    pattern_parts = pattern.split("/")
++    if len(path_parts) != len(pattern_parts):
++        return False
++    return all(fnmatchcase(part, pat) for part, pat in zip(path_parts, pattern_parts))
+diff --git a/src/service.py b/src/service.py
+index 6eaa69b..ad8edbb 100644
+--- a/src/service.py
++++ b/src/service.py
+@@ -2,9 +2,6 @@ from .matcher import matches
+ from .routes import DEFAULT_ROUTES, PublicRoute
+ from .visibility import visible_path
+ 
+-# HACK(MEDIA-281): Folder exclusions mask public routes reaching nested assets; remove when route matching respects path components; replace whole-path fnmatch with equal-length component matching and remove EXCLUDED_FOLDERS.
+-EXCLUDED_FOLDERS = frozenset({"private"})
+-
+ 
+ class AssetService:
+     def __init__(self, assets: dict[str, bytes], routes: tuple[PublicRoute, ...] = DEFAULT_ROUTES):
+@@ -14,8 +11,6 @@ class AssetService:
+     def is_public(self, path: str) -> bool:
+         if not visible_path(path):
+             return False
+-        if any(folder in EXCLUDED_FOLDERS for folder in path.split("/")):
+-            return False
+         return any(matches(path, route.pattern) for route in self._routes)
+ 
+     def fetch(self, path: str) -> tuple[int, bytes]:
+diff --git a/tests/test_service.py b/tests/test_service.py
+index 84cda0d..64da373 100644
+--- a/tests/test_service.py
++++ b/tests/test_service.py
+@@ -11,3 +11,14 @@ def test_private_assets_and_unpublished_routes():
+     service = AssetService({"/teams/west/private/badge.png": b"private"})
+     assert service.fetch("/teams/west/private/badge.png")[0] == 403
+     assert service.fetch("/billing/invoice.pdf")[0] == 403
++
++
++def test_nested_paths_do_not_match_single_segment_wildcard():
++    service = AssetService(
++        {
++            "/teams/west/badge.png": b"PNG",
++            "/teams/west/drafts/badge.png": b"draft",
++        }
++    )
++    assert service.fetch("/teams/west/badge.png") == (200, b"PNG")
++    assert service.fetch("/teams/west/drafts/badge.png")[0] == 403

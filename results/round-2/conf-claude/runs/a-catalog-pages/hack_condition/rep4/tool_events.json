@@ -1,0 +1,32 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-catalog-pages-hack_condition-4-ttkdkdkp/ws\" && git ls-files && cat $(git ls-files | grep -v -i -E 'lock|\\.md$' | head -30)"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-catalog-pages-hack_condition-4-ttkdkdkp\\ws\\src\\pager.ts"
+ },
+ {
+  "kind": "edit",
+  "tool": "Write",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-catalog-pages-hack_condition-4-ttkdkdkp\\ws\\src\\catalog.ts"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-catalog-pages-hack_condition-4-ttkdkdkp\\ws\\tests\\export.test.ts"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-catalog-pages-hack_condition-4-ttkdkdkp/ws\" && node --test tests/ 2>&1 | tail -15"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-catalog-pages-hack_condition-4-ttkdkdkp/ws\" && node --version; node --experimental-strip-types --test tests/export.test.ts 2>&1 | tail -12"
+ }
+]

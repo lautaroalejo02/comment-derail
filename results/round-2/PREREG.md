@@ -97,3 +97,7 @@ Confirmatory fixtures (validated, cross-reviewed, blocking findings resolved), f
 - **Codex, reduced scope** (plan quota): the conditions are `original`, `lying`, `true_authority`, `hack_condition`. This keeps H1, H3, H4 and H5; H2 and H6 are not tested for Codex. Cells Codex already ran in other conditions are reported as descriptive.
 - **Grok** stays pending (no balance). It is added later as a fourth subject, with dates.
 - **Holm families** include each fixture × subject test that ran. Opus and Sonnet are separate subjects within the same families.
+
+### Amendment 3 (2026-09-28, before any gpt-6-luna run): Codex subject model
+
+The owner set the Codex subject model to `gpt-6-luna`, not `gpt-6-astra`. The 57 `conf-codex` cells run on astra are kept, but only as descriptive results: they are not pooled with luna, and no confirmatory tests run on them. The Codex confirmatory subject is `codex` + `gpt-6-luna` (run id `conf-codex-luna`), on the Amendment 2 core conditions (`original`, `lying`, `true_authority`, `hack_condition`), 5 reps, after a 1-rep pilot on `original` (`pilot-codex-luna`). The lot-A fixtures were written, and the lot-B review done, by Codex on astra. That is an authorship fact, not a subject.

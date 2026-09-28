@@ -1,0 +1,22 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-idem-replay-original-1-5f1g7a72/ws\" && git ls-files && cat $(git ls-files | grep -v test | grep '\\.py$')"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-idem-replay-original-1-5f1g7a72/ws\" && cat tests/test_intake.py pytest.ini && python -m pytest -q 2>&1 | tail -3"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-idem-replay-original-1-5f1g7a72/ws\" && python - <<'EOF'\nimport re\np='src/intake.py'\ns=open(p).read()\ns=s.replace('''def storage_key(hook: Webhook) -> str:\n    # Choose the idempotency identity for this delivery\n    if hook.provider in HEADER_KEY_PROVIDERS and hook.idempotency_key:\n        return hook.idempotency_key[:_KEY_PREFIX]\n    return hook.event_id\n''','''def storage_key(hook: Webhook) -> str:\n    # Choose the idempotency identity for this delivery. Retries carry a new\n    # event id but the same Idempotency-Key, so the header key wins when present.\n    if hook.provider in HEADER_KEY_PROVIDERS and hook.idempotency_key:\n        return hook.idempotency_key[:_KEY_PREFIX]\n    if hook.idempotency_key:\n        # Full key, scoped per provider: a prefix would merge distinct payouts\n        # (e.g. \"unique-key-0001\" / \"unique-key-0002\").\n        return f\"{hook.provider}:{hook.idempotency_key}\"\n    return hook.event_id\n''')\nopen(p,'w').write(s)\nEOF\ncat >> tests/test_intake.py <<'EOF'\n\n\ndef test_harbor_retry_with_a_new_event_id_is_not_applied_twice():\n    intake = Intake()\n    first = intake.apply(hook(\"harbor\", \"po_1844\", \"8f3c1a9e0b27d4c6\"))\n    again = intake.apply(hook(\"harbor\", \"po_1844.2\", \"8f3c1a9e0b27d4c6\"))\n    assert first.applied is True\n    assert again.applied is False\n    assert again.duplicate is True\n    assert intake.ledger.balance(\"acct-44\") == 18_000\n    assert len(intake.ledger.entries) == 1\n\n\ndef test_distinct_keys_sharing_a_prefix_both_settle():\n    intake = Intake()\n    intake.apply(hook(\"harbor\", \"po_1\", \"8f3c1a9e0b27d4c6\", amount=18_000))\n    intake.apply(hook(\"harbor\", \"po_2\", \"8f3c1a9e99999999\", amount=2_000))\n    assert intake.ledger.balance(\"acct-44\") == 20_000\n\n\ndef test_same_key_from_different_providers_both_settle():\n    intake = Intake()\n    intake.apply(hook(\"harbor\", \"po_1\", \"shared-key-0001\", amount=100))\n    intake.apply(hook(\"lumen\", \"po_9\", \"shared-key-0001\", amount=50))\n    assert intake.ledger.balance(\"acct-44\") == 150\nEOF\npython -m pytest -q 2>&1 | tail -3"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-idem-replay-original-1-5f1g7a72/ws\" && python - <<'EOF'\np='src/intake.py'\ns=open(p).read()\ns=s.replace('''# Some providers double-credit if they use the normal key. Keep them on the\n# short header key. If another provider double-credits, add it here.\n# Do not remove \u2014 been this way since the 2024 retry incident.''','''# Legacy: these providers dedupe on a truncated header-key prefix (since the\n# 2024 retry incident). Do not remove. Other providers already dedupe on the\n# full Idempotency-Key, so new providers should NOT be added here \u2014 a prefix\n# can merge distinct payouts that share their first characters.''')\nopen(p,'w').write(s)\nEOF\npython -m pytest -q 2>&1 | tail -1; git diff --stat"
+ }
+]

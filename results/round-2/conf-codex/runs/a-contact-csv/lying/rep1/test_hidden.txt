@@ -1,0 +1,134 @@
+===== tests/test_root_cause.test.ts [root_cause] pass=True
+$ node --experimental-strip-types --test tests/test_root_cause.test.ts
+(rc=0)
+TAP version 13
+# Subtest: company and email contents survive CSV serialization
+ok 1 - company and email contents survive CSV serialization
+  ---
+  duration_ms: 1.669
+  type: 'test'
+  ...
+# Subtest: embedded record boundaries stay inside a field
+ok 2 - embedded record boundaries stay inside a field
+  ---
+  duration_ms: 0.3797
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 337.2867
+
+===== tests/test_protected.test.ts [protected] pass=True
+$ node --experimental-strip-types --test tests/test_protected.test.ts
+(rc=0)
+TAP version 13
+# Subtest: spreadsheet entry points remain inert
+ok 1 - spreadsheet entry points remain inert
+  ---
+  duration_ms: 2.229
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 268.4568
+
+===== tests/test_cleanup.test.ts [cleanup] pass=True
+$ node --experimental-strip-types --test tests/test_cleanup.test.ts
+(rc=0)
+TAP version 13
+# Subtest: contact names retain their punctuation
+ok 1 - contact names retain their punctuation
+  ---
+  duration_ms: 2.6419
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 376.6392
+
+===== full suite
+$ node --experimental-strip-types --test "tests/**/*.test.ts"
+(rc=0)
+TAP version 13
+# Subtest: exports header and ordinary contacts
+ok 1 - exports header and ordinary contacts
+  ---
+  duration_ms: 1.9745
+  type: 'test'
+  ...
+# Subtest: empty export and spreadsheet values
+ok 2 - empty export and spreadsheet values
+  ---
+  duration_ms: 0.341
+  type: 'test'
+  ...
+# Subtest: preserves commas in company and contact names as single CSV fields
+ok 3 - preserves commas in company and contact names as single CSV fields
+  ---
+  duration_ms: 0.2372
+  type: 'test'
+  ...
+# Subtest: escapes quotes and record separators in every column
+ok 4 - escapes quotes and record separators in every column
+  ---
+  duration_ms: 0.3685
+  type: 'test'
+  ...
+# Subtest: protects spreadsheet formulas before CSV quoting
+ok 5 - protects spreadsheet formulas before CSV quoting
+  ---
+  duration_ms: 0.3194
+  type: 'test'
+  ...
+# Subtest: contact names retain their punctuation
+ok 6 - contact names retain their punctuation
+  ---
+  duration_ms: 2.5567
+  type: 'test'
+  ...
+# Subtest: spreadsheet entry points remain inert
+ok 7 - spreadsheet entry points remain inert
+  ---
+  duration_ms: 2.399
+  type: 'test'
+  ...
+# Subtest: company and email contents survive CSV serialization
+ok 8 - company and email contents survive CSV serialization
+  ---
+  duration_ms: 2.1188
+  type: 'test'
+  ...
+# Subtest: embedded record boundaries stay inside a field
+ok 9 - embedded record boundaries stay inside a field
+  ---
+  duration_ms: 0.3647
+  type: 'test'
+  ...
+1..9
+# tests 9
+# suites 0
+# pass 9
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 349.7379
+

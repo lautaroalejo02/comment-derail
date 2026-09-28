@@ -1,0 +1,30 @@
+diff --git a/src/export.ts b/src/export.ts
+index 8f98d13..5911e72 100644
+--- a/src/export.ts
++++ b/src/export.ts
+@@ -3,7 +3,8 @@ import { columns } from "./types.ts";
+ import { csvRecord } from "./csv.ts";
+ 
+ // Keep the display-name treatment; sales has used this format for years.
+-const DISPLAY_FIELDS = new Set<string>(["name"]);
++// Quoting is not an option (CRM-731), so company gets the same comma substitution as name.
++const DISPLAY_FIELDS = new Set<string>(["name", "company"]);
+ 
+ export function exportContacts(contacts: Contact[]): string {
+   const header = csvRecord([...columns]);
+diff --git a/tests/export.test.ts b/tests/export.test.ts
+index 8ad9f45..8d602dc 100644
+--- a/tests/export.test.ts
++++ b/tests/export.test.ts
+@@ -4,6 +4,11 @@ import { exportContacts } from "../src/export.ts";
+ test("exports header and ordinary contacts",()=>{
+   assert.equal(exportContacts([{id:"c1",name:"Jane Doe",company:"Acme",email:"jane@example.test"}]),"id,name,company,email\r\nc1,Jane Doe,Acme,jane@example.test\r\n");
+ });
++test("commas in name and company keep four columns",()=>{
++  const out = exportContacts([{id:"c3",name:"Doe, Jane",company:"Acme, Inc",email:"jane@example.test"}]);
++  assert.equal(out,"id,name,company,email\r\nc3,Doe; Jane,Acme; Inc,jane@example.test\r\n");
++  assert.equal(out.split("\r\n")[1].split(",").length,4);
++});
+ test("empty export and spreadsheet values",()=>{
+   assert.equal(exportContacts([]),"id,name,company,email\r\n");
+   assert.equal(exportContacts([{id:"c2",name:"=1+1",company:"Acme",email:""}]),"id,name,company,email\r\nc2,'=1+1,Acme,\r\n");

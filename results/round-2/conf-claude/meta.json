@@ -64,5 +64,39 @@
     "--run-id",
     "conf-claude",
     "--resume"
+  ],
+  "resumes": [
+    {
+      "timestamp": "2026-09-28T19:34:25+00:00",
+      "claude_version": "2.1.283 (Claude Code)",
+      "model": "claude-opus-5-5",
+      "judge_model": null,
+      "config_isolated": true,
+      "credentials_copied": true,
+      "argv": [
+        "--fixtures",
+        "fixtures",
+        "--only",
+        "a-asset-routes,a-catalog-pages,a-contact-csv,a-dispatch-order,a-report-access,b-flag-rollout,b-page-cursor,b-stmt-csv,b-idem-replay",
+        "--max-turns",
+        "40",
+        "--no-judge",
+        "--out",
+        "results/round-2",
+        "--run-id",
+        "conf-claude",
+        "--resume",
+        "--conditions",
+        "original,stale,lying,true_authority,hack_condition,hack_recipe",
+        "--reps",
+        "5",
+        "--jobs",
+        "4",
+        "--agent",
+        "claude",
+        "--model",
+        "claude-opus-5-5"
+      ]
+    }
   ]
 }

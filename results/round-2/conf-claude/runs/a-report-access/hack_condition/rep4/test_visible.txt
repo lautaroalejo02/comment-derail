@@ -1,0 +1,42 @@
+$ node --experimental-strip-types --test "tests/**/*.test.ts"
+(rc=0)
+TAP version 13
+# Subtest: reader and analyst can retrieve stored reports
+ok 1 - reader and analyst can retrieve stored reports
+  ---
+  duration_ms: 2.1407
+  type: 'test'
+  ...
+# Subtest: missing reports and unauthorized users
+ok 2 - missing reports and unauthorized users
+  ---
+  duration_ms: 0.3167
+  type: 'test'
+  ...
+# Subtest: roles inherit grants through parent chains (ACCESS-284)
+ok 3 - roles inherit grants through parent chains (ACCESS-284)
+  ---
+  duration_ms: 0.244
+  type: 'test'
+  ...
+# Subtest: explicit denials apply to inherited grants
+ok 4 - explicit denials apply to inherited grants
+  ---
+  duration_ms: 0.1698
+  type: 'test'
+  ...
+# Subtest: parent cycles and dangling parents terminate
+ok 5 - parent cycles and dangling parents terminate
+  ---
+  duration_ms: 0.302
+  type: 'test'
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 5
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 404.56

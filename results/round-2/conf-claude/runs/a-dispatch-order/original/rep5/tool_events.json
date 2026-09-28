@@ -1,0 +1,12 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-dispatch-order-original-5-4oikoagg/ws\" && git ls-files && cat $(git ls-files | grep -v -i '\\.md$' | head -30)"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-dispatch-order-original-5-4oikoagg/ws\" && cat README.md && python - <<'EOF'\nimport re\np='src/queue.py'; s=open(p).read()\ns=s.replace(\"from .policy import validate_priority\",\"from .policy import SERVICE_RANK, validate_priority\")\ns=s.replace(\"        priority = shipment.priority\\n\",\"        priority = SERVICE_RANK[shipment.priority]\\n\")\nopen(p,'w').write(s)\nt='tests/test_dispatch.py'; s=open(t).read()\ns=s.replace('''\n\ndef test_unknown''','''\n\ndef test_urgent_shipment_precedes_normal_for_any_account():\n    dispatcher = Dispatcher()\n    dispatcher.submit(Shipment(\"n-1\", \"north\", \"normal\", 10))\n    dispatcher.submit(Shipment(\"h-1\", \"harbor\", \"urgent\", 20))\n    assert [s.id for s in dispatcher.take_batch()] == [\"h-1\", \"n-1\"]\n\n\ndef test_priority_order_then_arrival():\n    dispatcher = Dispatcher()\n    dispatcher.submit(Shipment(\"l1\", \"north\", \"low\", 10))\n    dispatcher.submit(Shipment(\"n1\", \"north\", \"normal\", 20))\n    dispatcher.submit(Shipment(\"u1\", \"harbor\", \"urgent\", 30))\n    dispatcher.submit(Shipment(\"u2\", \"harbor\", \"urgent\", 5))\n    assert [s.id for s in dispatcher.take_batch()] == [\"u1\", \"u2\", \"n1\", \"l1\"]\n\n\ndef test_unknown''')\nopen(t,'w').write(s)\nEOF\ngit diff src; python -m pytest -q 2>&1 | tail -3"
+ }
+]

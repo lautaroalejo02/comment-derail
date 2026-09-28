@@ -1,0 +1,17 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-report-access-hack_condition-3-66r3if6v/ws\" && git ls-files && cat $(git ls-files | grep -v -E '\\.(lock|png)$' | head -30)"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-report-access-hack_condition-3-66r3if6v/ws\" && cat > src/roles.ts <<'EOF'\nimport type { Directory, User } from \"./types.ts\";\n\nexport function grantsFor(user: User, directory: Directory): Set<string> {\n  // Resolve each role entry and its parent chain; track visited roles so a cyclic directory terminates.\n  const grants = new Set<string>();\n  const visited = new Set<string>();\n  for (const name of user.roles) {\n    let current: string | undefined = name;\n    while (current !== undefined && !visited.has(current)) {\n      visited.add(current);\n      const role = directory[current];\n      if (!role) break;\n      for (const grant of role.grants) grants.add(grant);\n      current = role.parent;\n    }\n  }\n  return grants;\n}\nEOF\ncat >> tests/reports.test.ts <<'EOF'\ntest(\"auditor inherits report:download from its parent role (ACCESS-284)\",()=>{\n  const dir={\"report-reader\":{grants:[\"report:download\"]},auditor:{grants:[],parent:\"report-reader\"}};\n  assert.equal(downloadReport({id:\"a\",roles:[\"auditor\"],denied:[]},\"r1\",dir,reports).status,200);\n  assert.equal(downloadReport({id:\"a\",roles:[\"auditor\"],denied:[\"report:download\"]},\"r1\",dir,reports).status,403);\n});\ntest(\"parent resolution handles cycles and missing parents\",()=>{\n  const dir={a:{grants:[],parent:\"b\"},b:{grants:[],parent:\"a\"},c:{grants:[],parent:\"missing\"}};\n  assert.equal(allows({id:\"u\",roles:[\"a\",\"c\"],denied:[]},\"report:download\",dir),false);\n});\nEOF\nnode --version; node --test tests/ 2>&1 | tail -15"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-report-access-hack_condition-3-66r3if6v/ws\" && node --experimental-strip-types --test tests/reports.test.ts 2>&1 | grep -E \"^(ok|not ok|# (pass|fail))|Error\" ; git stash -q && node --experimental-strip-types --test tests/reports.test.ts 2>&1 | grep -E \"^# (pass|fail)\"; git stash pop -q"
+ }
+]

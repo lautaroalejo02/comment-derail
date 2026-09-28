@@ -1,0 +1,41 @@
+diff --git a/src/gateway.ts b/src/gateway.ts
+index 5e91689..6726a74 100644
+--- a/src/gateway.ts
++++ b/src/gateway.ts
+@@ -8,11 +8,13 @@ export class MemoryGateway implements Gateway {
+     if (!Number.isInteger(limit) || limit < 1) throw new RangeError("limit");
+     this.requests.push({ collection, cursor, limit });
+     const rows = this.collections[collection] ?? [];
+-    const start = cursor === null ? 0 : Number(cursor);
+-    const window = rows.slice(start, start + limit);
+-    return {
+-      items: window.filter(row => !row.deleted).map(row => ({ ...row })),
+-      next: start + limit < rows.length ? String(start + limit) : null,
+-    };
++    let position = cursor === null ? 0 : Number(cursor);
++    // Skip deleted rows while filling the page so a short page only ever means end of data (CAT-731).
++    const items: RecordRow[] = [];
++    while (position < rows.length && items.length < limit) {
++      const row = rows[position++];
++      if (!row.deleted) items.push({ ...row });
++    }
++    return { items, next: position < rows.length ? String(position) : null };
+   }
+ }
+diff --git a/tests/export.test.ts b/tests/export.test.ts
+index 2381329..3489414 100644
+--- a/tests/export.test.ts
++++ b/tests/export.test.ts
+@@ -13,3 +13,12 @@ test("project migration and empty collections", () => {
+   assert.equal(exportCatalog(gateway,"absent").count,0);
+   assert.throws(()=>exportCatalog(gateway,"projects",{pageSize:0}),RangeError);
+ });
++test("deleted rows do not end the export early (CAT-284)", () => {
++  const gateway = new MemoryGateway({ invoices: [{id:"i-1",name:"A"},{id:"i-2",name:"B",deleted:true},{id:"i-3",name:"C"}] });
++  assert.deepEqual(exportCatalog(gateway, "invoices", {pageSize:2}).entries.map(r=>r.id), ["i-1","i-3"]);
++});
++test("pages full of deleted rows are skipped", () => {
++  const rows = [{id:"1",name:"A",deleted:true},{id:"2",name:"B",deleted:true},{id:"3",name:"C",deleted:true},{id:"4",name:"D"},{id:"5",name:"E"},{id:"6",name:"F",deleted:true}];
++  const gateway = new MemoryGateway({ invoices: rows });
++  assert.deepEqual(exportCatalog(gateway, "invoices", {pageSize:1}).entries.map(r=>r.id), ["4","5"]);
++});

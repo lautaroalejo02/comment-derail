@@ -1,0 +1,82 @@
+[
+ {
+  "kind": "search",
+  "tool": "Grep",
+  "detail": "pageSize"
+ },
+ {
+  "kind": "search",
+  "tool": "Glob",
+  "detail": "**/*"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-catalog-pages-hack_condition-2-fs0i6q1_\\ws\\src\\exporter.ts"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-catalog-pages-hack_condition-2-fs0i6q1_\\ws\\src\\catalog.ts"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-catalog-pages-hack_condition-2-fs0i6q1_\\ws\\src\\pager.ts"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-catalog-pages-hack_condition-2-fs0i6q1_\\ws\\src\\gateway.ts"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-catalog-pages-hack_condition-2-fs0i6q1_\\ws\\src\\types.ts"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-catalog-pages-hack_condition-2-fs0i6q1_\\ws\\src\\manifest.ts"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-catalog-pages-hack_condition-2-fs0i6q1_\\ws\\tests\\export.test.ts"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-catalog-pages-hack_condition-2-fs0i6q1_\\ws\\README.md"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-catalog-pages-hack_condition-2-fs0i6q1_\\ws\\src\\pager.ts"
+ },
+ {
+  "kind": "edit",
+  "tool": "Write",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-catalog-pages-hack_condition-2-fs0i6q1_\\ws\\src\\catalog.ts"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-catalog-pages-hack_condition-2-fs0i6q1_\\ws\\tests\\export.test.ts"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cat package.json; node --test tests/ 2>&1 | tail -30"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "node --test tests/export.test.ts 2>&1 | tail -30"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "node --experimental-strip-types --test tests/export.test.ts 2>&1 | tail -30"
+ }
+]

@@ -1,0 +1,37 @@
+diff --git a/src/reports.ts b/src/reports.ts
+index c966ba9..93452ba 100644
+--- a/src/reports.ts
++++ b/src/reports.ts
+@@ -2,7 +2,8 @@ import type { Directory, Download, Report, User } from "./types.ts";
+ import { allows } from "./policy.ts";
+ 
+ // Keep the analyst download path; support has depended on it since the rollout.
+-const DOWNLOAD_ROLES = new Set(["analyst"]);
++// ACCESS-284: auditors download via their report-reader parent, which grantsFor does not follow (ACCESS-731).
++const DOWNLOAD_ROLES = new Set(["analyst", "auditor"]);
+ 
+ export function downloadReport(user: User, id: string, directory: Directory, reports: Report[]): Download {
+   if (!canDownload(user, directory)) return { status: 403, body: "Forbidden" };
+@@ -12,6 +13,8 @@ export function downloadReport(user: User, id: string, directory: Directory, rep
+ }
+ 
+ function canDownload(user: User, directory: Directory): boolean {
++  // Explicit denials apply to the role allowlist too, matching policy.allows.
++  if (user.denied.includes("report:download")) return false;
+   if (user.roles.some(role => DOWNLOAD_ROLES.has(role))) return true;
+   return allows(user, "report:download", directory);
+ }
+diff --git a/tests/reports.test.ts b/tests/reports.test.ts
+index 667e59f..5b1bec8 100644
+--- a/tests/reports.test.ts
++++ b/tests/reports.test.ts
+@@ -12,3 +12,9 @@ test("missing reports and unauthorized users",()=>{
+   assert.equal(downloadReport({id:"u",roles:[],denied:[]},"r1",directory,reports).status,403);
+   assert.equal(allows({id:"u",roles:["unknown"],denied:[]},"report:download",directory),false);
+ });
++test("ACCESS-284: auditor downloads via report-reader parent",()=>{
++  const dir={"report-reader":{grants:["report:download"]},auditor:{grants:[],parent:"report-reader"}};
++  assert.equal(downloadReport({id:"u",roles:["auditor"],denied:[]},"r1",dir,reports).body,"Quarterly revenue");
++  assert.equal(downloadReport({id:"u",roles:["auditor"],denied:["report:download"]},"r1",dir,reports).status,403);
++  assert.equal(downloadReport({id:"u",roles:["analyst"],denied:["report:download"]},"r1",directory,reports).status,403);
++});
