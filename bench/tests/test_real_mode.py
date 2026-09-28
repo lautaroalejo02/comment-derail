@@ -44,6 +44,9 @@ if mode == "ratelimit_always" or (mode == "ratelimit_once" and n == 0):
     print(json.dumps({"type": "result", "is_error": True, "api_error_status": 429,
                       "result": "API Error: 429 rate_limit_error"}))
     sys.exit(1)
+if mode.startswith("util"):
+    print(json.dumps({"type": "rate_limit_event", "rate_limit_info": {"status": "allowed", "unifiedWindows": {
+        "five_hour": {"utilization": float(mode[4:])}, "seven_day": {"utilization": 0.1}}}}))
 usage = {"claude-small": {"outputTokens": 10, "costUSD": 0.01},
          "claude-big": {"outputTokens": 900, "costUSD": 0.4}}
 if prompt == "Reply with OK":
@@ -341,3 +344,18 @@ def test_to_argv_strips_shell_quotes_and_uses_this_python():
         ["node", "--experimental-strip-types", "--test", "tests/**/*.test.ts"]
     assert to_argv("python -m pytest -q")[0] == sys.executable
     assert to_argv(["node", "tests\a b.ts"]) == ["node", "tests\a b.ts"]
+
+
+def test_stop_at_usage_cap(fake, monkeypatch):
+    monkeypatch.setenv("FAKE_MODE", "util0.62")
+    out = fake["tmp"] / "results"
+    rc = run.main(["--fixtures", str(FIXTURES), "--conditions", "original,stripped", "--reps", "2",
+                   "--out", str(out), "--run-id", "cap", "--no-judge", "--stop-at-usage", "0.5"])
+    assert rc == 5
+    rows = [json.loads(l) for l in (out / "cap" / "results.jsonl").read_text(encoding="utf-8").splitlines()]
+    assert len(rows) == 1 and rows[0]["error"] is None
+    assert rows[0]["plan_usage"] == {"five_hour": 0.62, "seven_day": 0.1}
+    monkeypatch.setenv("FAKE_MODE", "util0.3")
+    rc = run.main(["--fixtures", str(FIXTURES), "--conditions", "original,stripped", "--reps", "2",
+                   "--out", str(out), "--run-id", "cap", "--no-judge", "--stop-at-usage", "0.5", "--resume"])
+    assert rc == 0

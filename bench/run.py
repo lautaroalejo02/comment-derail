@@ -28,7 +28,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 from . import __version__
-from .agent import MOCK_MODES, claude_version, credentials_available, run_agent
+from .agent import MOCK_MODES, claude_version, credentials_available, plan_usage, run_agent
 from .fixture import CONDITIONS, Fixture, discover
 from .grade import diff_metrics, judge, run_hidden, run_visible
 from .subjects import AGENTS, INSTRUCTION_FILE, behavior_flags
@@ -157,6 +157,7 @@ def run_one(fx: Fixture, condition: str, rep: int, args, run_dir: Path, meta: di
             "agent_parse_error": ar.parse_error, "mock_apply": ar.mock_apply,
             "api_error_status": ar.api_error_status,
             "main_model": ar.main_model, "modelUsage": ar.model_usage,
+            "plan_usage": plan_usage(ar.stdout) or None,
         })
         if ar.usage_limited:
             rec["error_kind"] = "usage_limit"
@@ -270,6 +271,9 @@ def parse_args(argv=None):
     ap.add_argument("--agent-timeout", type=float, default=1800)
     ap.add_argument("--judge-timeout", type=float, default=600)
     ap.add_argument("--test-timeout", type=float, default=600)
+    ap.add_argument("--stop-at-usage", type=float, default=None,
+                    help="stop starting new cells once the Claude plan 5-hour window utilization (0..1, from "
+                         "Claude Code's rate_limit_event) reaches this value; exit code 5")
     ap.add_argument("--backoff", default="60,120,240",
                     help="seconds to sleep before each rate-limit retry (comma list; its length = max retries)")
     ap.add_argument("--isolate-config", dest="isolate_config", action="store_true", default=True,
@@ -451,6 +455,10 @@ def _main(args, fixtures, errors, now, run_id, run_dir, results_path, meta_path,
         if rec.get("error_kind") in ("auth", "usage_limit"):
             stop_kind.setdefault("kind", rec["error_kind"])
             stop.set()
+        used = (rec.get("plan_usage") or {}).get("five_hour")
+        if args.stop_at_usage is not None and isinstance(used, (int, float)) and used >= args.stop_at_usage:
+            stop_kind.setdefault("kind", "usage_cap")
+            stop.set()
 
     def guarded(fx, cond, k):
         if stop.is_set():
@@ -470,6 +478,11 @@ def _main(args, fixtures, errors, now, run_id, run_dir, results_path, meta_path,
                 rec = f.result()
                 if rec is not None:
                     record(rec)
+    if stop.is_set() and stop_kind.get("kind") == "usage_cap":
+        log(f"[run] STOPPED: Claude plan 5-hour window at or above --stop-at-usage {args.stop_at_usage:g}; "
+            f"cells in flight finished normally, the rest were not started.")
+        log(f"[run] continue later with --run-id {run_id} --resume")
+        return 5
     if stop.is_set() and stop_kind.get("kind") == "usage_limit":
         log("[run] STOPPED: usage limit reached (plan window or API credit); the limited cell "
             "and the cells not started are not counted as done.")

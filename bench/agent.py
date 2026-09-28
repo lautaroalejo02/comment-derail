@@ -152,6 +152,22 @@ AUTH_RX = re.compile(r"invalid api key|/login\b|not logged in|authentication[ _]
                      r"could not resolve authentication|missing api key", re.IGNORECASE)
 
 
+def plan_usage(stdout: str) -> dict:
+    """Plan window utilization (0..1) from the last rate_limit_event in Claude
+    Code's stream-json output: {"five_hour": x, "seven_day": y}; {} if absent."""
+    last = None
+    for line in (stdout or "").splitlines():
+        if '"rate_limit_event"' not in line:
+            continue
+        try:
+            last = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+    windows = ((last or {}).get("rate_limit_info") or {}).get("unifiedWindows") or {}
+    return {k: v.get("utilization") for k, v in windows.items()
+            if isinstance(v, dict) and isinstance(v.get("utilization"), (int, float))}
+
+
 def main_model(model_usage: dict | None) -> str | None:
     """Model with the most output tokens in ``modelUsage`` (ties: higher cost)."""
     if not isinstance(model_usage, dict) or not model_usage:
