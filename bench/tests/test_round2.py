@@ -39,4 +39,4 @@ def test_build_tables(tmp_path):
     d.mkdir()
     (d / "results.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows), encoding="utf-8")
     md = round2.build([str(d)], None)
-    assert "| f | claude | 0/5 | 5/5 | 0.004 | 0.004 * |" in md
+    assert "| f | claude/? | 0/5 | 5/5 | 0.004 | 0.004 * |" in md

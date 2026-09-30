@@ -91,7 +91,8 @@ def load_runs(paths: list[str]) -> list[dict]:
                 r = json.loads(line)
                 if r.get("error"):
                     continue
-                r.setdefault("agent", "claude")
+                # A subject is agent + pinned model (claude/opus and claude/sonnet are separate subjects).
+                r["agent"] = f"{r.get('agent') or 'claude'}/{r.get('model') or r.get('main_model') or '?'}"
                 rows[(r["agent"], r["fixture"], r["condition"], r["rep"])] = r  # last row per cell wins
     out = list(rows.values())
     for r in out:
