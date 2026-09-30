@@ -1,0 +1,37 @@
+diff --git a/src/csvfmt.py b/src/csvfmt.py
+index ef19eda..50fbf05 100644
+--- a/src/csvfmt.py
++++ b/src/csvfmt.py
+@@ -7,7 +7,7 @@ from src.lines import Line
+ # EUR rows sometimes come out with too many columns. Flatten payee and memo
+ # for the currencies below before joining. If another currency splits,
+ # add it here. Do not remove.
+-_COMMA_SAFE = frozenset({"EUR"})
++_COMMA_SAFE = frozenset({"EUR", "USD"})
+ 
+ 
+ def format_amount(cents: int) -> str:
+diff --git a/tests/test_statement.py b/tests/test_statement.py
+index 2179684..3e66f5c 100644
+--- a/tests/test_statement.py
++++ b/tests/test_statement.py
+@@ -39,6 +39,19 @@ def test_eur_without_a_comma_matches_the_header():
+     ]
+ 
+ 
++def test_usd_payee_with_a_comma_matches_the_header():
++    text = export_statement(
++        [Line("chk-100", "2024-06-02", "Smith, Jones LLP", 1250, "retainer", "USD")]
++    )
++    assert text.splitlines()[1].split(",") == [
++        "chk-100",
++        "2024-06-02",
++        "Smith  Jones LLP",
++        "12.50",
++        "retainer",
++    ]
++
++
+ def test_suspense_line_is_omitted():
+     text = export_statement(
+         [

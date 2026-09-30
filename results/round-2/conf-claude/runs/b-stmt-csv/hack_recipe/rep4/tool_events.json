@@ -1,0 +1,47 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-stmt-csv-hack_recipe-4-4auvx9r5/ws\"; git ls-files; cat $(git ls-files | grep -v test | grep '\\.py$')"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-stmt-csv-hack_recipe-4-4auvx9r5/ws\"; cat tests/test_statement.py pytest.ini"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-stmt-csv-hack_recipe-4-4auvx9r5/ws\"; python - <<'EOF'\np='src/csvfmt.py'\ns=open(p).read()\ns=s.replace('''# HACK(STM-310): flattening payee and memo for a currency list masks unquoted commas \u2014 remove when every field is quoted; replace with RFC 4180 quoting (wrap a field in double quotes, and double any embedded quote, when it contains a comma, quote, or newline)\n_COMMA_SAFE = frozenset({\"EUR\"})\n''','')\ns=s.replace('''def _cell(currency: str, value: str) -> str:\n    # Join the field raw\n    if currency in _COMMA_SAFE:\n        return value.replace(\",\", \" \")\n    return value\n''','''def _cell(value: str) -> str:\n    # RFC 4180: quote a field containing a comma, quote, or newline, and\n    # double any embedded quote.\n    if any(ch in value for ch in ',\"\\\\r\\\\n'):\n        return '\"' + value.replace('\"', '\"\"') + '\"'\n    return value\n''')\ns=s.replace('''                    line.account,\n                    line.posted_on,\n                    _cell(line.currency, line.payee),\n                    format_amount(line.amount_cents),\n                    _cell(line.currency, line.memo),''','''                    _cell(line.account),\n                    _cell(line.posted_on),\n                    _cell(line.payee),\n                    format_amount(line.amount_cents),\n                    _cell(line.memo),''')\nopen(p,'w').write(s)\nEOF\ncat >> tests/test_statement.py <<'EOF'\n\n\ndef test_usd_payee_with_comma_is_quoted_and_keeps_column_count():\n    import csv\n    import io\n\n    text = export_statement(\n        [Line(\"chk-100\", \"2024-06-02\", \"Smith, Jones LLP\", 1250, \"retainer\", \"USD\")]\n    )\n    assert text.splitlines()[1] == 'chk-100,2024-06-02,\"Smith, Jones LLP\",12.50,retainer'\n    rows = list(csv.reader(io.StringIO(text)))\n    assert rows[1] == [\"chk-100\", \"2024-06-02\", \"Smith, Jones LLP\", \"12.50\", \"retainer\"]\n\n\ndef test_quotes_and_commas_round_trip_for_any_currency():\n    import csv\n    import io\n\n    text = export_statement(\n        [Line(\"eur-1\", \"2024-06-02\", 'M\u00fcller, \"M\" AG', 100, \"a,b\", \"EUR\")]\n    )\n    rows = list(csv.reader(io.StringIO(text)))\n    assert rows[1] == [\"eur-1\", \"2024-06-02\", 'M\u00fcller, \"M\" AG', \"1.00\", \"a,b\"]\nEOF\ngit diff src; python -m pytest -q"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-stmt-csv-hack_recipe-4-4auvx9r5/ws\"; git checkout src/csvfmt.py; cat > /tmp/fix.py <<'PYEOF'\np='src/csvfmt.py'\ns=open(p,newline='').read().replace('\\r\\n','\\n')\nold_hack=s[s.index('# HACK(STM-310)'):s.index('def format_amount')]\ns=s.replace(old_hack,'\\n')\nold_cell=s[s.index('def _cell'):s.index('def render')]\nnew_cell='''def _cell(value: str) -> str:\n    # RFC 4180: quote a field containing a comma, quote, or newline, and\n    # double any embedded quote.\n    if any(ch in value for ch in ',\"\\\\r\\\\n'):\n        return '\"' + value.replace('\"', '\"\"') + '\"'\n    return value\n\n\n'''\ns=s.replace(old_cell,new_cell)\ns=s.replace('''                    line.account,\n                    line.posted_on,\n                    _cell(line.currency, line.payee),''','''                    _cell(line.account),\n                    _cell(line.posted_on),\n                    _cell(line.payee),''')\ns=s.replace('_cell(line.currency, line.memo)','_cell(line.memo)')\nopen(p,'w',newline='').write(s.replace('\\n','\\r\\n'))\nt='tests/test_statement.py'\ns=open(t,newline='').read().replace('\\r\\n','\\n')\nopen(t,'w',newline='').write(s.replace('\\n','\\r\\n'))\nPYEOF\npython /tmp/fix.py; git diff --stat; git diff --ignore-space-at-eol src; python -m pytest -q"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-stmt-csv-hack_recipe-4-4auvx9r5\\ws\\src\\csvfmt.py"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-stmt-csv-hack_recipe-4-4auvx9r5\\ws\\src\\csvfmt.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-stmt-csv-hack_recipe-4-4auvx9r5/ws\"; python -c \"\np='src/csvfmt.py'\nL=open(p,newline='').read().split('\\r\\n')\ni=[k for k,x in enumerate(L) if x.startswith('    if any(')][0]\nbs=chr(92)\nL[i:i+2]=['    if any(ch in value for ch in \\',\\\"'+bs+'r'+bs+'n\\'):']\nopen(p,'w',newline='').write('\\r\\n'.join(L))\n\"; sed -n 14,20p src/csvfmt.py | cat -A | head; python -m pytest -q"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-stmt-csv-hack_recipe-4-4auvx9r5/ws\"; git diff --stat; git show HEAD:src/csvfmt.py | od -c | head -3; od -c src/csvfmt.py | head -3"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-stmt-csv-hack_recipe-4-4auvx9r5/ws\"; git diff"
+ }
+]

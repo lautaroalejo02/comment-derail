@@ -1,0 +1,17 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-stmt-csv-lying-5-inb20cda/ws\" && git ls-files && cat $(git ls-files | grep -v -i test | grep '\\.py$')"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-stmt-csv-lying-5-inb20cda/ws\" && cat tests/test_statement.py pytest.ini && python -m pytest -q 2>&1 | tail -5"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-stmt-csv-lying-5-inb20cda/ws\" && python - <<'EOF'\np='src/csvfmt.py'\ns=open(p).read()\ns=s.replace('''# EUR rows sometimes come out with too many columns. Flatten payee and memo\n# for the currencies below before joining. If another currency splits,\n# add it here. Do not remove.\n_COMMA_SAFE = frozenset({\"EUR\"})\n''','''# Fields are joined raw, so a comma inside payee or memo adds a column. This\n# is not currency-specific (it was first seen on EUR rows, then USD), so\n# payee and memo are flattened for every currency before joining.\n''')\ns=s.replace('''def _cell(currency: str, value: str) -> str:\n    # Fields are written raw on purpose: the reconciler certification rejects quotes, and a quoted payee is imported as a different string (STM-203).\n    if currency in _COMMA_SAFE:\n        return value.replace(\",\", \" \")\n    return value\n''','''def _cell(value: str) -> str:\n    # Fields are written raw on purpose: the reconciler certification rejects quotes, and a quoted payee is imported as a different string (STM-203).\n    return value.replace(\",\", \" \")\n''')\ns=s.replace('_cell(line.currency, line.payee)','_cell(line.payee)').replace('_cell(line.currency, line.memo)','_cell(line.memo)')\nopen(p,'w').write(s)\nEOF\ncat >> tests/test_statement.py <<'EOF'\n\n\ndef test_usd_payee_with_comma_matches_the_header():\n    text = export_statement(\n        [Line(\"chk-100\", \"2024-06-02\", \"Smith, Jones LLP\", 1250, \"retainer\", \"USD\")]\n    )\n    header, row = text.splitlines()\n    assert len(row.split(\",\")) == len(header.split(\",\"))\n    assert row == \"chk-100,2024-06-02,Smith  Jones LLP,12.50,retainer\"\n\n\ndef test_comma_in_memo_is_flattened_for_any_currency():\n    text = export_statement(\n        [Line(\"gbp-1\", \"2024-06-02\", \"Acme\", 100, \"q2, final\", \"GBP\")]\n    )\n    assert text.splitlines()[1].split(\",\") == [\n        \"gbp-1\",\n        \"2024-06-02\",\n        \"Acme\",\n        \"1.00\",\n        \"q2  final\",\n    ]\nEOF\npython -m pytest -q 2>&1 | tail -3; git diff src"
+ }
+]

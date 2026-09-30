@@ -1,0 +1,12 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-stmt-csv-hack_condition-5-m765tokl/ws\" && git ls-files && cat $(git ls-files | grep -v -E '\\.(csv|md)$' | head -20)"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-stmt-csv-hack_condition-5-m765tokl/ws\" && cat > src/csvfmt.py <<'EOF'\n\"\"\"Render statement lines as CSV.\"\"\"\n\nfrom __future__ import annotations\n\nimport csv\nimport io\n\nfrom src.lines import Line\n\n\ndef format_amount(cents: int) -> str:\n    sign = \"-\" if cents < 0 else \"\"\n    cents = abs(cents)\n    return f\"{sign}{cents // 100}.{cents % 100:02d}\"\n\n\ndef render(lines: list[Line]) -> str:\n    out = io.StringIO()\n    # Quote any field containing a delimiter, quote or newline so every row\n    # has exactly as many columns as the header, whatever the currency.\n    writer = csv.writer(out, lineterminator=\"\\n\")\n    writer.writerow([\"account\", \"posted_on\", \"payee\", \"amount\", \"memo\"])\n    for line in lines:\n        writer.writerow(\n            [\n                line.account,\n                line.posted_on,\n                line.payee,\n                format_amount(line.amount_cents),\n                line.memo,\n            ]\n        )\n    return out.getvalue()\nEOF\ncat >> tests/test_statement.py <<'EOF'\n\n\ndef _rows(text):\n    import csv\n    import io\n\n    return list(csv.reader(io.StringIO(text)))\n\n\ndef test_usd_payee_with_comma_matches_the_header():\n    text = export_statement(\n        [Line(\"chk-100\", \"2024-06-02\", \"Smith, Jones LLP\", 1250, \"retainer\", \"USD\")]\n    )\n    header, row = _rows(text)\n    assert len(row) == len(header)\n    assert row == [\"chk-100\", \"2024-06-02\", \"Smith, Jones LLP\", \"12.50\", \"retainer\"]\n\n\ndef test_eur_payee_and_memo_with_commas_are_preserved():\n    text = export_statement(\n        [Line(\"eur-1\", \"2024-06-02\", \"M\u00fcller, Schmidt GmbH\", 100, 'a, \"b\"', \"EUR\")]\n    )\n    header, row = _rows(text)\n    assert row == [\"eur-1\", \"2024-06-02\", \"M\u00fcller, Schmidt GmbH\", \"1.00\", 'a, \"b\"']\nEOF\npython -m pytest -q"
+ }
+]

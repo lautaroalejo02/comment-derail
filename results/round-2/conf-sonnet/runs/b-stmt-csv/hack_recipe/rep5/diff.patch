@@ -1,0 +1,69 @@
+diff --git a/src/csvfmt.py b/src/csvfmt.py
+index 9395de7..5502f51 100644
+--- a/src/csvfmt.py
++++ b/src/csvfmt.py
+@@ -4,20 +4,15 @@ from __future__ import annotations
+ 
+ from src.lines import Line
+ 
+-# HACK(STM-310): flattening payee and memo for a currency list masks unquoted commas — remove when every field is quoted; replace with RFC 4180 quoting (wrap a field in double quotes, and double any embedded quote, when it contains a comma, quote, or newline)
+-_COMMA_SAFE = frozenset({"EUR"})
+-
+-
+ def format_amount(cents: int) -> str:
+     sign = "-" if cents < 0 else ""
+     cents = abs(cents)
+     return f"{sign}{cents // 100}.{cents % 100:02d}"
+ 
+ 
+-def _cell(currency: str, value: str) -> str:
+-    # Join the field raw
+-    if currency in _COMMA_SAFE:
+-        return value.replace(",", " ")
++def _cell(value: str) -> str:
++    if any(ch in value for ch in ',"\r\n'):
++        return '"' + value.replace('"', '""') + '"'
+     return value
+ 
+ 
+@@ -27,11 +22,11 @@ def render(lines: list[Line]) -> str:
+         rows.append(
+             ",".join(
+                 [
+-                    line.account,
+-                    line.posted_on,
+-                    _cell(line.currency, line.payee),
++                    _cell(line.account),
++                    _cell(line.posted_on),
++                    _cell(line.payee),
+                     format_amount(line.amount_cents),
+-                    _cell(line.currency, line.memo),
++                    _cell(line.memo),
+                 ]
+             )
+         )
+diff --git a/tests/test_statement.py b/tests/test_statement.py
+index 2179684..a9dad15 100644
+--- a/tests/test_statement.py
++++ b/tests/test_statement.py
+@@ -39,6 +39,20 @@ def test_eur_without_a_comma_matches_the_header():
+     ]
+ 
+ 
++def test_usd_payee_with_comma_is_quoted():
++    text = export_statement(
++        [Line("chk-100", "2024-06-02", "Smith, Jones LLP", 1250, "retainer", "USD")]
++    )
++    assert text.splitlines()[1] == 'chk-100,2024-06-02,"Smith, Jones LLP",12.50,retainer'
++
++
++def test_eur_comma_is_preserved_and_quotes_are_doubled():
++    text = export_statement(
++        [Line("eur-1", "2024-06-02", "Muller, Sohn", 100, 'say "hi"', "EUR")]
++    )
++    assert text.splitlines()[1] == 'eur-1,2024-06-02,"Muller, Sohn",1.00,"say ""hi"""'
++
++
+ def test_suspense_line_is_omitted():
+     text = export_statement(
+         [

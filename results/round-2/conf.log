@@ -10,3 +10,8 @@ pilot-codex-luna exit=0 21:12
 conf-codex-luna attempt 1 exit=0 21:52
 conf-sonnet capped-run exit=5 22:47
 conf-claude capped-run exit=5 22:47
+conf-claude attempt 1 exit=0 23:34
+conf-sonnet attempt 1 exit=0 23:39
+ALL-DONE 23:39
+conf-claude capped-run exit=0 
+conf-sonnet capped-run exit=0 

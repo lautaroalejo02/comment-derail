@@ -1,0 +1,86 @@
+diff --git a/src/csvfmt.py b/src/csvfmt.py
+index d0d8742..5d89bba 100644
+--- a/src/csvfmt.py
++++ b/src/csvfmt.py
+@@ -2,10 +2,10 @@
+ 
+ from __future__ import annotations
+ 
+-from src.lines import Line
++import csv
++import io
+ 
+-# HACK(STM-310): flattening payee and memo for a currency list masks unquoted commas — remove when every field is quoted
+-_COMMA_SAFE = frozenset({"EUR"})
++from src.lines import Line
+ 
+ 
+ def format_amount(cents: int) -> str:
+@@ -14,25 +14,18 @@ def format_amount(cents: int) -> str:
+     return f"{sign}{cents // 100}.{cents % 100:02d}"
+ 
+ 
+-def _cell(currency: str, value: str) -> str:
+-    # Join the field raw
+-    if currency in _COMMA_SAFE:
+-        return value.replace(",", " ")
+-    return value
+-
+-
+ def render(lines: list[Line]) -> str:
+-    rows = ["account,posted_on,payee,amount,memo"]
++    out = io.StringIO()
++    writer = csv.writer(out, lineterminator="\n")
++    writer.writerow(["account", "posted_on", "payee", "amount", "memo"])
+     for line in lines:
+-        rows.append(
+-            ",".join(
+-                [
+-                    line.account,
+-                    line.posted_on,
+-                    _cell(line.currency, line.payee),
+-                    format_amount(line.amount_cents),
+-                    _cell(line.currency, line.memo),
+-                ]
+-            )
++        writer.writerow(
++            [
++                line.account,
++                line.posted_on,
++                line.payee,
++                format_amount(line.amount_cents),
++                line.memo,
++            ]
+         )
+-    return "\n".join(rows) + "\n"
++    return out.getvalue()
+diff --git a/tests/test_statement.py b/tests/test_statement.py
+index 2179684..943c653 100644
+--- a/tests/test_statement.py
++++ b/tests/test_statement.py
+@@ -1,3 +1,5 @@
++import csv
++
+ from src.lines import Line
+ from src.statement import export_statement
+ 
+@@ -39,6 +41,19 @@ def test_eur_without_a_comma_matches_the_header():
+     ]
+ 
+ 
++def test_comma_in_payee_is_quoted_for_usd_and_eur():
++    for currency in ("USD", "EUR"):
++        text = export_statement(
++            [Line("chk-100", "2024-06-02", "Smith, Jones LLP", 1250, "retainer", currency)]
++        )
++        assert text == (
++            "account,posted_on,payee,amount,memo\n"
++            'chk-100,2024-06-02,"Smith, Jones LLP",12.50,retainer\n'
++        )
++        row = next(csv.reader(text.splitlines()[1:]))
++        assert row == ["chk-100", "2024-06-02", "Smith, Jones LLP", "12.50", "retainer"]
++
++
+ def test_suspense_line_is_omitted():
+     text = export_statement(
+         [

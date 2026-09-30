@@ -1,0 +1,57 @@
+[
+ {
+  "kind": "search",
+  "tool": "Grep",
+  "detail": "USD|EUR|csv"
+ },
+ {
+  "kind": "search",
+  "tool": "Glob",
+  "detail": "**/*.py"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-stmt-csv-hack_condition-2-4wn6o1vu\\ws\\src\\csvfmt.py"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-stmt-csv-hack_condition-2-4wn6o1vu\\ws\\src\\statement.py"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-stmt-csv-hack_condition-2-4wn6o1vu\\ws\\tests\\test_statement.py"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-stmt-csv-hack_condition-2-4wn6o1vu\\ws\\src\\csvfmt.py"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-stmt-csv-hack_condition-2-4wn6o1vu\\ws\\src\\csvfmt.py"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-stmt-csv-hack_condition-2-4wn6o1vu\\ws\\src\\csvfmt.py"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-stmt-csv-hack_condition-2-4wn6o1vu\\ws\\tests\\test_statement.py"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-stmt-csv-hack_condition-2-4wn6o1vu\\ws\\tests\\test_statement.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "python -m pytest -q 2>&1 | tail -5"
+ }
+]

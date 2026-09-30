@@ -1,0 +1,47 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-stmt-csv-original-1-3t9mrwh6/ws\" && git ls-files && cat $(git ls-files | grep -v '\\.csv$' | head -20)"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-stmt-csv-original-1-3t9mrwh6/ws\" && python - <<'EOF'\nimport re\np='src/csvfmt.py'\ns=open(p).read()\ns=s.replace('from __future__ import annotations\\n\\n', 'from __future__ import annotations\\n\\nimport csv\\nimport io\\n\\n',1)\ns=s.replace('''    # Join the field raw\n    if''','''    if''')\nold=s[s.index('def render'):]\nnew='''def render(lines: list[Line]) -> str:\n    # csv.writer quotes any field containing a comma, quote or newline, so a\n    # payee like \"Smith, Jones LLP\" stays in one column for every currency.\n    out = io.StringIO()\n    writer = csv.writer(out, lineterminator=\"\\\\n\")\n    writer.writerow([\"account\", \"posted_on\", \"payee\", \"amount\", \"memo\"])\n    for line in lines:\n        writer.writerow(\n            [\n                line.account,\n                line.posted_on,\n                _cell(line.currency, line.payee),\n                format_amount(line.amount_cents),\n                _cell(line.currency, line.memo),\n            ]\n        )\n    return out.getvalue()\n'''\ns=s.replace(old,new)\nopen(p,'w').write(s)\nEOF\ncat >> tests/test_statement.py <<'EOF'\n\n\ndef test_usd_payee_with_comma_stays_in_one_column():\n    import csv\n    import io\n\n    text = export_statement(\n        [Line(\"chk-100\", \"2024-06-02\", \"Smith, Jones LLP\", 1250, \"retainer\", \"USD\")]\n    )\n    rows = list(csv.reader(io.StringIO(text)))\n    assert rows[1] == [\"chk-100\", \"2024-06-02\", \"Smith, Jones LLP\", \"12.50\", \"retainer\"]\n    assert len(rows[1]) == len(rows[0])\nEOF\ngit diff src; python -m pytest -q"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-stmt-csv-original-1-3t9mrwh6/ws\" && python - <<'EOF'\np='src/csvfmt.py'\ns=open(p).read()\ns=s.replace('lineterminator=\"\\n\")','lineterminator=\"\\\\n\")')\nopen(p,'w').write(s)\nEOF\ngrep -n lineterminator src/csvfmt.py; python -m pytest -q"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-stmt-csv-original-1-3t9mrwh6\\ws\\src\\csvfmt.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-stmt-csv-original-1-3t9mrwh6/ws\" && git diff --stat; file src/csvfmt.py tests/test_statement.py; git show HEAD:src/csvfmt.py | file -"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-stmt-csv-original-1-3t9mrwh6/ws\" && python - <<'EOF'\np='src/csvfmt.py'\ns=open(p,newline='').read().replace('\\r\\n','\\n')\ns=s.replace('lineterminator=\"\\n\")','lineterminator=\"\\\\n\")')\nopen(p,'w',newline='').write(s)\nEOF\nfile src/csvfmt.py; grep -n lineterminator src/csvfmt.py; python -m pytest -q"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-stmt-csv-original-1-3t9mrwh6\\ws\\src\\csvfmt.py"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-stmt-csv-original-1-3t9mrwh6\\ws\\src\\csvfmt.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-stmt-csv-original-1-3t9mrwh6/ws\" && file src/csvfmt.py; cat src/csvfmt.py; python -m pytest -q"
+ }
+]

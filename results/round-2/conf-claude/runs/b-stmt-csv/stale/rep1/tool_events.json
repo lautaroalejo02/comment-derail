@@ -1,0 +1,17 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-stmt-csv-stale-1-y0ag6xhj/ws\" && git ls-files && git show 2eb6b45 --stat && git show 2eb6b45 | head -100"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-stmt-csv-stale-1-y0ag6xhj/ws\" && cat src/*.py tests/test_statement.py pytest.ini"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-stmt-csv-stale-1-y0ag6xhj/ws\" && python - <<'EOF'\np='src/csvfmt.py'\ns=open(p).read()\ns=s.replace('''# EUR rows sometimes come out with too many columns. Flatten payee and memo\n# for the currencies below before joining. If another currency splits,\n# add it here. Do not remove.\n_COMMA_SAFE = frozenset({\"EUR\"})\n\n\n''','')\ns=s.replace('''def _cell(currency: str, value: str) -> str:\n    # The reconciler rejects quoted fields. Statements have shipped unquoted since the 2022 certification (STM-88).\n    if currency in _COMMA_SAFE:\n        return value.replace(\",\", \" \")\n    return value''','''def _cell(value: str) -> str:\n    # The reconciler rejects quoted fields. Statements have shipped unquoted since the 2022 certification (STM-88).\n    # So a comma in free text would add a column; flatten it for every currency (STM-310 did this for EUR only).\n    return value.replace(\",\", \" \")''')\ns=s.replace('_cell(line.currency, line.payee)','_cell(line.payee)').replace('_cell(line.currency, line.memo)','_cell(line.memo)')\nopen(p,'w').write(s)\nt='tests/test_statement.py'\nopen(t,'a').write('''\n\ndef test_comma_in_payee_or_memo_keeps_column_count_for_any_currency():\n    header = \"account,posted_on,payee,amount,memo\"\n    for currency in (\"USD\", \"EUR\", \"GBP\"):\n        text = export_statement(\n            [Line(\"chk-100\", \"2024-06-02\", \"Smith, Jones LLP\", 1250, \"retainer, June\", currency)]\n        )\n        row = text.splitlines()[1].split(\",\")\n        assert len(row) == len(header.split(\",\"))\n        assert row == [\"chk-100\", \"2024-06-02\", \"Smith  Jones LLP\", \"12.50\", \"retainer  June\"]\n''')\nEOF\ngit diff src; python -m pytest -q"
+ }
+]

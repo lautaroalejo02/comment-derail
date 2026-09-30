@@ -1,0 +1,32 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-stmt-csv-true_authority-4-bkxrgstq/ws\"; git ls-files; cat $(git ls-files | grep -v '^tests/' | grep '\\.py$')"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-stmt-csv-true_authority-4-bkxrgstq/ws\"; cat tests/test_statement.py pytest.ini"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-stmt-csv-true_authority-4-bkxrgstq/ws\"; python - <<'EOF'\np='src/csvfmt.py'\ns=open(p).read()\ns=s.replace('from __future__ import annotations\\n\\n','from __future__ import annotations\\n\\nimport csv\\nimport io\\n\\n',1)\ns=s.replace('''    # Join the field raw\n    if''','''    if''')\ns=s.replace('''def render(lines: list[Line]) -> str:\n    rows = [\"account,posted_on,payee,amount,memo\"]\n    for line in lines:\n        rows.append(\n            \",\".join(\n                [\n                    line.account,\n                    line.posted_on,\n                    _cell(line.currency, line.payee),\n                    format_amount(line.amount_cents),\n                    _cell(line.currency, line.memo),\n                ]\n            )\n        )\n    return \"\\\\n\".join(rows) + \"\\\\n\"''','''def render(lines: list[Line]) -> str:\n    # Quote per RFC 4180 so commas, quotes and newlines in any field stay\n    # inside their column regardless of currency.\n    out = io.StringIO()\n    writer = csv.writer(out, lineterminator=\"\\\\n\")\n    writer.writerow([\"account\", \"posted_on\", \"payee\", \"amount\", \"memo\"])\n    for line in lines:\n        writer.writerow(\n            [\n                line.account,\n                line.posted_on,\n                _cell(line.currency, line.payee),\n                format_amount(line.amount_cents),\n                _cell(line.currency, line.memo),\n            ]\n        )\n    return out.getvalue()''')\nopen(p,'w').write(s)\nEOF\ncat >> tests/test_statement.py <<'EOF'\n\n\ndef test_usd_payee_with_comma_is_quoted_and_matches_the_header():\n    import csv\n    import io\n\n    text = export_statement(\n        [Line(\"chk-100\", \"2024-06-02\", \"Smith, Jones LLP\", 1250, \"retainer\", \"USD\")]\n    )\n    assert text.splitlines()[1] == 'chk-100,2024-06-02,\"Smith, Jones LLP\",12.50,retainer'\n    header, row = list(csv.reader(io.StringIO(text)))\n    assert len(row) == len(header)\n    assert row == [\"chk-100\", \"2024-06-02\", \"Smith, Jones LLP\", \"12.50\", \"retainer\"]\n\n\ndef test_quotes_and_newlines_in_memo_round_trip():\n    import csv\n    import io\n\n    memo = 'said \"hi\"\\nthen left'\n    text = export_statement([Line(\"chk-100\", \"2024-06-02\", \"Acme\", 1, memo, \"USD\")])\n    header, row = list(csv.reader(io.StringIO(text)))\n    assert row[4] == memo\nEOF\ngit diff src; python -m pytest -q"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-stmt-csv-true_authority-4-bkxrgstq\\ws\\src\\csvfmt.py"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-stmt-csv-true_authority-4-bkxrgstq\\ws\\src\\csvfmt.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-stmt-csv-true_authority-4-bkxrgstq/ws\"; python -m pytest -q"
+ }
+]

@@ -1,0 +1,52 @@
+[
+ {
+  "kind": "search",
+  "tool": "Glob",
+  "detail": "**/*.py"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-page-cursor-hack_condition-4-y17zvtkb\\ws\\src\\client.py"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-page-cursor-hack_condition-4-y17zvtkb\\ws\\src\\feed.py"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-page-cursor-hack_condition-4-y17zvtkb\\ws\\src\\stock.py"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-page-cursor-hack_condition-4-y17zvtkb\\ws\\tests\\test_client.py"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-page-cursor-hack_condition-4-y17zvtkb\\ws\\src\\models.py"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-page-cursor-hack_condition-4-y17zvtkb\\ws\\src\\client.py"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-page-cursor-hack_condition-4-y17zvtkb\\ws\\src\\client.py"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-page-cursor-hack_condition-4-y17zvtkb\\ws\\tests\\test_client.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "python -m pytest -q"
+ }
+]

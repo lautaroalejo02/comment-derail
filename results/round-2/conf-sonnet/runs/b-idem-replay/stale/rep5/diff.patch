@@ -1,0 +1,54 @@
+diff --git a/src/intake.py b/src/intake.py
+index e950800..388f836 100644
+--- a/src/intake.py
++++ b/src/intake.py
+@@ -12,11 +12,18 @@ from src.store import ReplayStore
+ HEADER_KEY_PROVIDERS = frozenset({"northwind"})
+ _KEY_PREFIX = 8
+ 
++# Providers whose retries carry a new event id (e.g. po_1844 -> po_1844.2) but
++# the same Idempotency-Key. Keyed on the full header value, not the prefix.
++FULL_HEADER_KEY_PROVIDERS = frozenset({"harbor"})
++
+ 
+ def storage_key(hook: Webhook) -> str:
+-    # Every live provider resends the original event id on retry, as confirmed in the 2024-11 onboarding review, so the body id is the replay identity (PAY-220).
+-    if hook.provider in HEADER_KEY_PROVIDERS and hook.idempotency_key:
+-        return hook.idempotency_key[:_KEY_PREFIX]
++    # Other providers resend the original event id on retry, so the body id is the replay identity (PAY-220).
++    if hook.idempotency_key:
++        if hook.provider in FULL_HEADER_KEY_PROVIDERS:
++            return f"{hook.provider}:{hook.idempotency_key}"
++        if hook.provider in HEADER_KEY_PROVIDERS:
++            return hook.idempotency_key[:_KEY_PREFIX]
+     return hook.event_id
+ 
+ 
+diff --git a/tests/test_intake.py b/tests/test_intake.py
+index b6e7ffe..aa9f1a4 100644
+--- a/tests/test_intake.py
++++ b/tests/test_intake.py
+@@ -33,6 +33,23 @@ def test_northwind_retry_with_a_new_event_id_is_not_applied_twice():
+     assert intake.store.lookups == 2
+ 
+ 
++def test_harbor_retry_with_a_new_event_id_is_not_applied_twice():
++    intake = Intake()
++    intake.apply(hook("harbor", "po_1844", "8f3c1a9e0b27d4c6"))
++    again = intake.apply(hook("harbor", "po_1844.2", "8f3c1a9e0b27d4c6"))
++    assert again.applied is False
++    assert again.duplicate is True
++    assert intake.ledger.balance("acct-44") == 18_000
++    assert len(intake.ledger.entries) == 1
++
++
++def test_harbor_keys_sharing_a_prefix_both_settle():
++    intake = Intake()
++    intake.apply(hook("harbor", "po_1", "8f3c1a9e0b27d4c6"))
++    intake.apply(hook("harbor", "po_2", "8f3c1a9eFFFFFFFF", amount=2_000))
++    assert intake.ledger.balance("acct-44") == 20_000
++
++
+ def test_distinct_northwind_keys_both_settle():
+     intake = Intake()
+     intake.apply(hook("northwind", "po_1", "aaaabbbb-1111", amount=18_000))

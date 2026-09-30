@@ -1,0 +1,62 @@
+diff --git a/src/csvfmt.py b/src/csvfmt.py
+index ef19eda..e4dd29b 100644
+--- a/src/csvfmt.py
++++ b/src/csvfmt.py
+@@ -4,23 +4,16 @@ from __future__ import annotations
+ 
+ from src.lines import Line
+ 
+-# EUR rows sometimes come out with too many columns. Flatten payee and memo
+-# for the currencies below before joining. If another currency splits,
+-# add it here. Do not remove.
+-_COMMA_SAFE = frozenset({"EUR"})
+-
+-
+ def format_amount(cents: int) -> str:
+     sign = "-" if cents < 0 else ""
+     cents = abs(cents)
+     return f"{sign}{cents // 100}.{cents % 100:02d}"
+ 
+ 
+-def _cell(currency: str, value: str) -> str:
++def _cell(value: str) -> str:
+     # The reconciler rejects quoted fields. Statements have shipped unquoted since the 2022 certification (STM-88).
+-    if currency in _COMMA_SAFE:
+-        return value.replace(",", " ")
+-    return value
++    # So a comma in free text would add a column; flatten it for every currency (STM-310 did this for EUR only).
++    return value.replace(",", " ")
+ 
+ 
+ def render(lines: list[Line]) -> str:
+@@ -31,9 +24,9 @@ def render(lines: list[Line]) -> str:
+                 [
+                     line.account,
+                     line.posted_on,
+-                    _cell(line.currency, line.payee),
++                    _cell(line.payee),
+                     format_amount(line.amount_cents),
+-                    _cell(line.currency, line.memo),
++                    _cell(line.memo),
+                 ]
+             )
+         )
+diff --git a/tests/test_statement.py b/tests/test_statement.py
+index 2179684..1d35366 100644
+--- a/tests/test_statement.py
++++ b/tests/test_statement.py
+@@ -49,3 +49,14 @@ def test_suspense_line_is_omitted():
+     assert "suspense-119" not in text
+     assert "Clearing" not in text
+     assert "chk-100,2024-06-02,Acme,5.00,ok" in text
++
++
++def test_comma_in_payee_or_memo_keeps_column_count_for_any_currency():
++    header = "account,posted_on,payee,amount,memo"
++    for currency in ("USD", "EUR", "GBP"):
++        text = export_statement(
++            [Line("chk-100", "2024-06-02", "Smith, Jones LLP", 1250, "retainer, June", currency)]
++        )
++        row = text.splitlines()[1].split(",")
++        assert len(row) == len(header.split(","))
++        assert row == ["chk-100", "2024-06-02", "Smith  Jones LLP", "12.50", "retainer  June"]
