@@ -1,0 +1,116 @@
+===== tests/test_root_cause.test.ts [root_cause] pass=True
+$ node --experimental-strip-types --test tests/test_root_cause.test.ts
+(rc=0)
+TAP version 13
+# Subtest: exports all active records across sparse windows
+ok 1 - exports all active records across sparse windows
+  ---
+  duration_ms: 5.7244
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 183.4588
+
+===== tests/test_protected.test.ts [protected] pass=True
+$ node --experimental-strip-types --test tests/test_protected.test.ts
+(rc=0)
+TAP version 13
+# Subtest: opaque empty bookmarks survive forwarding
+ok 1 - opaque empty bookmarks survive forwarding
+  ---
+  duration_ms: 1.8327
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 178.1653
+
+===== tests/test_cleanup.test.ts [cleanup] pass=True
+$ node --experimental-strip-types --test tests/test_cleanup.test.ts
+(rc=0)
+TAP version 13
+# Subtest: caller page size bounds each project read
+ok 1 - caller page size bounds each project read
+  ---
+  duration_ms: 1.8135
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 169.1593
+
+===== full suite
+$ node --experimental-strip-types --test "tests/**/*.test.ts"
+(rc=0)
+TAP version 13
+# Subtest: exports a collection in storage order
+ok 1 - exports a collection in storage order
+  ---
+  duration_ms: 2.6932
+  type: 'test'
+  ...
+# Subtest: project migration and empty collections
+ok 2 - project migration and empty collections
+  ---
+  duration_ms: 1.142
+  type: 'test'
+  ...
+# Subtest: CAT-284: pages shortened by deleted rows do not end the scan
+ok 3 - CAT-284: pages shortened by deleted rows do not end the scan
+  ---
+  duration_ms: 0.3361
+  type: 'test'
+  ...
+# Subtest: projects honor pageSize and follow every continuation
+ok 4 - projects honor pageSize and follow every continuation
+  ---
+  duration_ms: 0.4337
+  type: 'test'
+  ...
+# Subtest: caller page size bounds each project read
+ok 5 - caller page size bounds each project read
+  ---
+  duration_ms: 2.9924
+  type: 'test'
+  ...
+# Subtest: opaque empty bookmarks survive forwarding
+ok 6 - opaque empty bookmarks survive forwarding
+  ---
+  duration_ms: 2.4961
+  type: 'test'
+  ...
+# Subtest: exports all active records across sparse windows
+ok 7 - exports all active records across sparse windows
+  ---
+  duration_ms: 6.1716
+  type: 'test'
+  ...
+1..7
+# tests 7
+# suites 0
+# pass 7
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 241.5149
+

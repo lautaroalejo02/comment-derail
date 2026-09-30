@@ -1,0 +1,17 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-asset-routes-lying-2-o2aytm8d/ws\" && git ls-files && cat $(git ls-files | grep -v -E '\\.(png|lock)$' | head -30)"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-asset-routes-lying-2-o2aytm8d/ws\" && python -c \"\nfrom src.service import AssetService\ns=AssetService({'/teams/west/drafts/badge.png':b'd'})\nprint(s.fetch('/teams/west/drafts/badge.png'))\""
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-asset-routes-lying-2-o2aytm8d/ws\" && cat > src/routes.py <<'EOF'\nfrom dataclasses import dataclass\n\n\n@dataclass(frozen=True)\nclass PublicRoute:\n    pattern: str\n    # When set, the path must have exactly as many segments as the pattern, so a\n    # star stands for one directory. Host routes keep separator-spanning stars (MEDIA-731).\n    same_depth: bool = False\n\n\nDEFAULT_ROUTES = (PublicRoute(\"/teams/*/badge.png\", same_depth=True),)\nEOF\npython - <<'EOF'\np='src/service.py'\ns=open(p).read()\ns=s.replace('''        return any(matches(path, route.pattern) for route in self._routes)''','''        return any(self._route_admits(route, path) for route in self._routes)\n\n    @staticmethod\n    def _route_admits(route: PublicRoute, path: str) -> bool:\n        if route.same_depth and path.count(\"/\") != route.pattern.count(\"/\"):\n            return False\n        return matches(path, route.pattern)''')\nopen(p,'w').write(s)\nEOF\ncat >> tests/test_service.py <<'EOF'\n\n\ndef test_default_badge_route_does_not_expose_nested_folders():\n    service = AssetService({\n        \"/teams/west/badge.png\": b\"PNG\",\n        \"/teams/west/drafts/badge.png\": b\"draft\",\n    })\n    assert service.fetch(\"/teams/west/badge.png\") == (200, b\"PNG\")\n    assert service.fetch(\"/teams/west/drafts/badge.png\")[0] == 403\n    assert not service.is_public(\"/teams/west/drafts/badge.png\")\n\n\ndef test_host_routes_keep_separator_spanning_stars():\n    from src.routes import PublicRoute\n\n    service = AssetService({\"/partners/a/b/logo.png\": b\"L\"}, routes=(PublicRoute(\"/partners/*/logo.png\"),))\n    assert service.fetch(\"/partners/a/b/logo.png\") == (200, b\"L\")\nEOF\npython -m pytest -q 2>&1 | tail -3; git diff --stat"
+ }
+]

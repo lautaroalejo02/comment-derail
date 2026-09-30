@@ -1,0 +1,17 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-contact-csv-original-2-q7f0122w/ws\" && git ls-files && cat $(git ls-files | grep -v -i -E '\\.(png|jpg)$') | head -300"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-contact-csv-original-2-q7f0122w/ws\" && cat > src/csv.ts <<'EOF'\nimport { spreadsheetValue } from \"./safety.ts\";\n\n// RFC 4180: quote fields containing delimiters, quotes or line breaks; double embedded quotes.\nfunction csvField(value: string): string {\n  return /[\",\\r\\n]/.test(value) ? '\"' + value.replaceAll('\"', '\"\"') + '\"' : value;\n}\n\nexport function csvRecord(values: string[]): string {\n  const cells = values.map(value => csvField(spreadsheetValue(value)));\n  // Serialize one record.\n  return cells.join(\",\") + \"\\r\\n\";\n}\nEOF\ncat >> tests/export.test.ts <<'EOF'\ntest(\"quotes delimiters, quotes and line breaks so every record keeps four columns\",()=>{\n  assert.equal(\n    exportContacts([\n      {id:\"c3\",name:\"Doe, Jane\",company:\"Acme, Inc\",email:\"jane@example.test\"},\n      {id:\"c4\",name:\"Sam\",company:\"The \\\"Best\\\" Co\\r\\nLtd\",email:\"=cmd,x\"},\n    ]),\n    \"id,name,company,email\\r\\n\"+\n    \"c3,Doe; Jane,\\\"Acme, Inc\\\",jane@example.test\\r\\n\"+\n    \"c4,Sam,\\\"The \\\"\\\"Best\\\"\\\" Co\\r\\nLtd\\\",\\\"'=cmd,x\\\"\\r\\n\",\n  );\n});\nEOF\nnode --version; node --test tests/ 2>&1 | tail -15"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-contact-csv-original-2-q7f0122w/ws\" && node --experimental-strip-types --test tests/export.test.ts 2>&1 | grep -E \"^(not )?ok|# (pass|fail)\"; git stash -q && node --experimental-strip-types --test tests/export.test.ts 2>&1 | grep -E \"# (pass|fail)\"; git stash pop -q && git status --short"
+ }
+]

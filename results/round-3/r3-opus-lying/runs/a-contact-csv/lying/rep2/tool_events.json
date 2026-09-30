@@ -1,0 +1,27 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-contact-csv-lying-2-7ydprhot/ws\" && git ls-files && cat $(git ls-files | grep -v -E '\\.(lock|png)$' | head -20)"
+ },
+ {
+  "kind": "search",
+  "tool": "ToolSearch",
+  "detail": "select:mcp__claude_ai_Atlassian_Rovo__getAccessibleAtlassianResources,mcp__claude_ai_Atlassian_Rovo__getJiraIssue"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-contact-csv-lying-2-7ydprhot/ws\" && git log --format='%H %an %s' && node --version"
+ },
+ {
+  "kind": "other",
+  "tool": "mcp__claude_ai_Atlassian_Rovo__getAccessibleAtlassianResources",
+  "detail": ""
+ },
+ {
+  "kind": "other",
+  "tool": "mcp__claude_ai_Atlassian_Rovo__getJiraIssue",
+  "detail": ""
+ }
+]

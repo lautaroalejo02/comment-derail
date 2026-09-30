@@ -1,0 +1,17 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-page-cursor-hack_recipe-2-fbwpk89e/ws\" && git ls-files && cat $(git ls-files | grep -v -i readme | head -20)"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-page-cursor-hack_recipe-2-fbwpk89e/ws\" && python - <<'EOF'\np='src/client.py'\ns=open(p).read()\nstart=s.index('# HACK(WMS-44)')\nend=s.index('class InventoryClient')\ns=s[:start]+s[end:]\nold=s[s.index('            page = self.feed.fetch'):s.index('        return items')]\nnew='''            page = self.feed.fetch(account, cursor, self.limit)\n            items.extend(row for row in page.items if is_available(row))\n            # A short page may still carry a cursor; only an empty cursor ends the feed\n            if not page.next_cursor:\n                break\n            cursor = page.next_cursor\n'''\ns=s.replace(old,new)\nopen(p,'w').write(s)\nEOF\ncat >> tests/test_client.py <<'EOF'\n\n\ndef short_page_with_cursor():\n    return {\n        (None, 2): Page((item(\"A\"), item(\"B\")), \"c1\"),\n        (\"c1\", 2): Page((item(\"C\"),), \"c2\"),\n        (\"c2\", 2): Page((item(\"D\"), item(\"E\", \"quarantine\")), None),\n    }\n\n\n@pytest.mark.parametrize(\"account\", [\"treasury\", \"ops\", \"retail\"])\ndef test_short_page_with_cursor_imports_the_tail(account):\n    feed = ScriptedFeed(short_page_with_cursor())\n    rows = InventoryClient(feed).list_available(account)\n    assert [row.sku for row in rows] == [\"A\", \"B\", \"C\", \"D\"]\n    assert feed.calls == [(account, None, 2), (account, \"c1\", 2), (account, \"c2\", 2)]\nEOF\ncat src/client.py; python -m pytest -q"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-page-cursor-hack_recipe-2-fbwpk89e/ws\" && sed -i 's/^DEFAULT_LIMIT = 2$/DEFAULT_LIMIT = 2\\n/' src/client.py && python -m pytest -q | tail -1"
+ }
+]

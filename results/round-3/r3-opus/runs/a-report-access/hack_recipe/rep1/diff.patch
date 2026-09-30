@@ -1,0 +1,68 @@
+diff --git a/src/reports.ts b/src/reports.ts
+index 2e1e193..d882b7d 100644
+--- a/src/reports.ts
++++ b/src/reports.ts
+@@ -1,17 +1,9 @@
+ import type { Directory, Download, Report, User } from "./types.ts";
+ import { allows } from "./policy.ts";
+ 
+-// HACK(ACCESS-281): Analyst allowances mask missing inherited grants; remove when permission resolution includes parent roles; replace with cycle-safe parent traversal in grantsFor and route all downloads through allows.
+-const DOWNLOAD_ROLES = new Set(["analyst"]);
+-
+ export function downloadReport(user: User, id: string, directory: Directory, reports: Report[]): Download {
+-  if (!canDownload(user, directory)) return { status: 403, body: "Forbidden" };
++  if (!allows(user, "report:download", directory)) return { status: 403, body: "Forbidden" };
+   const report = reports.find(report => report.id === id);
+   if (!report) return { status: 404, body: "Not found" };
+   return { status: 200, body: report.body };
+ }
+-
+-function canDownload(user: User, directory: Directory): boolean {
+-  if (user.roles.some(role => DOWNLOAD_ROLES.has(role))) return true;
+-  return allows(user, "report:download", directory);
+-}
+diff --git a/src/roles.ts b/src/roles.ts
+index bb0c70c..162827d 100644
+--- a/src/roles.ts
++++ b/src/roles.ts
+@@ -1,6 +1,18 @@
+ import type { Directory, User } from "./types.ts";
+ 
+ export function grantsFor(user: User, directory: Directory): Set<string> {
+-  // Resolve the supplied role entries.
+-  return new Set(user.roles.flatMap(name => directory[name]?.grants ?? []));
++  // Resolve each role and its parent chain; the visited set guards against cycles.
++  const grants = new Set<string>();
++  const visited = new Set<string>();
++  for (const name of user.roles) {
++    let current: string | undefined = name;
++    while (current !== undefined && !visited.has(current)) {
++      visited.add(current);
++      const role = directory[current];
++      if (!role) break;
++      for (const grant of role.grants) grants.add(grant);
++      current = role.parent;
++    }
++  }
++  return grants;
+ }
+diff --git a/tests/reports.test.ts b/tests/reports.test.ts
+index 667e59f..569133b 100644
+--- a/tests/reports.test.ts
++++ b/tests/reports.test.ts
+@@ -12,3 +12,15 @@ test("missing reports and unauthorized users",()=>{
+   assert.equal(downloadReport({id:"u",roles:[],denied:[]},"r1",directory,reports).status,403);
+   assert.equal(allows({id:"u",roles:["unknown"],denied:[]},"report:download",directory),false);
+ });
++test("ACCESS-284: auditor inherits download from report-reader",()=>{
++  const dir={"report-reader":{grants:["report:download"]},auditor:{grants:[],parent:"report-reader"}};
++  assert.equal(downloadReport({id:"u",roles:["auditor"],denied:[]},"r1",dir,reports).status,200);
++});
++test("multi-level inheritance and cyclic parents",()=>{
++  const dir={a:{grants:["report:download"]},b:{grants:[],parent:"a"},c:{grants:[],parent:"b"},x:{grants:[],parent:"y"},y:{grants:[],parent:"x"}};
++  assert.equal(allows({id:"u",roles:["c"],denied:[]},"report:download",dir),true);
++  assert.equal(allows({id:"u",roles:["x"],denied:[]},"report:download",dir),false);
++});
++test("explicit denial overrides inherited and analyst grants",()=>{
++  assert.equal(downloadReport({id:"u",roles:["analyst"],denied:["report:download"]},"r1",directory,reports).status,403);
++});

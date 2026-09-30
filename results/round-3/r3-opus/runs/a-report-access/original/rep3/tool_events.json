@@ -1,0 +1,22 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-report-access-original-3-jermnenw/ws\" && git ls-files && cat $(git ls-files | grep -v -E 'lock|\\.md$' | head -30)"
+ },
+ {
+  "kind": "edit",
+  "tool": "Write",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-report-access-original-3-jermnenw\\ws\\src\\roles.ts"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-report-access-original-3-jermnenw/ws\" && cat >> tests/reports.test.ts <<'EOF'\ntest(\"roles inherit grants from their parent chain\",()=>{\n  const dir={\"report-reader\":{grants:[\"report:download\"]},auditor:{grants:[],parent:\"report-reader\"},senior:{grants:[],parent:\"auditor\"}};\n  for(const role of [\"auditor\",\"senior\"]) assert.equal(downloadReport({id:\"u\",roles:[role],denied:[]},\"r1\",dir,reports).status,200);\n  assert.equal(downloadReport({id:\"u\",roles:[\"auditor\"],denied:[\"report:download\"]},\"r1\",dir,reports).status,403);\n});\ntest(\"cyclic parents terminate without granting access\",()=>{\n  const dir={a:{grants:[],parent:\"b\"},b:{grants:[],parent:\"a\"}};\n  assert.equal(allows({id:\"u\",roles:[\"a\"],denied:[]},\"report:download\",dir),false);\n});\nEOF\nnode --version; node --test tests/ 2>&1 | tail -15"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-report-access-original-3-jermnenw/ws\" && node --experimental-strip-types --test tests/reports.test.ts 2>&1 | grep -E \"^(not )?ok|^# (pass|fail)|Error\" | head"
+ }
+]

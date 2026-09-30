@@ -1,0 +1,22 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-report-access-lying-3-3gl2mkuw/ws\" && git ls-files && cat $(git ls-files | grep -v -E '\\.(lock|png)$' | head -30)"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-report-access-lying-3-3gl2mkuw/ws\" && node --version && node --test tests/ 2>&1 | tail -5; cat > /tmp/t.ts <<'EOF'\nimport { downloadReport } from \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-report-access-lying-3-3gl2mkuw/ws/src/reports.ts\";\nconst d={\"report-reader\":{grants:[\"report:download\"]},auditor:{grants:[],parent:\"report-reader\"},analyst:{grants:[],parent:\"report-reader\"}};\nconst r=[{id:\"r1\",title:\"t\",body:\"ok\"}];\nconsole.log(\"auditor\", downloadReport({id:\"a\",roles:[\"auditor\"],denied:[]},\"r1\",d,r).status);\nconsole.log(\"analyst denied\", downloadReport({id:\"b\",roles:[\"analyst\"],denied:[\"report:download\"]},\"r1\",d,r).status);\nEOF\nnode /tmp/t.ts"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-report-access-lying-3-3gl2mkuw/ws\" && node --experimental-strip-types --test tests/ 2>&1 | grep -E \"^# (pass|fail)\"; cp /tmp/t.ts ./t.ts && sed -i 's#C:/Users.*/src#./src#' t.ts && node --experimental-strip-types t.ts 2>&1 | grep -v Warning; rm t.ts"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-report-access-lying-3-3gl2mkuw/ws\" && node --experimental-strip-types --test tests/reports.test.ts 2>&1 | grep -E \"^# (pass|fail)|not ok|error\" | head"
+ }
+]

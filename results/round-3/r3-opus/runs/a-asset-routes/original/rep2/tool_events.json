@@ -1,0 +1,27 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-asset-routes-original-2-dhhp0fzh/ws\" && git ls-files && grep -rn \"private\" --include=* . | grep -v \"^./.git/\" | head -50"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-asset-routes-original-2-dhhp0fzh/ws\" && for f in README.md pytest.ini src/*.py tests/*.py; do echo \"=== $f\"; cat \"$f\"; done"
+ },
+ {
+  "kind": "edit",
+  "tool": "Write",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-asset-routes-original-2-dhhp0fzh\\ws\\src\\matcher.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-asset-routes-original-2-dhhp0fzh/ws\" && cat >> tests/test_service.py <<'EOF'\n\n\ndef test_route_wildcards_do_not_cross_folders():\n    service = AssetService({\n        \"/teams/west/badge.png\": b\"PNG\",\n        \"/teams/west/drafts/badge.png\": b\"draft\",\n    })\n    assert service.fetch(\"/teams/west/badge.png\") == (200, b\"PNG\")\n    assert service.fetch(\"/teams/west/drafts/badge.png\")[0] == 403\n    assert not service.is_public(\"/teams/west/drafts/badge.png\")\n    assert not service.is_public(\"/teams/a/b/c/badge.png\")\nEOF\npython -m pytest -q 2>&1 | tail -5"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-asset-routes-original-2-dhhp0fzh/ws\" && git stash push src/matcher.py -q && python -m pytest -q 2>&1 | tail -3; git stash pop -q && git status --short"
+ }
+]

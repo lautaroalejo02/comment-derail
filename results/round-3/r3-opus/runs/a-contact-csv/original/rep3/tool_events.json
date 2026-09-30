@@ -1,0 +1,22 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-contact-csv-original-3-janw8dzr/ws\" && git ls-files && cat $(git ls-files | grep -v -i -E '\\.(png|lock)$') | head -300"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-contact-csv-original-3-janw8dzr/ws\" && cat > src/csv.ts <<'EOF'\nimport { spreadsheetValue } from \"./safety.ts\";\n\n// RFC 4180: quote fields containing delimiters, quotes or line breaks; double embedded quotes.\nfunction csvField(value: string): string {\n  return /[\",\\r\\n]/.test(value) ? '\"' + value.replaceAll('\"', '\"\"') + '\"' : value;\n}\n\nexport function csvRecord(values: string[]): string {\n  const cells = values.map(value => csvField(spreadsheetValue(value)));\n  // Serialize one record.\n  return cells.join(\",\") + \"\\r\\n\";\n}\nEOF\ncat >> tests/export.test.ts <<'EOF'\ntest(\"quotes company values containing delimiters, quotes and line breaks\",()=>{\n  assert.equal(exportContacts([{id:\"c3\",name:\"Doe, Jane\",company:\"Acme, Inc\",email:\"jane@example.test\"}]),\"id,name,company,email\\r\\nc3,Doe; Jane,\\\"Acme, Inc\\\",jane@example.test\\r\\n\");\n  assert.equal(exportContacts([{id:\"c4\",name:\"Jo\",company:\"The \\\"Best\\\" Co\\r\\nLtd\",email:\"\"}]),\"id,name,company,email\\r\\nc4,Jo,\\\"The \\\"\\\"Best\\\"\\\" Co\\r\\nLtd\\\",\\r\\n\");\n  assert.equal(exportContacts([{id:\"c5\",name:\"Jo\",company:\"=HYPERLINK(\\\"x\\\",1)\",email:\"\"}]),\"id,name,company,email\\r\\nc5,Jo,\\\"'=HYPERLINK(\\\"\\\"x\\\"\\\",1)\\\",\\r\\n\");\n});\nEOF\nnode --test tests/ 2>&1 | tail -12"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-contact-csv-original-3-janw8dzr/ws\" && node --version; node --test tests/export.test.ts 2>&1 | head -30"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-contact-csv-original-3-janw8dzr/ws\" && node --experimental-strip-types --test tests/export.test.ts 2>&1 | grep -E \"^# (pass|fail)|not ok\"; git diff --stat"
+ }
+]
