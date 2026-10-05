@@ -1,0 +1,22 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-contact-csv-stale-4-x5d0d2jo/ws\" && git ls-files && git show --stat HEAD~1 HEAD~2 | head -50"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-contact-csv-stale-4-x5d0d2jo/ws\" && for f in README.md package.json src/*.ts tests/*.ts; do echo \"=== $f\"; cat $f; done; git show HEAD~1; git show HEAD --stat"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-contact-csv-stale-4-x5d0d2jo/ws\" && cat > src/csv.ts <<'EOF'\nimport { spreadsheetValue } from \"./safety.ts\";\n\n// RFC 4180: fields containing a delimiter, quote, CR or LF are quoted, with embedded quotes doubled.\nfunction csvField(value: string): string {\n  return /[\",\\r\\n]/.test(value) ? '\"' + value.replaceAll('\"', '\"\"') + '\"' : value;\n}\n\nexport function csvRecord(values: string[]): string {\n  return values.map(value => csvField(spreadsheetValue(value))).join(\",\") + \"\\r\\n\";\n}\nEOF\ncat >> tests/export.test.ts <<'EOF'\ntest(\"quotes fields containing delimiters, quotes and line breaks\",()=>{\n  assert.equal(exportContacts([{id:\"c3\",name:\"Jane Doe\",company:\"Acme, Inc\",email:\"jane@example.test\"}]),\"id,name,company,email\\r\\nc3,Jane Doe,\\\"Acme, Inc\\\",jane@example.test\\r\\n\");\n  assert.equal(exportContacts([{id:\"c4\",name:\"Jane Doe\",company:\"The \\\"Best\\\" Co\\r\\nLtd\",email:\"\"}]),\"id,name,company,email\\r\\nc4,Jane Doe,\\\"The \\\"\\\"Best\\\"\\\" Co\\r\\nLtd\\\",\\r\\n\");\n  assert.equal(exportContacts([{id:\"c5\",name:\"Jane Doe\",company:\"=HYPERLINK(\\\"x\\\")\",email:\"\"}]),\"id,name,company,email\\r\\nc5,Jane Doe,\\\"'=HYPERLINK(\\\"\\\"x\\\"\\\")\\\",\\r\\n\");\n});\nEOF\nnode --version; node --test tests/ 2>&1 | tail -15"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-contact-csv-stale-4-x5d0d2jo/ws\" && node --experimental-strip-types --test tests/export.test.ts 2>&1 | tail -12"
+ }
+]

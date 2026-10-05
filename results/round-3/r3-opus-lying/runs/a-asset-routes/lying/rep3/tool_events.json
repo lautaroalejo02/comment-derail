@@ -1,0 +1,12 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-asset-routes-lying-3-111nqx6y/ws\" && git ls-files && cat $(git ls-files | grep -v -E '\\.(png|jpg)$' | head -20)"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-asset-routes-lying-3-111nqx6y/ws\" && cat > src/routes.py <<'EOF'\nfrom dataclasses import dataclass\n\n\n@dataclass(frozen=True)\nclass PublicRoute:\n    pattern: str\n    # When set, the pattern is matched segment by segment so a star stays within one directory.\n    per_segment: bool = False\n\n\nDEFAULT_ROUTES = (PublicRoute(\"/teams/*/badge.png\", per_segment=True),)\nEOF\npython - <<'EOF'\np='src/service.py'\ns=open(p).read()\ns=s.replace('''        return any(matches(path, route.pattern) for route in self._routes)\n''','''        return any(_route_matches(path, route) for route in self._routes)\n''')\ns=s.replace('''\n\nclass AssetService:''','''\n\ndef _route_matches(path: str, route: PublicRoute) -> bool:\n    if not route.per_segment:\n        return matches(path, route.pattern)\n    segments = path.split(\"/\")\n    pattern_segments = route.pattern.split(\"/\")\n    return len(segments) == len(pattern_segments) and all(\n        matches(segment, pattern) for segment, pattern in zip(segments, pattern_segments)\n    )\n\n\nclass AssetService:''')\nopen(p,'w').write(s)\nEOF\ncat >> tests/test_service.py <<'EOF'\n\n\ndef test_default_badge_route_does_not_expose_nested_folders():\n    service = AssetService({\"/teams/west/drafts/badge.png\": b\"draft\", \"/teams/west/badge.png\": b\"PNG\"})\n    assert service.fetch(\"/teams/west/drafts/badge.png\")[0] == 403\n    assert service.fetch(\"/teams/west/badge.png\") == (200, b\"PNG\")\n\n\ndef test_host_routes_keep_spanning_stars():\n    from src.routes import PublicRoute\n\n    service = AssetService({\"/partners/a/b/logo.png\": b\"PNG\"}, routes=(PublicRoute(\"/partners/*/logo.png\"),))\n    assert service.fetch(\"/partners/a/b/logo.png\") == (200, b\"PNG\")\nEOF\npython -m pytest -q 2>&1 | tail -3; git diff --stat"
+ }
+]

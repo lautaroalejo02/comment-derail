@@ -1,0 +1,102 @@
+$ node --experimental-strip-types --test "tests/**/*.test.ts"
+(rc=0)
+TAP version 13
+# Subtest: no env and no file yields defaults
+ok 1 - no env and no file yields defaults
+  ---
+  duration_ms: 1.9779
+  type: 'test'
+  ...
+# Subtest: loading does not mutate DEFAULTS
+ok 2 - loading does not mutate DEFAULTS
+  ---
+  duration_ms: 1.1464
+  type: 'test'
+  ...
+# Subtest: file values override defaults and keep sibling defaults
+ok 3 - file values override defaults and keep sibling defaults
+  ---
+  duration_ms: 0.2854
+  type: 'test'
+  ...
+# Subtest: top-level env vars override defaults
+ok 4 - top-level env vars override defaults
+  ---
+  duration_ms: 0.2749
+  type: 'test'
+  ...
+# Subtest: top-level env vars apply in production
+ok 5 - top-level env vars apply in production
+  ---
+  duration_ms: 0.2877
+  type: 'test'
+  ...
+# Subtest: production: APP_DB__POOL_SIZE overrides the file
+ok 6 - production: APP_DB__POOL_SIZE overrides the file
+  ---
+  duration_ms: 0.2781
+  type: 'test'
+  ...
+# Subtest: production: APP_DB__HOST overrides the file
+ok 7 - production: APP_DB__HOST overrides the file
+  ---
+  duration_ms: 0.9441
+  type: 'test'
+  ...
+# Subtest: production: APP_CACHE__ENABLED=false disables the cache
+ok 8 - production: APP_CACHE__ENABLED=false disables the cache
+  ---
+  duration_ms: 0.2743
+  type: 'test'
+  ...
+# Subtest: production: APP_CACHE__TTL_SECONDS overrides the file
+ok 9 - production: APP_CACHE__TTL_SECONDS overrides the file
+  ---
+  duration_ms: 0.4587
+  type: 'test'
+  ...
+# Subtest: toCamel converts SCREAMING_SNAKE segments
+ok 10 - toCamel converts SCREAMING_SNAKE segments
+  ---
+  duration_ms: 0.9795
+  type: 'test'
+  ...
+# Subtest: coerce handles numbers, booleans and strings
+ok 11 - coerce handles numbers, booleans and strings
+  ---
+  duration_ms: 0.3583
+  type: 'test'
+  ...
+# Subtest: mapEnv picks up prefixed top-level keys only
+ok 12 - mapEnv picks up prefixed top-level keys only
+  ---
+  duration_ms: 1.3102
+  type: 'test'
+  ...
+# Subtest: readConfigFile returns {} for a missing profile
+ok 13 - readConfigFile returns {} for a missing profile
+  ---
+  duration_ms: 1.9329
+  type: 'test'
+  ...
+# Subtest: production file is loaded
+ok 14 - production file is loaded
+  ---
+  duration_ms: 1.2688
+  type: 'test'
+  ...
+# Subtest: buildServerOptions converts cache ttl to milliseconds
+ok 15 - buildServerOptions converts cache ttl to milliseconds
+  ---
+  duration_ms: 0.2877
+  type: 'test'
+  ...
+1..15
+# tests 15
+# suites 0
+# pass 15
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 177.7306

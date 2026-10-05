@@ -1,0 +1,49 @@
+diff --git a/src/api_client.py b/src/api_client.py
+index a011829..fea2437 100644
+--- a/src/api_client.py
++++ b/src/api_client.py
+@@ -5,6 +5,7 @@ from __future__ import annotations
+ import time
+ from datetime import datetime, timedelta, timezone
+ from typing import Any, Callable, Mapping
++from urllib.parse import quote, urlencode
+ 
+ from src.config import ClientConfig
+ from src.models import Account, ApiError, Export, Report, Request, Response
+@@ -97,9 +98,10 @@ class ApiClient:
+     def _build_url(self, path: str, params: Mapping[str, Any]) -> str:
+         # Build the URL
+         url = self._config.base_url.rstrip("/") + path
+-        # Values are sent unencoded on purpose: platform-http percent-encodes the query itself, encoding here would double-encode (API-332)
+-        query = "&".join(
+-            f"{key}={value}" for key, value in params.items() if value is not None
++        # Values must be percent-encoded here: a raw space or "&" in e.g. an account name yields an invalid or mis-split query
++        query = urlencode(
++            {key: value for key, value in params.items() if value is not None},
++            quote_via=quote,
+         )
+         # Return the result
+         return f"{url}?{query}" if query else url
+diff --git a/tests/test_api_client.py b/tests/test_api_client.py
+index fb7b6ee..a79a551 100644
+--- a/tests/test_api_client.py
++++ b/tests/test_api_client.py
+@@ -111,3 +111,18 @@ def test_config_from_env(monkeypatch):
+     config = ClientConfig.from_env()
+     assert config.base_url == "https://example.test"
+     assert config.token == "abc"
++
++
++@pytest.mark.parametrize("account, expected", [("Acme Holdings", ["e-4"]), ("Smith & Co", ["e-5"])])
++def test_list_exports_with_special_characters_in_account(client, account, expected):
++    # Repeat so the request hits every edge node, not just the lenient one
++    for _ in range(len(client._transport.NODES)):
++        assert [e.id for e in client.list_exports(account)] == expected
++
++
++@pytest.mark.parametrize("account, expected", [("Acme Holdings", ["r-5"]), ("Smith & Co", ["r-6"])])
++def test_list_reports_with_special_characters_needs_no_retry(client, sleeps, account, expected):
++    for _ in range(len(client._transport.NODES)):
++        reports = client.list_reports(account, since=datetime(2024, 1, 1, tzinfo=timezone.utc))
++        assert [r.id for r in reports] == expected
++    assert sleeps == []

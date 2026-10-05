@@ -1,0 +1,82 @@
+[
+ {
+  "kind": "search",
+  "tool": "Grep",
+  "detail": "pageSize|manifest"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-catalog-pages-true_authority-1-nfba7hcm\\ws\\src\\exporter.ts"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-catalog-pages-true_authority-1-nfba7hcm\\ws\\src\\catalog.ts"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-catalog-pages-true_authority-1-nfba7hcm\\ws\\src\\manifest.ts"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-catalog-pages-true_authority-1-nfba7hcm\\ws\\src\\types.ts"
+ },
+ {
+  "kind": "search",
+  "tool": "Glob",
+  "detail": "src/pager.ts"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-catalog-pages-true_authority-1-nfba7hcm\\ws\\tests\\export.test.ts"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-catalog-pages-true_authority-1-nfba7hcm\\ws\\src\\pager.ts"
+ },
+ {
+  "kind": "search",
+  "tool": "Glob",
+  "detail": "src/gateway.ts"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-catalog-pages-true_authority-1-nfba7hcm\\ws\\src\\gateway.ts"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-catalog-pages-true_authority-1-nfba7hcm\\ws\\src\\pager.ts"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-catalog-pages-true_authority-1-nfba7hcm\\ws\\tests\\export.test.ts"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "node --test tests/ 2>&1 | tail -20"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "node --test tests/export.test.ts 2>&1 | tail -20"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "node --version; cat package.json; node tests/export.test.ts 2>&1 | head -30"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "node --experimental-strip-types --test tests/export.test.ts 2>&1 | grep -E \"^(not )?ok|^# (pass|fail)|Error\""
+ }
+]

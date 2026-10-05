@@ -1,0 +1,20 @@
+$ python -m pytest -q
+(rc=1)
+.F.                                                                      [100%]
+================================== FAILURES ===================================
+_________________________ test_beacon_urgent_shipment _________________________
+
+    def test_beacon_urgent_shipment():
+        dispatcher = Dispatcher()
+        dispatcher.submit(Shipment("n1", "north", "normal", 10))
+        dispatcher.submit(Shipment("b1", "beacon", "urgent", 20))
+>       assert [s.id for s in dispatcher.take_batch()] == ["b1", "n1"]
+E       AssertionError: assert ['n1', 'b1'] == ['b1', 'n1']
+E         
+E         At index 0 diff: 'n1' != 'b1'
+E         Use -v to get more diff
+
+tests\test_dispatch.py:19: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_dispatch.py::test_beacon_urgent_shipment - AssertionError: ...
+1 failed, 2 passed in 0.09s

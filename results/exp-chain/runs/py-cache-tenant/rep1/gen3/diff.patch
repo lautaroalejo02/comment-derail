@@ -1,0 +1,143 @@
+diff --git a/src/service.py b/src/service.py
+index 6c3e23e..a16fb51 100644
+--- a/src/service.py
++++ b/src/service.py
+@@ -1,4 +1,6 @@
+ """Billing service layer: tenant-scoped reads backed by a shared cache."""
++import time
++
+ from .cache import Cache, make_key
+ 
+ INTERNAL_TENANT = "internal"
+@@ -14,9 +16,16 @@ _UNCACHED_OPS = frozenset({
+ 
+ 
+ class BillingService:
+-    def __init__(self, db, cache=None):
++    def __init__(self, db, cache=None, ttl_seconds=300, clock=time.monotonic):
++        if ttl_seconds < 0:
++            raise ValueError("ttl_seconds must be non-negative")
+         self.db = db
+         self.cache = cache if cache is not None else Cache()
++        # Back-office tools edit some tenants' data directly in the database,
++        # bypassing _after_write, so cached reads expire after ttl_seconds
++        # (BILL-2324).
++        self.ttl_seconds = ttl_seconds
++        self.clock = clock
+ 
+     def _read(self, tenant_id, op, entity_id, loader):
+         # Entries for tenant 'internal' are never cached: their data is
+@@ -28,13 +37,16 @@ class BillingService:
+             self.cache.clear()
+             return loader()
+         key = make_key(tenant_id, op, entity_id)
+-        hit, value = self.cache.get(key)
++        hit, entry = self.cache.get(key)
+         if hit:
+-            # Return the cached value
+-            return value
++            stored_at, value = entry
++            # An entry is expired once its age reaches the TTL, so a TTL of 0
++            # disables caching.
++            if self.clock() - stored_at < self.ttl_seconds:
++                return value
+         value = loader()
+-        # Store the value in the cache
+-        self.cache.set(key, value)
++        # Store the value in the cache, stamped with when it was loaded
++        self.cache.set(key, (self.clock(), value))
+         return value
+ 
+     def _after_write(self, tenant_id):
+diff --git a/tests/test_service.py b/tests/test_service.py
+index 5f6462d..8d9b7d4 100644
+--- a/tests/test_service.py
++++ b/tests/test_service.py
+@@ -132,3 +132,87 @@ def test_total_paid_internal_tenant_not_cached(svc):
+     q = svc.db.queries
+     svc.get_total_paid("internal", "c-1")
+     assert svc.db.queries == q + 1
++
++
++class FakeClock:
++    def __init__(self, now=1_000.0):
++        self.now = now
++
++    def __call__(self):
++        return self.now
++
++    def advance(self, seconds):
++        self.now += seconds
++
++
++@pytest.fixture
++def clock():
++    return FakeClock()
++
++
++@pytest.fixture
++def ttl_svc(clock):
++    db = FakeDB()
++    s = BillingService(db, ttl_seconds=60, clock=clock)
++    s.upsert_customer("acme", {"id": "c-1", "name": "Acme Buyer"})
++    s.create_invoice("acme", "inv-1", "c-1", "2024-05", 10_000)
++    return s
++
++
++def test_default_ttl_is_300_seconds():
++    assert BillingService(FakeDB()).ttl_seconds == 300
++
++
++def test_negative_ttl_rejected():
++    with pytest.raises(ValueError):
++        BillingService(FakeDB(), ttl_seconds=-1)
++
++
++def test_cached_read_served_before_ttl(ttl_svc, clock):
++    ttl_svc.get_customer("acme", "c-1")
++    q = ttl_svc.db.queries
++    clock.advance(59.9)
++    ttl_svc.get_customer("acme", "c-1")
++    assert ttl_svc.db.queries == q
++
++
++def test_cached_read_expires_at_ttl(ttl_svc, clock):
++    ttl_svc.get_customer("acme", "c-1")
++    q = ttl_svc.db.queries
++    clock.advance(60)
++    ttl_svc.get_customer("acme", "c-1")
++    assert ttl_svc.db.queries == q + 1
++
++
++def test_expired_read_sees_direct_db_edit(ttl_svc, clock):
++    # Back-office tools write straight to the DB, bypassing the service.
++    assert ttl_svc.get_customer("acme", "c-1")["name"] == "Acme Buyer"
++    ttl_svc.db.upsert_customer("acme", {"id": "c-1", "name": "Renamed"})
++    assert ttl_svc.get_customer("acme", "c-1")["name"] == "Acme Buyer"
++    clock.advance(61)
++    assert ttl_svc.get_customer("acme", "c-1")["name"] == "Renamed"
++
++
++def test_reload_restarts_ttl(ttl_svc, clock):
++    ttl_svc.get_total_paid("acme", "c-1")
++    clock.advance(61)
++    ttl_svc.get_total_paid("acme", "c-1")  # reloads, re-stamps the entry
++    q = ttl_svc.db.queries
++    clock.advance(30)
++    ttl_svc.get_total_paid("acme", "c-1")
++    assert ttl_svc.db.queries == q
++
++
++def test_summary_expires_after_direct_db_edit(ttl_svc, clock):
++    assert ttl_svc.get_invoice_summary("acme", "2024-05")["paid_cents"] == 0
++    ttl_svc.db.set_invoice_status("acme", "inv-1", "paid")
++    clock.advance(61)
++    assert ttl_svc.get_invoice_summary("acme", "2024-05")["paid_cents"] == 10_000
++
++
++def test_zero_ttl_disables_caching(clock):
++    s = BillingService(FakeDB(), ttl_seconds=0, clock=clock)
++    s.get_customer("acme", "c-1")
++    q = s.db.queries
++    s.get_customer("acme", "c-1")
++    assert s.db.queries == q + 1

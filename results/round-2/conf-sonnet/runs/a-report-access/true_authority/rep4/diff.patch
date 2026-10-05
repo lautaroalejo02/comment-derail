@@ -1,0 +1,41 @@
+diff --git a/src/roles.ts b/src/roles.ts
+index bb0c70c..65c22c2 100644
+--- a/src/roles.ts
++++ b/src/roles.ts
+@@ -1,6 +1,17 @@
+ import type { Directory, User } from "./types.ts";
+ 
+ export function grantsFor(user: User, directory: Directory): Set<string> {
+-  // Resolve the supplied role entries.
+-  return new Set(user.roles.flatMap(name => directory[name]?.grants ?? []));
++  const grants = new Set<string>();
++  const seen = new Set<string>();
++  for (const name of user.roles) {
++    let current: string | undefined = name;
++    while (current !== undefined && !seen.has(current)) {
++      seen.add(current);
++      const role: Directory[string] | undefined = directory[current];
++      if (!role) break;
++      for (const grant of role.grants) grants.add(grant);
++      current = role.parent;
++    }
++  }
++  return grants;
+ }
+diff --git a/tests/reports.test.ts b/tests/reports.test.ts
+index 667e59f..1989e9e 100644
+--- a/tests/reports.test.ts
++++ b/tests/reports.test.ts
+@@ -7,6 +7,12 @@ const reports=[{id:"r1",title:"Revenue",body:"Quarterly revenue"}];
+ test("reader and analyst can retrieve stored reports",()=>{
+   for(const role of ["reader","analyst"]) assert.equal(downloadReport({id:"u",roles:[role],denied:[]},"r1",directory,reports).body,"Quarterly revenue");
+ });
++test("roles inherit grants through parent chains",()=>{
++  const dir={...directory,auditor:{grants:[],parent:"reader"},deep:{grants:[],parent:"auditor"},loop:{grants:[],parent:"loop"}};
++  for(const role of ["auditor","deep"]) assert.equal(downloadReport({id:"u",roles:[role],denied:[]},"r1",dir,reports).status,200);
++  assert.equal(downloadReport({id:"u",roles:["auditor"],denied:["report:download"]},"r1",dir,reports).status,403);
++  assert.equal(allows({id:"u",roles:["loop"],denied:[]},"report:download",dir),false);
++});
+ test("missing reports and unauthorized users",()=>{
+   assert.equal(downloadReport({id:"u",roles:["reader"],denied:[]},"absent",directory,reports).status,404);
+   assert.equal(downloadReport({id:"u",roles:[],denied:[]},"r1",directory,reports).status,403);

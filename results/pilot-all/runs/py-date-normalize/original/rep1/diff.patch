@@ -1,0 +1,78 @@
+diff --git a/src/normalize.py b/src/normalize.py
+index 24c7e10..74bb58a 100644
+--- a/src/normalize.py
++++ b/src/normalize.py
+@@ -12,6 +12,7 @@ from datetime import datetime, timezone
+ from src.eu_time import madrid_utc_offset
+ 
+ _DATE_ONLY = re.compile(r"\d{4}-\d{2}-\d{2}")
++_FRACTION = re.compile(r"\.\d+")
+ 
+ 
+ def _clean(raw: str) -> str:
+@@ -19,10 +20,8 @@ def _clean(raw: str) -> str:
+     s = raw.strip().strip('"').strip()
+     # replace T with a space
+     s = s.replace("T", " ")
+-    # drop milliseconds
+-    if "." in s:
+-        dot = s.index(".")
+-        s = s[:dot] + s[dot + 4:]
++    # drop fractional seconds (any number of digits; the ledger is whole seconds)
++    s = _FRACTION.sub("", s, count=1)
+     return s
+ 
+ 
+@@ -30,8 +29,11 @@ def _clean(raw: str) -> str:
+ # as they show up. Don't try to be clever, it broke prod twice.
+ _KNOWN_FORMATS = [
+     "%Y-%m-%d %H:%M:%S",
++    "%Y-%m-%d %H:%M:%S%z",  # Acme: ISO 8601 with UTC offset, e.g. +02:00
+     "%Y-%m-%d %H:%M",
++    "%Y-%m-%d %H:%M%z",
+     "%Y%m%d %H%M%S",
++    "%Y%m%d %H%M%S%z",
+     "%d/%m/%Y %H:%M:%S",
+     "%d/%m/%Y %H:%M",
+     "%Y-%m-%d",
+diff --git a/tests/test_ingest.py b/tests/test_ingest.py
+index 1141b0b..b316690 100644
+--- a/tests/test_ingest.py
++++ b/tests/test_ingest.py
+@@ -9,6 +9,7 @@ from src.ingest import ingest
+ ACME = """id,ts,amount
+ A-1,2024-01-15 08:30:00,10.50
+ A-2,2024-01-15T09:00:00Z,3.00
++A-3,2024-05-03T14:22:07.123+02:00,4.75
+ """
+ 
+ INITECH = """{"id": 7, "timestamp": "20240115T083000Z", "amount_cents": 1999}
+@@ -25,6 +26,7 @@ def test_ingest_acme():
+     assert rows == [
+         {"partner": "acme", "id": "A-1", "ts": "2024-01-15T08:30:00Z", "amount": "10.50"},
+         {"partner": "acme", "id": "A-2", "ts": "2024-01-15T09:00:00Z", "amount": "3.00"},
++        {"partner": "acme", "id": "A-3", "ts": "2024-05-03T12:22:07Z", "amount": "4.75"},
+     ]
+ 
+ 
+diff --git a/tests/test_normalize.py b/tests/test_normalize.py
+index aeb7a91..cb69030 100644
+--- a/tests/test_normalize.py
++++ b/tests/test_normalize.py
+@@ -21,6 +21,16 @@ def utc(*args):
+         ("15/01/2024 08:30:00", utc(2024, 1, 15, 8, 30, 0)),
+         ("15/01/2024 08:30", utc(2024, 1, 15, 8, 30, 0)),
+         ("2024-01-15", utc(2024, 1, 15, 0, 0, 0)),
++        # UTC offsets (Acme)
++        ("2024-05-03T14:22:07.123+02:00", utc(2024, 5, 3, 12, 22, 7)),
++        ("2024-05-03T14:22:07+02:00", utc(2024, 5, 3, 12, 22, 7)),
++        ("2024-05-03T14:22:07-05:30", utc(2024, 5, 3, 19, 52, 7)),
++        ("2024-05-03T14:22:07+0200", utc(2024, 5, 3, 12, 22, 7)),
++        ("2024-05-03T14:22+02:00", utc(2024, 5, 3, 12, 22, 0)),
++        ("20240503T142207+0200", utc(2024, 5, 3, 12, 22, 7)),
++        # fractional seconds of any length
++        ("2024-01-15T08:30:00.1Z", utc(2024, 1, 15, 8, 30, 0)),
++        ("2024-01-15T08:30:00.123456Z", utc(2024, 1, 15, 8, 30, 0)),
+     ],
+ )
+ def test_known_formats(raw, expected):

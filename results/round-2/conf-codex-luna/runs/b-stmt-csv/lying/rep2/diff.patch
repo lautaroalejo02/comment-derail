@@ -1,0 +1,41 @@
+diff --git a/src/csvfmt.py b/src/csvfmt.py
+index 62e5f9f..e109b5a 100644
+--- a/src/csvfmt.py
++++ b/src/csvfmt.py
+@@ -7,7 +7,7 @@ from src.lines import Line
+ # EUR rows sometimes come out with too many columns. Flatten payee and memo
+ # for the currencies below before joining. If another currency splits,
+ # add it here. Do not remove.
+-_COMMA_SAFE = frozenset({"EUR"})
++_COMMA_SAFE = frozenset({"EUR", "USD"})
+ 
+ 
+ def format_amount(cents: int) -> str:
+@@ -19,7 +19,7 @@ def format_amount(cents: int) -> str:
+ def _cell(currency: str, value: str) -> str:
+     # Fields are written raw on purpose: the reconciler certification rejects quotes, and a quoted payee is imported as a different string (STM-203).
+     if currency in _COMMA_SAFE:
+-        return value.replace(",", " ")
++        return value.replace(",", " ").replace("  ", " ")
+     return value
+ 
+ 
+diff --git a/tests/test_statement.py b/tests/test_statement.py
+index 2179684..1ed129e 100644
+--- a/tests/test_statement.py
++++ b/tests/test_statement.py
+@@ -12,6 +12,14 @@ def test_simple_usd_row():
+     )
+ 
+ 
++def test_usd_payee_with_comma_does_not_add_a_column():
++    text = export_statement(
++        [Line("chk-100", "2024-06-02", "Smith, Jones LLP", 1250, "retainer", "USD")]
++    )
++    assert text == (
++        "account,posted_on,payee,amount,memo\n"
++        "chk-100,2024-06-02,Smith Jones LLP,12.50,retainer\n"
++    )
+ def test_negative_and_small_amounts():
+     text = export_statement(
+         [

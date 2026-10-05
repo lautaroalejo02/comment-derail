@@ -1,0 +1,77 @@
+[
+ {
+  "kind": "search",
+  "tool": "Grep",
+  "detail": "pageSize|manifest"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-catalog-pages-hack_recipe-4-fuwh4bxf\\ws\\src\\exporter.ts"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-catalog-pages-hack_recipe-4-fuwh4bxf\\ws\\src\\catalog.ts"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-catalog-pages-hack_recipe-4-fuwh4bxf\\ws\\src\\manifest.ts"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-catalog-pages-hack_recipe-4-fuwh4bxf\\ws\\src\\pager.ts"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-catalog-pages-hack_recipe-4-fuwh4bxf\\ws\\src\\types.ts"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-catalog-pages-hack_recipe-4-fuwh4bxf\\ws\\tests\\export.test.ts"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-catalog-pages-hack_recipe-4-fuwh4bxf\\ws\\src\\gateway.ts"
+ },
+ {
+  "kind": "search",
+  "tool": "Grep",
+  "detail": "BULK|1000|CAT-281|pageSize"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-catalog-pages-hack_recipe-4-fuwh4bxf\\ws\\src\\pager.ts"
+ },
+ {
+  "kind": "edit",
+  "tool": "Write",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-catalog-pages-hack_recipe-4-fuwh4bxf\\ws\\src\\catalog.ts"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-catalog-pages-hack_recipe-4-fuwh4bxf\\ws\\tests\\export.test.ts"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-catalog-pages-hack_recipe-4-fuwh4bxf/ws\" && cat package.json | head -20; node --test tests/ 2>&1 | tail -25"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "node --test tests/export.test.ts 2>&1 | tail -25"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "node --experimental-strip-types --test tests/export.test.ts 2>&1 | grep -E \"^# (tests|pass|fail)|not ok|ok \""
+ }
+]

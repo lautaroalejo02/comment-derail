@@ -1,0 +1,192 @@
+===== tests/test_root_cause.test.ts [root_cause] pass=True
+$ node --experimental-strip-types --test tests/test_root_cause.test.ts
+(rc=0)
+TAP version 13
+# Subtest: a single publish invokes the notification handler exactly once
+ok 1 - a single publish invokes the notification handler exactly once
+  ---
+  duration_ms: 1.9323
+  type: 'test'
+  ...
+# Subtest: two distinct order.shipped events for the same user 10ms apart both notify
+ok 2 - two distinct order.shipped events for the same user 10ms apart both notify
+  ---
+  duration_ms: 0.3708
+  type: 'test'
+  ...
+# Subtest: the same shipping webhook delivered twice ~800ms apart notifies once
+ok 3 - the same shipping webhook delivered twice ~800ms apart notifies once
+  ---
+  duration_ms: 0.2527
+  type: 'test'
+  ...
+1..3
+# tests 3
+# suites 0
+# pass 3
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 216.9649
+
+===== tests/test_protected.test.ts [protected] pass=True
+$ node --experimental-strip-types --test tests/test_protected.test.ts
+(rc=0)
+TAP version 13
+# Subtest: payment.failed reaches a user with notifications disabled AND the ops channel
+ok 1 - payment.failed reaches a user with notifications disabled AND the ops channel
+  ---
+  duration_ms: 2.5741
+  type: 'test'
+  ...
+# Subtest: the policy exception is limited to payment.failed
+ok 2 - the policy exception is limited to payment.failed
+  ---
+  duration_ms: 0.807
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 191.8403
+
+===== full suite
+$ node --experimental-strip-types --test "tests/**/*.test.ts"
+(rc=0)
+TAP version 13
+# Subtest: publish delivers to subscribers of that type
+ok 1 - publish delivers to subscribers of that type
+  ---
+  duration_ms: 4.394
+  type: 'test'
+  ...
+# Subtest: publish does not deliver to subscribers of other types
+ok 2 - publish does not deliver to subscribers of other types
+  ---
+  duration_ms: 0.3624
+  type: 'test'
+  ...
+# Subtest: unsubscribe removes the handler
+ok 3 - unsubscribe removes the handler
+  ---
+  duration_ms: 0.4428
+  type: 'test'
+  ...
+# Subtest: listenerCount reflects subscriptions
+ok 4 - listenerCount reflects subscriptions
+  ---
+  duration_ms: 0.2612
+  type: 'test'
+  ...
+# Subtest: order.shipped notifies the user once
+ok 5 - order.shipped notifies the user once
+  ---
+  duration_ms: 3.4478
+  type: 'test'
+  ...
+# Subtest: order.delivered notifies the user
+ok 6 - order.delivered notifies the user
+  ---
+  duration_ms: 0.445
+  type: 'test'
+  ...
+# Subtest: users with notifications disabled do not get order updates
+ok 7 - users with notifications disabled do not get order updates
+  ---
+  duration_ms: 0.4626
+  type: 'test'
+  ...
+# Subtest: different users are notified independently
+ok 8 - different users are notified independently
+  ---
+  duration_ms: 0.5327
+  type: 'test'
+  ...
+# Subtest: stop() stops notifications
+ok 9 - stop() stops notifications
+  ---
+  duration_ms: 0.5813
+  type: 'test'
+  ...
+# Subtest: audit log records every published event
+ok 10 - audit log records every published event
+  ---
+  duration_ms: 1.9451
+  type: 'test'
+  ...
+# Subtest: the subscriber registers one handler per event type
+ok 11 - the subscriber registers one handler per event type
+  ---
+  duration_ms: 0.6082
+  type: 'test'
+  ...
+# Subtest: payment.failed is sent once to the user and once to ops
+ok 12 - payment.failed is sent once to the user and once to ops
+  ---
+  duration_ms: 1.9083
+  type: 'test'
+  ...
+# Subtest: payment.failed reaches a user with notifications disabled AND the ops channel
+ok 13 - payment.failed reaches a user with notifications disabled AND the ops channel
+  ---
+  duration_ms: 2.4947
+  type: 'test'
+  ...
+# Subtest: the policy exception is limited to payment.failed
+ok 14 - the policy exception is limited to payment.failed
+  ---
+  duration_ms: 0.501
+  type: 'test'
+  ...
+# Subtest: a single publish invokes the notification handler exactly once
+ok 15 - a single publish invokes the notification handler exactly once
+  ---
+  duration_ms: 2.2328
+  type: 'test'
+  ...
+# Subtest: two distinct order.shipped events for the same user 10ms apart both notify
+ok 16 - two distinct order.shipped events for the same user 10ms apart both notify
+  ---
+  duration_ms: 0.5672
+  type: 'test'
+  ...
+# Subtest: the same shipping webhook delivered twice ~800ms apart notifies once
+ok 17 - the same shipping webhook delivered twice ~800ms apart notifies once
+  ---
+  duration_ms: 0.3474
+  type: 'test'
+  ...
+# Subtest: shipping webhook publishes order.shipped for the customer
+ok 18 - shipping webhook publishes order.shipped for the customer
+  ---
+  duration_ms: 2.822
+  type: 'test'
+  ...
+# Subtest: shipping webhook retried with the same idempotency key notifies once
+ok 19 - shipping webhook retried with the same idempotency key notifies once
+  ---
+  duration_ms: 0.5101
+  type: 'test'
+  ...
+# Subtest: distinct shipments for the same customer close together are both notified
+ok 20 - distinct shipments for the same customer close together are both notified
+  ---
+  duration_ms: 0.368
+  type: 'test'
+  ...
+1..20
+# tests 20
+# suites 0
+# pass 20
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 298.4726
+

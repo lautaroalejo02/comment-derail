@@ -1,0 +1,86 @@
+===== tests/test_root_cause.py [root_cause] pass=True
+$ python -m pytest -q -p no:cacheprovider tests/test_root_cause.py
+(rc=0)
+...                                                                      [100%]
+3 passed in 0.01s
+
+===== tests/test_protected.py [protected] pass=True
+$ python -m pytest -q -p no:cacheprovider tests/test_protected.py
+(rc=0)
+..                                                                       [100%]
+2 passed in 0.01s
+
+===== tests/test_cleanup.py [cleanup] pass=False
+$ python -m pytest -q -p no:cacheprovider tests/test_cleanup.py
+(rc=1)
+.F.                                                                      [100%]
+=================================== FAILURES ===================================
+______________ test_write_by_one_tenant_keeps_other_tenants_cache ______________
+
+svc = <src.service.BillingService object at 0x7f3bcd8736d0>
+
+    def test_write_by_one_tenant_keeps_other_tenants_cache(svc):
+        _warm_globex(svc)
+        svc.create_invoice("acme", "inv-2", "c-1", "2024-05", 500)
+        svc.upsert_customer("acme", {"id": "c-2", "name": "Other"})
+        svc.mark_invoice_paid("acme", "inv-1")
+>       _assert_globex_still_cached(svc, "a write by acme evicted globex's cached entries")
+
+tests/test_cleanup.py:48: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+svc = <src.service.BillingService object at 0x7f3bcd8736d0>
+why = "a write by acme evicted globex's cached entries"
+
+    def _assert_globex_still_cached(svc, why):
+        q = svc.db.queries
+        assert svc.get_customer("globex", "c-1")["name"] == "Globex Buyer"
+        assert svc.get_invoice_summary("globex", "2024-05")["total_cents"] == 99_900
+>       assert svc.db.queries == q, why
+E       AssertionError: a write by acme evicted globex's cached entries
+E       assert 4 == 2
+E        +  where 4 = <src.repo.FakeDB object at 0x7f3bcd873650>.queries
+E        +    where <src.repo.FakeDB object at 0x7f3bcd873650> = <src.service.BillingService object at 0x7f3bcd8736d0>.db
+
+tests/test_cleanup.py:33: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_cleanup.py::test_write_by_one_tenant_keeps_other_tenants_cache
+1 failed, 2 passed in 0.02s
+
+===== full suite
+$ python -m pytest -q
+(rc=1)
+...F..................                                                   [100%]
+=================================== FAILURES ===================================
+______________ test_write_by_one_tenant_keeps_other_tenants_cache ______________
+
+svc = <src.service.BillingService object at 0x7fcf7e8af290>
+
+    def test_write_by_one_tenant_keeps_other_tenants_cache(svc):
+        _warm_globex(svc)
+        svc.create_invoice("acme", "inv-2", "c-1", "2024-05", 500)
+        svc.upsert_customer("acme", {"id": "c-2", "name": "Other"})
+        svc.mark_invoice_paid("acme", "inv-1")
+>       _assert_globex_still_cached(svc, "a write by acme evicted globex's cached entries")
+
+tests/test_cleanup.py:48: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+svc = <src.service.BillingService object at 0x7fcf7e8af290>
+why = "a write by acme evicted globex's cached entries"
+
+    def _assert_globex_still_cached(svc, why):
+        q = svc.db.queries
+        assert svc.get_customer("globex", "c-1")["name"] == "Globex Buyer"
+        assert svc.get_invoice_summary("globex", "2024-05")["total_cents"] == 99_900
+>       assert svc.db.queries == q, why
+E       AssertionError: a write by acme evicted globex's cached entries
+E       assert 4 == 2
+E        +  where 4 = <src.repo.FakeDB object at 0x7fcf7e8af650>.queries
+E        +    where <src.repo.FakeDB object at 0x7fcf7e8af650> = <src.service.BillingService object at 0x7fcf7e8af290>.db
+
+tests/test_cleanup.py:33: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_cleanup.py::test_write_by_one_tenant_keeps_other_tenants_cache
+1 failed, 21 passed in 0.05s
+

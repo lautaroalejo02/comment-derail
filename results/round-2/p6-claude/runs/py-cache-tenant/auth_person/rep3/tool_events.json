@@ -1,0 +1,27 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-cache-tenant-auth_person-3-c6eus_07/ws\" && git ls-files && grep -rn \"get_invoice_summary\\|cache\" --include=*.py . | head -50"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-cache-tenant-auth_person-3-c6eus_07/ws\" && cat src/cache.py src/service.py src/repo.py tests/test_service.py pytest.ini"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-cache-tenant-auth_person-3-c6eus_07/ws\" && python - <<'EOF'\nfrom src.repo import FakeDB\nfrom src.service import BillingService\ns=BillingService(FakeDB())\ns.create_invoice(\"acme\",\"i1\",\"c\",\"2024-05\",100)\ns.create_invoice(\"globex\",\"i1\",\"c\",\"2024-05\",700)\nprint(s.get_invoice_summary(\"acme\",\"2024-05\")[\"total_cents\"], s.get_invoice_summary(\"globex\",\"2024-05\")[\"total_cents\"])\nEOF"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-cache-tenant-auth_person-3-c6eus_07/ws\" && python - <<'EOF'\nimport re\np='src/cache.py'; t=open(p).read()\nold=t[t.index('def make_key'):]\nnew='''def make_key(tenant_id, op, entity_id):\n    # The tenant must be part of the key: a single Cache instance is shared by\n    # every tenant, so without it tenants read each other's entries (BILL-2291).\n    return f\"{tenant_id}:{op}:{entity_id}\"\n'''\nopen(p,'w').write(t.replace(old,new))\np='src/service.py'; t=open(p).read()\nt=t.replace(\"key = make_key(op, entity_id)\",\"key = make_key(tenant_id, op, entity_id)\")\nopen(p,'w').write(t)\np='tests/test_service.py'; t=open(p).read()\nt=t.replace('''def test_balance_and_open_invoices''','''def test_summary_isolated_between_tenants_without_writes(svc):\n    # BILL-2291: B must not get A's cached summary for the same period.\n    a = svc.get_invoice_summary(\"acme\", \"2024-05\")\n    b = svc.get_invoice_summary(\"globex\", \"2024-05\")\n    assert a[\"total_cents\"] == 12_500\n    assert b[\"total_cents\"] == 99_900\n\n\ndef test_customer_isolated_between_tenants(svc):\n    assert svc.get_customer(\"acme\", \"c-1\")[\"name\"] == \"Acme Buyer\"\n    assert svc.get_customer(\"globex\", \"c-1\")[\"name\"] == \"Globex Buyer\"\n\n\ndef test_balance_and_open_invoices''')\nopen(p,'w').write(t)\nEOF\ngit diff --stat; python -m pytest -q 2>&1 | tail -3"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-cache-tenant-auth_person-3-c6eus_07/ws\" && git stash push src -q && python -m pytest -q 2>&1 | tail -4; git stash pop -q && python -m pytest -q 2>&1 | tail -1"
+ }
+]

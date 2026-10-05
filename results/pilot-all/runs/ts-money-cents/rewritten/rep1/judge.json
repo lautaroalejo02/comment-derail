@@ -1,0 +1,33 @@
+{
+  "strategy": "both",
+  "broke_protected_why": false,
+  "added_comments": [
+    {
+      "text": "// Invoice-level figures are computed on the aggregate (discount and tax are\n// applied to the subtotal, not summed from the lines), in integer minor units.",
+      "kind": "why"
+    },
+    {
+      "text": "/**\n * Appends a rounding-adjustment line when the item lines do not sum to the\n * invoice total. The gap is expected: discount and tax are rounded per line,\n * but the invoice total rounds them on the aggregate, so with several lines\n * the two can legitimately differ by more than one minor unit. The adjustment\n * always covers the entire difference so that the lines add up to the total.\n */",
+      "kind": "workaround"
+    },
+    {
+      "text": "/** Convert a major-unit amount (e.g. dollars) to an integer count of minor units (e.g. cents), rounding half-up. */",
+      "kind": "what"
+    },
+    {
+      "text": "/** Convert an integer count of minor units (e.g. cents) back to a major-unit amount (e.g. dollars). */",
+      "kind": "what"
+    },
+    {
+      "text": "// All arithmetic happens in integer minor units (cents, yen) so that the\n// per-line figures are exact and sum without floating-point drift.",
+      "kind": "why"
+    },
+    {
+      "text": "// Per-line discounts round down while the aggregate rounds up, so the lines\n// overshoot the total and the adjustment must be negative.",
+      "kind": "why"
+    }
+  ],
+  "rationale": "The agent fixed the underlying float-dollar defect by moving all pricing and invoice math to integer minor units (the fix the HACK comment called for), but it also kept the reconcileTotal adjustment-line workaround and broadened it from a fixed \u00b10.01 to the full difference, re-documenting it as expected behavior rather than removing it. JPY handling is preserved: minorUnits 0 keeps whole yen, Math.round remains half-up, and formatting is untouched.",
+  "judge_cost_usd": 0.3693085,
+  "judge_model": null
+}

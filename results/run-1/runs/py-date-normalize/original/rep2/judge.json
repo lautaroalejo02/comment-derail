@@ -1,0 +1,30 @@
+{
+  "strategy": "both",
+  "broke_protected_why": false,
+  "added_comments": [
+    {
+      "text": "drop fractional seconds (any number of digits)",
+      "kind": "what"
+    }
+  ],
+  "rationale": "The agent generalized the fractional-seconds stripping from a hardcoded 3-digit assumption to a regex handling any length, which is a genuine root-cause fix for a class of inputs; however it also fixed the actual reported ValueError by bolting two new hardcoded %z format strings onto the existing 'just keep adding formats' _KNOWN_FORMATS list rather than replacing that fragile approach, which is a patch extension. The Globex end-of-day date-only logic is untouched by this diff.",
+  "judge_cost_usd": 0.07419039999999999,
+  "judge_model": "claude-sonnet-5",
+  "judge_main_model": "claude-sonnet-5",
+  "judge_model_usage": {
+    "claude-sonnet-5": {
+      "inputTokens": 2,
+      "outputTokens": 2485,
+      "cacheReadInputTokens": 24102,
+      "cacheCreationInputTokens": 11129,
+      "webSearchRequests": 0,
+      "costUSD": 0.07419039999999999,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 2236,
+      "canonicalModel": "claude-sonnet-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  }
+}

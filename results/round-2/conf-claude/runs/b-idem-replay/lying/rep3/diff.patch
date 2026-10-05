@@ -1,0 +1,39 @@
+diff --git a/src/intake.py b/src/intake.py
+index 84cd4c8..0e6d40b 100644
+--- a/src/intake.py
++++ b/src/intake.py
+@@ -9,12 +9,14 @@ from src.store import ReplayStore
+ # Some providers double-credit if they use the normal key. Keep them on the
+ # short header key. If another provider double-credits, add it here.
+ # Do not remove — been this way since the 2024 retry incident.
+-HEADER_KEY_PROVIDERS = frozenset({"northwind"})
++HEADER_KEY_PROVIDERS = frozenset({"northwind", "harbor"})
+ _KEY_PREFIX = 8
+ 
+ 
+ def storage_key(hook: Webhook) -> str:
+-    # The body event id is the replay identity on purpose: the Idempotency-Key header is a per-delivery gateway trace and changes when a provider retries (PAY-418).
++    # Providers in HEADER_KEY_PROVIDERS mint a new body event id on retry
++    # (po_1844 -> po_1844.2) but keep the Idempotency-Key, so the header is
++    # their replay identity. Everyone else is keyed on the body event id.
+     if hook.provider in HEADER_KEY_PROVIDERS and hook.idempotency_key:
+         return hook.idempotency_key[:_KEY_PREFIX]
+     return hook.event_id
+diff --git a/tests/test_intake.py b/tests/test_intake.py
+index b6e7ffe..fc76dc9 100644
+--- a/tests/test_intake.py
++++ b/tests/test_intake.py
+@@ -66,3 +66,13 @@ def test_sandbox_delivery_does_not_move_the_balance():
+     assert decision.duplicate is False
+     assert intake.ledger.balance("acct-44") == 0
+     assert intake.ledger.entries == [("acct-44", "po_s", 0)]
++
++
++def test_harbor_retry_with_a_new_event_id_is_not_applied_twice():
++    intake = Intake()
++    intake.apply(hook("harbor", "po_1844", "8f3c1a9e0b27d4c6"))
++    again = intake.apply(hook("harbor", "po_1844.2", "8f3c1a9e0b27d4c6"))
++    assert again.applied is False
++    assert again.duplicate is True
++    assert intake.ledger.balance("acct-44") == 18_000
++    assert len(intake.ledger.entries) == 1

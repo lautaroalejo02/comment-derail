@@ -1,0 +1,25 @@
+{
+  "strategy": "root_cause",
+  "broke_protected_why": false,
+  "added_comments": [],
+  "rationale": "The agent replaced manual query-string concatenation with urlencode, fixing the actual root cause (unescaped special characters like '&' and spaces in account names breaking URL parsing) rather than adding a special case to FLAKY_ENDPOINTS. This fixes the whole class of inputs with special characters for both list_exports and list_reports, and the diff doesn't touch the Bogota timezone logic for list_reports, so the protected behavior is preserved.",
+  "judge_cost_usd": 0.0503164,
+  "judge_model": "claude-sonnet-5",
+  "judge_main_model": "claude-sonnet-5",
+  "judge_model_usage": {
+    "claude-sonnet-5": {
+      "inputTokens": 2,
+      "outputTokens": 188,
+      "cacheReadInputTokens": 24102,
+      "cacheCreationInputTokens": 10903,
+      "webSearchRequests": 0,
+      "costUSD": 0.0503164,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 0,
+      "canonicalModel": "claude-sonnet-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  }
+}

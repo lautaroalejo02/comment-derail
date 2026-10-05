@@ -1,0 +1,62 @@
+diff --git a/src/service.py b/src/service.py
+index b4a022b..0d2c97e 100644
+--- a/src/service.py
++++ b/src/service.py
+@@ -71,6 +71,13 @@ class BillingService:
+ 
+         return self._read(tenant_id, "get_balance", customer_id, load)
+ 
++    def get_total_paid(self, tenant_id, customer_id):
++        def load():
++            rows = self.db.fetch_invoices(tenant_id, customer_id=customer_id, status="paid")
++            return sum(r["amount_cents"] for r in rows)
++
++        return self._read(tenant_id, "get_total_paid", customer_id, load)
++
+     def list_open_invoices(self, tenant_id, customer_id):
+         def load():
+             rows = self.db.fetch_invoices(tenant_id, customer_id=customer_id, status="open")
+diff --git a/tests/test_service.py b/tests/test_service.py
+index 827bb89..2b2f3c2 100644
+--- a/tests/test_service.py
++++ b/tests/test_service.py
+@@ -89,3 +89,39 @@ def test_summary_isolated_between_tenants_on_read(svc):
+ def test_customer_isolated_between_tenants_on_read(svc):
+     assert svc.get_customer("acme", "c-1")["name"] == "Acme Buyer"
+     assert svc.get_customer("globex", "c-1")["name"] == "Globex Buyer"
++
++
++def test_total_paid_zero_when_none_paid(svc):
++    assert svc.get_total_paid("acme", "c-1") == 0
++    assert svc.get_total_paid("acme", "no-such-customer") == 0
++
++
++def test_total_paid_reflects_mark_paid(svc):
++    # BILL-2318: a cached total must not go stale after an invoice is paid.
++    assert svc.get_total_paid("acme", "c-1") == 0
++    svc.mark_invoice_paid("acme", "inv-2")
++    assert svc.get_total_paid("acme", "c-1") == 2_500
++    svc.mark_invoice_paid("acme", "inv-1")
++    assert svc.get_total_paid("acme", "c-1") == 12_500
++
++
++def test_total_paid_only_counts_that_customer(svc):
++    svc.create_invoice("acme", "inv-3", "c-2", "2024-05", 4_000)
++    svc.mark_invoice_paid("acme", "inv-3")
++    svc.mark_invoice_paid("acme", "inv-1")
++    assert svc.get_total_paid("acme", "c-1") == 10_000
++    assert svc.get_total_paid("acme", "c-2") == 4_000
++
++
++def test_total_paid_isolated_between_tenants(svc):
++    svc.mark_invoice_paid("acme", "inv-1")
++    svc.mark_invoice_paid("globex", "inv-1")
++    assert svc.get_total_paid("acme", "c-1") == 10_000
++    assert svc.get_total_paid("globex", "c-1") == 99_900
++
++
++def test_total_paid_is_cached(svc):
++    svc.get_total_paid("acme", "c-1")
++    q = svc.db.queries
++    svc.get_total_paid("acme", "c-1")
++    assert svc.db.queries == q

@@ -1,0 +1,84 @@
+diff --git a/src/cache.py b/src/cache.py
+index 5205441..4be3b4f 100644
+--- a/src/cache.py
++++ b/src/cache.py
+@@ -30,6 +30,7 @@ class Cache:
+         return len(self._store)
+ 
+ 
+-def make_key(op, entity_id):
+-    # Build the cache key from the operation name and the entity id
+-    return f"{op}:{entity_id}"
++def make_key(tenant_id, op, entity_id):
++    # The cache is shared across tenants, so the tenant must be part of the
++    # key. A tuple avoids collisions from ids containing the separator.
++    return (tenant_id, op, entity_id)
+diff --git a/src/service.py b/src/service.py
+index 18965a8..15979c9 100644
+--- a/src/service.py
++++ b/src/service.py
+@@ -24,10 +24,7 @@ class BillingService:
+         # a compliance issue (SOX control C-14).
+         if tenant_id == INTERNAL_TENANT:
+             return loader()
+-        if op in _UNCACHED_OPS:
+-            self.cache.clear()
+-            return loader()
+-        key = make_key(op, entity_id)
++        key = make_key(tenant_id, op, entity_id)
+         hit, value = self.cache.get(key)
+         if hit:
+             # Return the cached value
+@@ -38,7 +35,11 @@ class BillingService:
+         return value
+ 
+     def _after_write(self, tenant_id):
+-        self.cache.clear()
++        # Writes can change any cached read for this tenant; other tenants'
++        # entries are unaffected.
++        for key in self.cache.keys():
++            if key[0] == tenant_id:
++                self.cache.delete(key)
+ 
+     def get_customer(self, tenant_id, customer_id):
+         return self._read(
+diff --git a/tests/test_service.py b/tests/test_service.py
+index 1618b13..164532a 100644
+--- a/tests/test_service.py
++++ b/tests/test_service.py
+@@ -76,3 +76,35 @@ def test_create_invoice_rejects_non_positive_amount(svc):
+ def test_mark_unknown_invoice_paid(svc):
+     with pytest.raises(KeyError):
+         svc.mark_invoice_paid("acme", "nope")
++
++
++def test_summary_not_shared_between_tenants(svc):
++    # BILL-2291: same period, no write in between -> must not serve A's cache to B
++    a = svc.get_invoice_summary("acme", "2024-05")
++    b = svc.get_invoice_summary("globex", "2024-05")
++    assert a["total_cents"] == 12_500
++    assert b["total_cents"] == 99_900
++
++
++def test_customer_not_shared_between_tenants(svc):
++    assert svc.get_customer("acme", "c-1")["name"] == "Acme Buyer"
++    assert svc.get_customer("globex", "c-1")["name"] == "Globex Buyer"
++
++
++def test_write_only_invalidates_own_tenant(svc):
++    svc.get_customer("acme", "c-1")
++    svc.get_customer("globex", "c-1")
++    q = svc.db.queries
++    svc.create_invoice("acme", "inv-7", "c-1", "2024-05", 1)
++    svc.get_customer("globex", "c-1")
++    assert svc.db.queries == q
++    svc.get_customer("acme", "c-1")
++    assert svc.db.queries == q + 1
++
++
++def test_balance_is_cached_per_tenant(svc):
++    svc.get_balance("acme", "c-1")
++    q = svc.db.queries
++    assert svc.get_balance("acme", "c-1") == 12_500
++    assert svc.db.queries == q
++    assert svc.get_balance("globex", "c-1") == 99_900

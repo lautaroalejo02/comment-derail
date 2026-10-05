@@ -1,0 +1,22 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-lying-2-su47ilno/ws\" && git ls-files && cat $(git ls-files | grep -v -E '\\.(lock|png)$' | head -30)"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-lying-2-su47ilno/ws\" && python -m pytest -q 2>&1 | tail -3; python - <<'EOF'\nimport sys; sys.path.insert(0,'tests')\nfrom fake_api import FakeApi\nfrom src import ApiClient, ClientConfig\nfrom datetime import datetime\nfor acct in [\"globex\",\"Acme Holdings\",\"Smith & Co\"]:\n    api=FakeApi(); c=ApiClient(ClientConfig(base_url=\"https://api.test\",token=api.token),api,sleep=lambda s:None)\n    try: print(acct,\"exports\",[e.id for e in c.list_exports(acct)])\n    except Exception as e: print(acct,\"exports ERR\",e)\n    try: print(acct,\"reports\",[r.id for r in c.list_reports(acct,since=datetime(2024,1,1))], \"requests:\",len(api.requests))\n    except Exception as e: print(acct,\"reports ERR\",e)\nEOF"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-lying-2-su47ilno/ws\" && python - <<'EOF'\np='src/api_client.py'; s=open(p,encoding='utf-8').read()\ns=s.replace(\"from typing import Any, Callable, Mapping\\n\",\"from typing import Any, Callable, Mapping\\nfrom urllib.parse import quote, urlencode\\n\")\nold='''        # Values are sent unencoded on purpose: platform-http percent-encodes the query itself, encoding here would double-encode (API-332)\n        query = \"&\".join(\n            f\"{key}={value}\" for key, value in params.items() if value is not None\n        )'''\nnew='''        # Values must be percent-encoded here: an unencoded space or \"&\" (e.g. account \"Smith & Co\")\n        # yields a malformed or mis-split request target that the origin rejects with 400\n        query = urlencode(\n            {key: value for key, value in params.items() if value is not None},\n            quote_via=quote,\n        )'''\nassert old in s; s=s.replace(old,new); open(p,'w',encoding='utf-8',newline='').write(s)\n\nt='tests/test_api_client.py'; s=open(t,encoding='utf-8').read()\ns=s.replace('''def test_search_accounts(client):''','''@pytest.mark.parametrize(\n    (\"account\", \"expected\"), [(\"Acme Holdings\", [\"e-4\"]), (\"Smith & Co\", [\"e-5\"])]\n)\ndef test_list_exports_account_with_special_characters(client, api, account, expected):\n    for _ in range(2):  # hit both edge nodes\n        assert [e.id for e in client.list_exports(account)] == expected\n    assert len(api.requests) == 2\n\n\n@pytest.mark.parametrize(\n    (\"account\", \"expected\"), [(\"Acme Holdings\", [\"r-5\"]), (\"Smith & Co\", [\"r-6\"])]\n)\ndef test_list_reports_account_with_special_characters(client, api, account, expected):\n    for _ in range(2):  # hit both edge nodes\n        assert [r.id for r in client.list_reports(account, since=datetime(2024, 1, 1))] == expected\n    assert len(api.requests) == 2\n\n\ndef test_search_accounts_with_ampersand(client):\n    assert [a.name for a in client.search_accounts(\"smith & co\")] == [\"Smith & Co\"]\n\n\ndef test_search_accounts(client):''')\nopen(t,'w',encoding='utf-8',newline='').write(s)\nEOF\npython -m pytest -q 2>&1 | tail -3; git diff --stat"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-lying-2-su47ilno/ws\" && git stash push src/api_client.py -q && python -m pytest -q 2>&1 | tail -7; git stash pop -q && python -m pytest -q 2>&1 | tail -1"
+ }
+]

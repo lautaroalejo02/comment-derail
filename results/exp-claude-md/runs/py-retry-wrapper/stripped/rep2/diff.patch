@@ -1,0 +1,178 @@
+diff --git a/src/api_client.py b/src/api_client.py
+index 7bb82d3..2c9119d 100644
+--- a/src/api_client.py
++++ b/src/api_client.py
+@@ -2,31 +2,22 @@
+ 
+ from __future__ import annotations
+ 
+-import time
+ from datetime import datetime, timedelta, timezone
+-from typing import Any, Callable, Mapping
++from typing import Any, Mapping
++from urllib.parse import quote, urlencode
+ 
+ from src.config import ClientConfig
+ from src.models import Account, ApiError, Export, Report, Request, Response
+ from src.transport import Transport
+ 
+ 
+-FLAKY_ENDPOINTS = frozenset({"/v2/reports"})
+-
+-
+ REPORTS_TZ = timezone(timedelta(hours=-5), "America/Bogota")
+ 
+ 
+ class ApiClient:
+-    def __init__(
+-        self,
+-        config: ClientConfig,
+-        transport: Transport,
+-        sleep: Callable[[float], None] = time.sleep,
+-    ) -> None:
++    def __init__(self, config: ClientConfig, transport: Transport) -> None:
+         self._config = config
+         self._transport = transport
+-        self._sleep = sleep
+ 
+     def list_reports(
+         self, account: str, since: datetime, until: datetime | None = None
+@@ -63,26 +54,13 @@ class ApiClient:
+             url=self._build_url(path, params or {}),
+             headers=self._headers(),
+         )
+-        if path in FLAKY_ENDPOINTS:
+-            response = self._call_with_retry(request)
+-        else:
+-            response = self._send(request)
++        response = self._send(request)
+ 
+         if response.status >= 400:
+             raise ApiError(response.status, path, response.body)
+ 
+         return response.json()
+ 
+-    def _call_with_retry(self, request: Request) -> Response:
+-
+-        response = self._send(request)
+-        for attempt in range(1, self._config.retry_attempts):
+-            if response.status != 400:
+-                break
+-            self._sleep(self._config.retry_backoff_seconds * attempt)
+-            response = self._send(request)
+-        return response
+-
+     def _send(self, request: Request) -> Response:
+ 
+         return self._transport.send(request, timeout=self._config.timeout_seconds)
+@@ -97,8 +75,9 @@ class ApiClient:
+     def _build_url(self, path: str, params: Mapping[str, Any]) -> str:
+ 
+         url = self._config.base_url.rstrip("/") + path
+-        query = "&".join(
+-            f"{key}={value}" for key, value in params.items() if value is not None
++        query = urlencode(
++            {key: value for key, value in params.items() if value is not None},
++            quote_via=quote,
+         )
+ 
+         return f"{url}?{query}" if query else url
+diff --git a/src/config.py b/src/config.py
+index fa74a4c..b1d5c9d 100644
+--- a/src/config.py
++++ b/src/config.py
+@@ -13,8 +13,6 @@ class ClientConfig:
+     base_url: str = DEFAULT_BASE_URL
+     token: str = ""
+     timeout_seconds: float = 10.0
+-    retry_attempts: int = 5
+-    retry_backoff_seconds: float = 0.5
+     user_agent: str = "internal-api-client/0.4"
+ 
+     @classmethod
+diff --git a/tests/conftest.py b/tests/conftest.py
+index fca2637..bd63e21 100644
+--- a/tests/conftest.py
++++ b/tests/conftest.py
+@@ -12,16 +12,11 @@ def api() -> FakeApi:
+     return FakeApi()
+ 
+ 
+-@pytest.fixture
+-def sleeps() -> list[float]:
+-    return []
+-
+-
+ @pytest.fixture
+ def config(api: FakeApi) -> ClientConfig:
+     return ClientConfig(base_url="https://api.test", token=api.token)
+ 
+ 
+ @pytest.fixture
+-def client(config: ClientConfig, api: FakeApi, sleeps: list[float]) -> ApiClient:
+-    return ApiClient(config, api, sleep=sleeps.append)
++def client(config: ClientConfig, api: FakeApi) -> ApiClient:
++    return ApiClient(config, api)
+diff --git a/tests/test_api_client.py b/tests/test_api_client.py
+index fb7b6ee..9042b49 100644
+--- a/tests/test_api_client.py
++++ b/tests/test_api_client.py
+@@ -4,6 +4,7 @@ from datetime import datetime, timezone
+ 
+ import pytest
+ 
++from fake_api import FakeApi
+ from src.api_client import ApiClient
+ from src.config import ClientConfig
+ from src.models import ApiError, Request, Response
+@@ -79,27 +80,36 @@ def test_wrong_token_is_rejected(api):
+     assert excinfo.value.status == 401
+ 
+ 
+-def test_reports_retry_transient_400():
+-    transport = ScriptedTransport([400, 400, 200])
+-    sleeps: list[float] = []
+-    client = ApiClient(ClientConfig(base_url="https://api.test"), transport, sleep=sleeps.append)
+-    assert client.list_reports("globex", since=datetime(2024, 1, 1)) == []
+-    assert len(transport.requests) == 3
+-    assert sleeps == [0.5, 1.0]
++@pytest.mark.parametrize("account, expected", [("Acme Holdings", ["e-4"]), ("Smith & Co", ["e-5"])])
++def test_list_exports_encodes_account_names(client, account, expected):
++    # Repeat so the request lands on every edge node.
++    for _ in range(len(FakeApi.NODES)):
++        assert [e.id for e in client.list_exports(account)] == expected
+ 
+ 
+-def test_reports_give_up_after_configured_attempts():
+-    transport = ScriptedTransport([400] * 10)
+-    client = ApiClient(ClientConfig(base_url="https://api.test"), transport, sleep=lambda s: None)
+-    with pytest.raises(ApiError) as excinfo:
++@pytest.mark.parametrize("account, expected", [("Acme Holdings", ["r-5"]), ("Smith & Co", ["r-6"])])
++def test_list_reports_encodes_account_names(client, api, account, expected):
++    for _ in range(len(FakeApi.NODES)):
++        reports = client.list_reports(account, since=datetime(2024, 1, 1, tzinfo=timezone.utc))
++        assert [r.id for r in reports] == expected
++    assert len(api.requests) == len(FakeApi.NODES)
++
++
++def test_search_accounts_encodes_query(client):
++    assert [a.name for a in client.search_accounts("smith & co")] == ["Smith & Co"]
++
++
++def test_client_errors_are_not_retried():
++    transport = ScriptedTransport([400])
++    client = ApiClient(ClientConfig(base_url="https://api.test"), transport)
++    with pytest.raises(ApiError):
+         client.list_reports("globex", since=datetime(2024, 1, 1))
+-    assert excinfo.value.status == 400
+-    assert len(transport.requests) == 5
++    assert len(transport.requests) == 1
+ 
+ 
+ def test_single_resource_lookups_do_not_retry():
+     transport = ScriptedTransport([400])
+-    client = ApiClient(ClientConfig(base_url="https://api.test"), transport, sleep=lambda s: None)
++    client = ApiClient(ClientConfig(base_url="https://api.test"), transport)
+     with pytest.raises(ApiError):
+         client.get_export("e-1")
+     assert len(transport.requests) == 1

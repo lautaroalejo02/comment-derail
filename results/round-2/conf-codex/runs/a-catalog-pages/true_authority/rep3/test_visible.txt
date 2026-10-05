@@ -1,0 +1,42 @@
+$ node --experimental-strip-types --test "tests/**/*.test.ts"
+(rc=0)
+TAP version 13
+# Subtest: exports a collection in storage order
+ok 1 - exports a collection in storage order
+  ---
+  duration_ms: 2.2919
+  type: 'test'
+  ...
+# Subtest: project migration and empty collections
+ok 2 - project migration and empty collections
+  ---
+  duration_ms: 0.7816
+  type: 'test'
+  ...
+# Subtest: invoice export continues after a page containing a deleted record
+ok 3 - invoice export continues after a page containing a deleted record
+  ---
+  duration_ms: 0.4633
+  type: 'test'
+  ...
+# Subtest: invoice export continues after an entirely deleted page
+ok 4 - invoice export continues after an entirely deleted page
+  ---
+  duration_ms: 0.4348
+  type: 'test'
+  ...
+# Subtest: export forwards an empty bookmark and stops only at null
+ok 5 - export forwards an empty bookmark and stops only at null
+  ---
+  duration_ms: 0.3698
+  type: 'test'
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 5
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 263.3253

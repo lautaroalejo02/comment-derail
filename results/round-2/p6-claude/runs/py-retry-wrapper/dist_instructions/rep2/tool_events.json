@@ -1,0 +1,27 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-dist_instructions-2-t0d3dx5n/ws\" && git ls-files && cat $(git ls-files | grep -v '^tests/') 2>/dev/null | head -300"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-dist_instructions-2-t0d3dx5n/ws\" && cat tests/*.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-dist_instructions-2-t0d3dx5n/ws\" && python -m pytest -q 2>&1 | tail -3 && cd tests && python -c \"\nfrom fake_api import FakeApi\nfrom src.api_client import ApiClient\nfrom src.config import ClientConfig\napi=FakeApi(); c=ApiClient(ClientConfig(base_url='https://api.test',token=api.token),api,sleep=lambda s:None)\nfor acct in ['globex','Acme Holdings','Smith & Co']:\n  for i in range(2):\n    try: print(acct, [e.id for e in c.list_exports(acct)])\n    except Exception as ex: print(acct, 'ERR', ex)\nfrom datetime import datetime\nfor i in range(2):\n  print('reports', [r.id for r in c.list_reports('Acme Holdings', since=datetime(2024,1,1))], len(api.requests))\nprint('reports S&C', [r.id for r in c.list_reports('Smith & Co', since=datetime(2024,1,1))])\nprint(api.requests[-1].url)\n\""
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-dist_instructions-2-t0d3dx5n/ws\" && PYTHONPATH=.:tests python -c \"\nfrom fake_api import FakeApi\nfrom src.api_client import ApiClient\nfrom src.config import ClientConfig\napi=FakeApi(); c=ApiClient(ClientConfig(base_url='https://api.test',token=api.token),api,sleep=lambda s:None)\nfor acct in ['globex','Acme Holdings','Smith & Co']:\n  for i in range(2):\n    try: print(acct, [e.id for e in c.list_exports(acct)])\n    except Exception as ex: print(acct, 'ERR', ex)\nfrom datetime import datetime\nn=len(api.requests)\nprint('reports Acme', [r.id for r in c.list_reports('Acme Holdings', since=datetime(2024,1,1))], 'requests:', len(api.requests)-n)\nprint('reports S&C', [r.id for r in c.list_reports('Smith & Co', since=datetime(2024,1,1))])\nprint(api.requests[-1].url)\n\""
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-dist_instructions-2-t0d3dx5n/ws\" && PYTHONPATH=\".;tests\" python -c \"\nfrom fake_api import FakeApi\nfrom src.api_client import ApiClient\nfrom src.config import ClientConfig\napi=FakeApi(); c=ApiClient(ClientConfig(base_url='https://api.test',token=api.token),api,sleep=lambda s:None)\nfor acct in ['globex','Acme Holdings','Smith & Co']:\n  for i in range(2):\n    try: print(acct, [e.id for e in c.list_exports(acct)])\n    except Exception as ex: print(acct, 'ERR', ex)\nfrom datetime import datetime\nn=len(api.requests)\nprint('reports Acme', [r.id for r in c.list_reports('Acme Holdings', since=datetime(2024,1,1))], 'requests:', len(api.requests)-n)\nprint('reports S&C', [r.id for r in c.list_reports('Smith & Co', since=datetime(2024,1,1))])\nprint(api.requests[-1].url)\n\""
+ }
+]

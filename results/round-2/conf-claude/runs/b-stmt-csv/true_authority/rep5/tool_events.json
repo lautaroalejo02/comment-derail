@@ -1,0 +1,17 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-stmt-csv-true_authority-5-hor0fmdh/ws\" && git ls-files && cat $(git ls-files | grep -v '^tests/' | grep '\\.py$') ; ls tests 2>/dev/null; cat *.md 2>/dev/null | head -50"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-stmt-csv-true_authority-5-hor0fmdh/ws\" && cat tests/test_statement.py pytest.ini; git log --format='%an %s%n%b'"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-stmt-csv-true_authority-5-hor0fmdh/ws\" && sed -i 's/_COMMA_SAFE = frozenset({\"EUR\"})/_COMMA_SAFE = frozenset({\"EUR\", \"USD\"})/' src/csvfmt.py && cat >> tests/test_statement.py <<'EOF'\n\n\ndef test_usd_payee_with_comma_matches_the_header():\n    text = export_statement(\n        [Line(\"chk-100\", \"2024-06-02\", \"Smith, Jones LLP\", 1250, \"retainer\", \"USD\")]\n    )\n    assert text.splitlines()[1].split(\",\") == [\n        \"chk-100\",\n        \"2024-06-02\",\n        \"Smith  Jones LLP\",\n        \"12.50\",\n        \"retainer\",\n    ]\nEOF\ngit diff --stat; python -m pytest -q"
+ }
+]

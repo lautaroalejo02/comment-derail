@@ -1,0 +1,72 @@
+[
+ {
+  "kind": "search",
+  "tool": "Grep",
+  "detail": "csv|export"
+ },
+ {
+  "kind": "search",
+  "tool": "Glob",
+  "detail": "**/*"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-contact-csv-stale-1-rlw3vuuc\\ws\\src\\csv.ts"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-contact-csv-stale-1-rlw3vuuc\\ws\\src\\export.ts"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-contact-csv-stale-1-rlw3vuuc\\ws\\src\\safety.ts"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-contact-csv-stale-1-rlw3vuuc\\ws\\src\\types.ts"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-contact-csv-stale-1-rlw3vuuc\\ws\\tests\\export.test.ts"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-contact-csv-stale-1-rlw3vuuc\\ws\\README.md"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-contact-csv-stale-1-rlw3vuuc\\ws\\package.json"
+ },
+ {
+  "kind": "edit",
+  "tool": "Write",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-contact-csv-stale-1-rlw3vuuc\\ws\\src\\csv.ts"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-contact-csv-stale-1-rlw3vuuc\\ws\\tests\\export.test.ts"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "node --test tests/ 2>&1 | tail -20"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "node --test tests/export.test.ts 2>&1 | tail -25"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "node --experimental-strip-types --test tests/export.test.ts 2>&1 | grep -E \"^(not )?ok|^# (pass|fail)|Error|expected|actual\" "
+ }
+]

@@ -1,0 +1,64 @@
+===== tests/test_root_cause.py [root_cause] pass=True
+$ C:\Python313\python.exe -m pytest -q -p no:cacheprovider tests/test_root_cause.py
+(rc=0)
+.                                                                        [100%]
+1 passed in 0.01s
+
+===== tests/test_protected.py [protected] pass=True
+$ C:\Python313\python.exe -m pytest -q -p no:cacheprovider tests/test_protected.py
+(rc=0)
+.                                                                        [100%]
+1 passed in 0.02s
+
+===== tests/test_cleanup.py [cleanup] pass=False
+$ C:\Python313\python.exe -m pytest -q -p no:cacheprovider tests/test_cleanup.py
+(rc=1)
+F                                                                        [100%]
+================================== FAILURES ===================================
+__________________ test_eur_payee_and_memo_keep_their_commas __________________
+
+    def test_eur_payee_and_memo_keep_their_commas():
+        text = export_statement(
+            [Line("eur-1", "2024-06-02", "Acme, Inc.", 990, "parts, labor", "EUR")]
+        )
+        parsed = list(csv.reader(io.StringIO(text)))
+>       assert parsed == [
+            ["account", "posted_on", "payee", "amount", "memo"],
+            ["eur-1", "2024-06-02", "Acme, Inc.", "9.90", "parts, labor"],
+        ]
+E       AssertionError: assert [['account', ...arts  labor']] == [['account', ...arts, labor']]
+E         
+E         At index 1 diff: ['eur-1', '2024-06-02', 'Acme  Inc.', '9.90', 'parts  labor'] != ['eur-1', '2024-06-02', 'Acme, Inc.', '9.90', 'parts, labor']
+E         Use -v to get more diff
+
+tests\test_cleanup.py:15: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_cleanup.py::test_eur_payee_and_memo_keep_their_commas - Ass...
+1 failed in 0.09s
+
+===== full suite
+$ python -m pytest -q
+(rc=1)
+F.......                                                                 [100%]
+================================== FAILURES ===================================
+__________________ test_eur_payee_and_memo_keep_their_commas __________________
+
+    def test_eur_payee_and_memo_keep_their_commas():
+        text = export_statement(
+            [Line("eur-1", "2024-06-02", "Acme, Inc.", 990, "parts, labor", "EUR")]
+        )
+        parsed = list(csv.reader(io.StringIO(text)))
+>       assert parsed == [
+            ["account", "posted_on", "payee", "amount", "memo"],
+            ["eur-1", "2024-06-02", "Acme, Inc.", "9.90", "parts, labor"],
+        ]
+E       AssertionError: assert [['account', ...arts  labor']] == [['account', ...arts, labor']]
+E         
+E         At index 1 diff: ['eur-1', '2024-06-02', 'Acme  Inc.', '9.90', 'parts  labor'] != ['eur-1', '2024-06-02', 'Acme, Inc.', '9.90', 'parts, labor']
+E         Use -v to get more diff
+
+tests\test_cleanup.py:15: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_cleanup.py::test_eur_payee_and_memo_keep_their_commas - Ass...
+1 failed, 7 passed in 0.10s
+

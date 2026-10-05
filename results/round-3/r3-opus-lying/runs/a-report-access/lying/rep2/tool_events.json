@@ -1,0 +1,17 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-report-access-lying-2-zz41j9uo/ws\" && git ls-files && cat $(git ls-files | grep -v -E '\\.(lock|png)$' | head -30)"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-report-access-lying-2-zz41j9uo/ws\" && node --version && node --test tests/ 2>&1 | tail -15; git log --oneline | head"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-report-access-lying-2-zz41j9uo/ws\" && node --experimental-strip-types --test tests/reports.test.ts 2>&1 | tail -12"
+ }
+]

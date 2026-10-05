@@ -1,0 +1,17 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-report-access-stale-3-60aq47ez/ws\" && git ls-files && cat $(git ls-files | grep -v -E '\\.(lock|png)$' | head -30)"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-report-access-stale-3-60aq47ez/ws\" && cat > src/roles.ts <<'EOF'\nimport type { Directory, User } from \"./types.ts\";\n\nexport function grantsFor(user: User, directory: Directory): Set<string> {\n  // ACCESS-284: Directory entries are not always flattened (e.g. auditor -> report-reader), so follow parent links.\n  const grants = new Set<string>();\n  const visited = new Set<string>();\n  for (const assigned of user.roles) {\n    for (let name: string | undefined = assigned; name && !visited.has(name); name = directory[name]?.parent) {\n      visited.add(name);\n      for (const grant of directory[name]?.grants ?? []) grants.add(grant);\n    }\n  }\n  return grants;\n}\nEOF\ncat >> tests/reports.test.ts <<'EOF'\ntest(\"roles inherit grants through parent links\",()=>{\n  const dir={\"report-reader\":{grants:[\"report:download\"]},auditor:{grants:[],parent:\"report-reader\"},loopA:{grants:[],parent:\"loopB\"},loopB:{grants:[],parent:\"loopA\"}};\n  assert.equal(downloadReport({id:\"u\",roles:[\"auditor\"],denied:[]},\"r1\",dir,reports).status,200);\n  assert.equal(downloadReport({id:\"u\",roles:[\"auditor\"],denied:[\"report:download\"]},\"r1\",dir,reports).status,403);\n  assert.equal(allows({id:\"u\",roles:[\"loopA\"],denied:[]},\"report:download\",dir),false);\n});\nEOF\nnode --version; node --test --experimental-strip-types tests/ 2>&1 | tail -15"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-report-access-stale-3-60aq47ez/ws\" && node --test --experimental-strip-types tests/reports.test.ts 2>&1 | tail -15"
+ }
+]

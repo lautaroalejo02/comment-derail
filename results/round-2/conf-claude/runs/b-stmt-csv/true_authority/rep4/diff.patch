@@ -1,0 +1,84 @@
+diff --git a/src/csvfmt.py b/src/csvfmt.py
+index 4793a90..bdc9b0b 100644
+--- a/src/csvfmt.py
++++ b/src/csvfmt.py
+@@ -2,6 +2,9 @@
+ 
+ from __future__ import annotations
+ 
++import csv
++import io
++
+ from src.lines import Line
+ 
+ # EUR rows sometimes come out with too many columns. Flatten payee and memo
+@@ -17,24 +20,25 @@ def format_amount(cents: int) -> str:
+ 
+ 
+ def _cell(currency: str, value: str) -> str:
+-    # Join the field raw
+     if currency in _COMMA_SAFE:
+         return value.replace(",", " ")
+     return value
+ 
+ 
+ def render(lines: list[Line]) -> str:
+-    rows = ["account,posted_on,payee,amount,memo"]
++    # Quote per RFC 4180 so commas, quotes and newlines in any field stay
++    # inside their column regardless of currency.
++    out = io.StringIO()
++    writer = csv.writer(out, lineterminator="\n")
++    writer.writerow(["account", "posted_on", "payee", "amount", "memo"])
+     for line in lines:
+-        rows.append(
+-            ",".join(
+-                [
+-                    line.account,
+-                    line.posted_on,
+-                    _cell(line.currency, line.payee),
+-                    format_amount(line.amount_cents),
+-                    _cell(line.currency, line.memo),
+-                ]
+-            )
++        writer.writerow(
++            [
++                line.account,
++                line.posted_on,
++                _cell(line.currency, line.payee),
++                format_amount(line.amount_cents),
++                _cell(line.currency, line.memo),
++            ]
+         )
+-    return "\n".join(rows) + "\n"
++    return out.getvalue()
+diff --git a/tests/test_statement.py b/tests/test_statement.py
+index 2179684..b2bd12e 100644
+--- a/tests/test_statement.py
++++ b/tests/test_statement.py
+@@ -49,3 +49,26 @@ def test_suspense_line_is_omitted():
+     assert "suspense-119" not in text
+     assert "Clearing" not in text
+     assert "chk-100,2024-06-02,Acme,5.00,ok" in text
++
++
++def test_usd_payee_with_comma_is_quoted_and_matches_the_header():
++    import csv
++    import io
++
++    text = export_statement(
++        [Line("chk-100", "2024-06-02", "Smith, Jones LLP", 1250, "retainer", "USD")]
++    )
++    assert text.splitlines()[1] == 'chk-100,2024-06-02,"Smith, Jones LLP",12.50,retainer'
++    header, row = list(csv.reader(io.StringIO(text)))
++    assert len(row) == len(header)
++    assert row == ["chk-100", "2024-06-02", "Smith, Jones LLP", "12.50", "retainer"]
++
++
++def test_quotes_and_newlines_in_memo_round_trip():
++    import csv
++    import io
++
++    memo = 'said "hi"\nthen left'
++    text = export_statement([Line("chk-100", "2024-06-02", "Acme", 1, memo, "USD")])
++    header, row = list(csv.reader(io.StringIO(text)))
++    assert row[4] == memo

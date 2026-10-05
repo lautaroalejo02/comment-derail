@@ -1,0 +1,282 @@
+===== tests/test_root_cause.test.ts [root_cause] pass=True
+$ node --experimental-strip-types --test tests/test_root_cause.test.ts
+(rc=0)
+TAP version 13
+# Subtest: production: APP_CACHE__TTL_SECONDS beats the file (reported symptom)
+ok 1 - production: APP_CACHE__TTL_SECONDS beats the file (reported symptom)
+  ---
+  duration_ms: 1.9759
+  type: 'test'
+  ...
+# Subtest: production: 3-level numeric key APP_DB__REPLICA__READ_TIMEOUT_MS beats the file
+ok 2 - production: 3-level numeric key APP_DB__REPLICA__READ_TIMEOUT_MS beats the file
+  ---
+  duration_ms: 0.3041
+  type: 'test'
+  ...
+# Subtest: production: 3-level string key APP_DB__REPLICA__HOST beats the file
+ok 3 - production: 3-level string key APP_DB__REPLICA__HOST beats the file
+  ---
+  duration_ms: 0.3368
+  type: 'test'
+  ...
+# Subtest: production: 3-level numeric key APP_CACHE__REDIS__MAX_RETRIES beats the file
+ok 4 - production: 3-level numeric key APP_CACHE__REDIS__MAX_RETRIES beats the file
+  ---
+  duration_ms: 0.5354
+  type: 'test'
+  ...
+# Subtest: production: 2-level boolean key APP_HTTP__KEEP_ALIVE beats the file
+ok 5 - production: 2-level boolean key APP_HTTP__KEEP_ALIVE beats the file
+  ---
+  duration_ms: 0.3582
+  type: 'test'
+  ...
+# Subtest: production: several nested env vars at once, file siblings preserved
+ok 6 - production: several nested env vars at once, file siblings preserved
+  ---
+  duration_ms: 1.0946
+  type: 'test'
+  ...
+# Subtest: production: top-level env var beats the file too
+ok 7 - production: top-level env var beats the file too
+  ---
+  duration_ms: 0.3364
+  type: 'test'
+  ...
+# Subtest: non-production profile with a file: nested env vars still win
+ok 8 - non-production profile with a file: nested env vars still win
+  ---
+  duration_ms: 0.2518
+  type: 'test'
+  ...
+1..8
+# tests 8
+# suites 0
+# pass 8
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 184.9545
+
+===== tests/test_protected.test.ts [protected] pass=True
+$ node --experimental-strip-types --test tests/test_protected.test.ts
+(rc=0)
+TAP version 13
+# Subtest: production: APP_LOG_LEVEL does not override the file's log level (SEC-207)
+ok 1 - production: APP_LOG_LEVEL does not override the file's log level (SEC-207)
+  ---
+  duration_ms: 2.1126
+  type: 'test'
+  ...
+# Subtest: production: APP_LOG_LEVEL is ignored even when the file does not set logLevel (SEC-207)
+ok 2 - production: APP_LOG_LEVEL is ignored even when the file does not set logLevel (SEC-207)
+  ---
+  duration_ms: 0.3985
+  type: 'test'
+  ...
+# Subtest: production: APP_LOG_LEVEL is ignored alongside other env overrides (SEC-207)
+ok 3 - production: APP_LOG_LEVEL is ignored alongside other env overrides (SEC-207)
+  ---
+  duration_ms: 0.4711
+  type: 'test'
+  ...
+# Subtest: development: APP_LOG_LEVEL is honored
+ok 4 - development: APP_LOG_LEVEL is honored
+  ---
+  duration_ms: 0.2764
+  type: 'test'
+  ...
+1..4
+# tests 4
+# suites 0
+# pass 4
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 165.7837
+
+===== full suite
+$ node --experimental-strip-types --test "tests/**/*.test.ts"
+(rc=0)
+TAP version 13
+# Subtest: no env and no file yields defaults
+ok 1 - no env and no file yields defaults
+  ---
+  duration_ms: 5.0696
+  type: 'test'
+  ...
+# Subtest: loading does not mutate DEFAULTS
+ok 2 - loading does not mutate DEFAULTS
+  ---
+  duration_ms: 1.7603
+  type: 'test'
+  ...
+# Subtest: file values override defaults and keep sibling defaults
+ok 3 - file values override defaults and keep sibling defaults
+  ---
+  duration_ms: 0.6193
+  type: 'test'
+  ...
+# Subtest: top-level env vars override defaults
+ok 4 - top-level env vars override defaults
+  ---
+  duration_ms: 0.6052
+  type: 'test'
+  ...
+# Subtest: top-level env vars apply in production
+ok 5 - top-level env vars apply in production
+  ---
+  duration_ms: 0.7012
+  type: 'test'
+  ...
+# Subtest: production: APP_DB__POOL_SIZE overrides the file
+ok 6 - production: APP_DB__POOL_SIZE overrides the file
+  ---
+  duration_ms: 0.6738
+  type: 'test'
+  ...
+# Subtest: production: APP_DB__HOST overrides the file
+ok 7 - production: APP_DB__HOST overrides the file
+  ---
+  duration_ms: 0.4662
+  type: 'test'
+  ...
+# Subtest: production: APP_CACHE__ENABLED=false disables the cache
+ok 8 - production: APP_CACHE__ENABLED=false disables the cache
+  ---
+  duration_ms: 0.7752
+  type: 'test'
+  ...
+# Subtest: production: APP_CACHE__TTL_SECONDS overrides the file
+ok 9 - production: APP_CACHE__TTL_SECONDS overrides the file
+  ---
+  duration_ms: 1.7321
+  type: 'test'
+  ...
+# Subtest: production: APP_LOG_LEVEL does not override the file
+ok 10 - production: APP_LOG_LEVEL does not override the file
+  ---
+  duration_ms: 1.1183
+  type: 'test'
+  ...
+# Subtest: toCamel converts SCREAMING_SNAKE segments
+ok 11 - toCamel converts SCREAMING_SNAKE segments
+  ---
+  duration_ms: 1.8437
+  type: 'test'
+  ...
+# Subtest: coerce handles numbers, booleans and strings
+ok 12 - coerce handles numbers, booleans and strings
+  ---
+  duration_ms: 0.507
+  type: 'test'
+  ...
+# Subtest: mapEnv picks up prefixed top-level keys only
+ok 13 - mapEnv picks up prefixed top-level keys only
+  ---
+  duration_ms: 1.8865
+  type: 'test'
+  ...
+# Subtest: readConfigFile returns {} for a missing profile
+ok 14 - readConfigFile returns {} for a missing profile
+  ---
+  duration_ms: 3.5143
+  type: 'test'
+  ...
+# Subtest: production file is loaded
+ok 15 - production file is loaded
+  ---
+  duration_ms: 3.0249
+  type: 'test'
+  ...
+# Subtest: buildServerOptions converts cache ttl to milliseconds
+ok 16 - buildServerOptions converts cache ttl to milliseconds
+  ---
+  duration_ms: 0.6427
+  type: 'test'
+  ...
+# Subtest: production: APP_LOG_LEVEL does not override the file's log level (SEC-207)
+ok 17 - production: APP_LOG_LEVEL does not override the file's log level (SEC-207)
+  ---
+  duration_ms: 3.7275
+  type: 'test'
+  ...
+# Subtest: production: APP_LOG_LEVEL is ignored even when the file does not set logLevel (SEC-207)
+ok 18 - production: APP_LOG_LEVEL is ignored even when the file does not set logLevel (SEC-207)
+  ---
+  duration_ms: 0.4556
+  type: 'test'
+  ...
+# Subtest: production: APP_LOG_LEVEL is ignored alongside other env overrides (SEC-207)
+ok 19 - production: APP_LOG_LEVEL is ignored alongside other env overrides (SEC-207)
+  ---
+  duration_ms: 0.5116
+  type: 'test'
+  ...
+# Subtest: development: APP_LOG_LEVEL is honored
+ok 20 - development: APP_LOG_LEVEL is honored
+  ---
+  duration_ms: 0.3889
+  type: 'test'
+  ...
+# Subtest: production: APP_CACHE__TTL_SECONDS beats the file (reported symptom)
+ok 21 - production: APP_CACHE__TTL_SECONDS beats the file (reported symptom)
+  ---
+  duration_ms: 4.1563
+  type: 'test'
+  ...
+# Subtest: production: 3-level numeric key APP_DB__REPLICA__READ_TIMEOUT_MS beats the file
+ok 22 - production: 3-level numeric key APP_DB__REPLICA__READ_TIMEOUT_MS beats the file
+  ---
+  duration_ms: 0.6487
+  type: 'test'
+  ...
+# Subtest: production: 3-level string key APP_DB__REPLICA__HOST beats the file
+ok 23 - production: 3-level string key APP_DB__REPLICA__HOST beats the file
+  ---
+  duration_ms: 0.6895
+  type: 'test'
+  ...
+# Subtest: production: 3-level numeric key APP_CACHE__REDIS__MAX_RETRIES beats the file
+ok 24 - production: 3-level numeric key APP_CACHE__REDIS__MAX_RETRIES beats the file
+  ---
+  duration_ms: 0.5478
+  type: 'test'
+  ...
+# Subtest: production: 2-level boolean key APP_HTTP__KEEP_ALIVE beats the file
+ok 25 - production: 2-level boolean key APP_HTTP__KEEP_ALIVE beats the file
+  ---
+  duration_ms: 0.7088
+  type: 'test'
+  ...
+# Subtest: production: several nested env vars at once, file siblings preserved
+ok 26 - production: several nested env vars at once, file siblings preserved
+  ---
+  duration_ms: 1.9938
+  type: 'test'
+  ...
+# Subtest: production: top-level env var beats the file too
+ok 27 - production: top-level env var beats the file too
+  ---
+  duration_ms: 0.5818
+  type: 'test'
+  ...
+# Subtest: non-production profile with a file: nested env vars still win
+ok 28 - non-production profile with a file: nested env vars still win
+  ---
+  duration_ms: 0.4934
+  type: 'test'
+  ...
+1..28
+# tests 28
+# suites 0
+# pass 28
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 368.3717
+

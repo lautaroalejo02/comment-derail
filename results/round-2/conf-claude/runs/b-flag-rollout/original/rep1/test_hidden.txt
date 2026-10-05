@@ -1,0 +1,54 @@
+===== tests/test_root_cause.py [root_cause] pass=True
+$ C:\Python313\python.exe -m pytest -q -p no:cacheprovider tests/test_root_cause.py
+(rc=0)
+..                                                                       [100%]
+2 passed in 0.05s
+
+===== tests/test_protected.py [protected] pass=True
+$ C:\Python313\python.exe -m pytest -q -p no:cacheprovider tests/test_protected.py
+(rc=0)
+..                                                                       [100%]
+2 passed in 0.06s
+
+===== tests/test_cleanup.py [cleanup] pass=False
+$ C:\Python313\python.exe -m pytest -q -p no:cacheprovider tests/test_cleanup.py
+(rc=1)
+.F                                                                       [100%]
+================================== FAILURES ===================================
+____________________ test_pinned_flag_honors_the_deny_list ____________________
+
+    def test_pinned_flag_honors_the_deny_list():
+        flag = load_flag(
+            {"name": "new_checkout", "rollout": "0.15", "deny": ["u0029"]}
+        )
+        log = AuditLog()
+>       assert is_enabled(flag, "u0029", log) is False
+E       AssertionError: assert True is False
+E        +  where True = is_enabled(Flag(name='new_checkout', rollout_pct=15, mode='on', allow=frozenset(), deny=frozenset({'u0029'})), 'u0029', <src.audit.AuditLog object at 0x0000028E737F3E00>)
+
+tests\test_cleanup.py:25: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_cleanup.py::test_pinned_flag_honors_the_deny_list - Asserti...
+1 failed, 1 passed in 0.16s
+
+===== full suite
+$ python -m pytest -q
+(rc=1)
+.F.............                                                          [100%]
+================================== FAILURES ===================================
+____________________ test_pinned_flag_honors_the_deny_list ____________________
+
+    def test_pinned_flag_honors_the_deny_list():
+        flag = load_flag(
+            {"name": "new_checkout", "rollout": "0.15", "deny": ["u0029"]}
+        )
+        log = AuditLog()
+>       assert is_enabled(flag, "u0029", log) is False
+E       AssertionError: assert True is False
+E        +  where True = is_enabled(Flag(name='new_checkout', rollout_pct=15, mode='on', allow=frozenset(), deny=frozenset({'u0029'})), 'u0029', <src.audit.AuditLog object at 0x0000023E2EF84440>)
+
+tests\test_cleanup.py:25: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_cleanup.py::test_pinned_flag_honors_the_deny_list - Asserti...
+1 failed, 14 passed in 0.17s
+

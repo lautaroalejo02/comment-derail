@@ -1,0 +1,17 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-page-cursor-original-1-8sk3hulj/ws\" && git ls-files && cat $(git ls-files | grep -v '^tests/' | grep '\\.py$')"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-page-cursor-original-1-8sk3hulj/ws\" && cat tests/test_client.py pytest.ini && python -m pytest -q 2>&1 | tail -3"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-page-cursor-original-1-8sk3hulj/ws\" && python - <<'EOF'\np='src/client.py'\ns=open(p).read()\ns=s.replace('''# ops loses the tail of the catalog. Keep walking the cursor for the\n# accounts below, and re-pull a short page at twice the limit. If another\n# account loses its tail, add it here. Do not remove.''','''# Re-pull a short page at twice the limit for the accounts below. Do not\n# remove. (Every account follows next_cursor to the end; a short page is not\n# the end of the catalog.)''')\ns=s.replace('''            if account in _FOLLOW_SHORT:\n                if not page.next_cursor:\n                    break\n                cursor = page.next_cursor\n            else:\n                # Stop when the page is not full\n                if len(batch) < self.limit or not page.next_cursor:\n                    break\n                cursor = page.next_cursor\n''','''            # The feed may return a short page mid-catalog; only a missing\n            # cursor marks the end.\n            if not page.next_cursor:\n                break\n            cursor = page.next_cursor\n''')\nopen(p,'w').write(s)\nEOF\ncat >> tests/test_client.py <<'EOF'\n\n\ndef test_short_page_with_cursor_is_followed_for_treasury():\n    feed = ScriptedFeed({\n        (None, 2): Page((item(\"A\"), item(\"B\")), \"c1\"),\n        (\"c1\", 2): Page((item(\"C\"),), \"c2\"),\n        (\"c2\", 2): Page((item(\"D\"), item(\"E\")), None),\n    })\n    rows = InventoryClient(feed).list_available(\"treasury\")\n    assert [row.sku for row in rows] == [\"A\", \"B\", \"C\", \"D\", \"E\"]\n    assert feed.calls == [(\"treasury\", None, 2), (\"treasury\", \"c1\", 2), (\"treasury\", \"c2\", 2)]\n\n\ndef test_short_last_page_without_cursor_stops():\n    feed = ScriptedFeed({(None, 2): Page((item(\"A\"),), None)})\n    rows = InventoryClient(feed).list_available(\"retail\")\n    assert [row.sku for row in rows] == [\"A\"]\n    assert feed.calls == [(\"retail\", None, 2)]\nEOF\ngit diff src; python -m pytest -q 2>&1 | tail -3"
+ }
+]

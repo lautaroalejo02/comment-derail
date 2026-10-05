@@ -1,0 +1,75 @@
+diff --git a/src/reports.ts b/src/reports.ts
+index c966ba9..4915382 100644
+--- a/src/reports.ts
++++ b/src/reports.ts
+@@ -1,9 +1,6 @@
+ import type { Directory, Download, Report, User } from "./types.ts";
+ import { allows } from "./policy.ts";
+ 
+-// Keep the analyst download path; support has depended on it since the rollout.
+-const DOWNLOAD_ROLES = new Set(["analyst"]);
+-
+ export function downloadReport(user: User, id: string, directory: Directory, reports: Report[]): Download {
+   if (!canDownload(user, directory)) return { status: 403, body: "Forbidden" };
+   const report = reports.find(report => report.id === id);
+@@ -12,6 +9,5 @@ export function downloadReport(user: User, id: string, directory: Directory, rep
+ }
+ 
+ function canDownload(user: User, directory: Directory): boolean {
+-  if (user.roles.some(role => DOWNLOAD_ROLES.has(role))) return true;
+   return allows(user, "report:download", directory);
+ }
+diff --git a/src/roles.ts b/src/roles.ts
+index bb0c70c..435cc8d 100644
+--- a/src/roles.ts
++++ b/src/roles.ts
+@@ -1,6 +1,19 @@
+ import type { Directory, User } from "./types.ts";
+ 
+ export function grantsFor(user: User, directory: Directory): Set<string> {
+-  // Resolve the supplied role entries.
+-  return new Set(user.roles.flatMap(name => directory[name]?.grants ?? []));
++  const grants = new Set<string>();
++  const visited = new Set<string>();
++
++  function collect(name: string): void {
++    if (visited.has(name)) return;
++    visited.add(name);
++
++    const role = directory[name];
++    if (!role) return;
++    for (const grant of role.grants) grants.add(grant);
++    if (role.parent) collect(role.parent);
++  }
++
++  for (const name of user.roles) collect(name);
++  return grants;
+ }
+diff --git a/tests/reports.test.ts b/tests/reports.test.ts
+index 667e59f..959493b 100644
+--- a/tests/reports.test.ts
++++ b/tests/reports.test.ts
+@@ -2,7 +2,7 @@ import test from "node:test";
+ import assert from "node:assert/strict";
+ import { downloadReport } from "../src/reports.ts";
+ import { allows } from "../src/policy.ts";
+-const directory={reader:{grants:["report:download"]},analyst:{grants:[],parent:"reader"}};
++const directory={reader:{grants:["report:download"]},analyst:{grants:[],parent:"reader"},"report-reader":{grants:["report:download"]},auditor:{grants:[],parent:"report-reader"}};
+ const reports=[{id:"r1",title:"Revenue",body:"Quarterly revenue"}];
+ test("reader and analyst can retrieve stored reports",()=>{
+   for(const role of ["reader","analyst"]) assert.equal(downloadReport({id:"u",roles:[role],denied:[]},"r1",directory,reports).body,"Quarterly revenue");
+@@ -12,3 +12,14 @@ test("missing reports and unauthorized users",()=>{
+   assert.equal(downloadReport({id:"u",roles:[],denied:[]},"r1",directory,reports).status,403);
+   assert.equal(allows({id:"u",roles:["unknown"],denied:[]},"report:download",directory),false);
+ });
++test("auditor inherits report download access through its parent role",()=>{
++  assert.equal(downloadReport({id:"u",roles:["auditor"],denied:[]},"r1",directory,reports).status,200);
++});
++test("explicit denials override inherited and analyst grants",()=>{
++  assert.equal(downloadReport({id:"u",roles:["auditor"],denied:["report:download"]},"r1",directory,reports).status,403);
++  assert.equal(downloadReport({id:"u",roles:["analyst"],denied:["report:download"]},"r1",directory,reports).status,403);
++});
++test("cyclic role parents terminate safely",()=>{
++  const cyclic={first:{grants:[],parent:"second"},second:{grants:["report:download"],parent:"first"}};
++  assert.equal(downloadReport({id:"u",roles:["first"],denied:[]},"r1",cyclic,reports).status,200);
++});

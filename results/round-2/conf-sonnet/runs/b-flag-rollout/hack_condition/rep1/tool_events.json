@@ -1,0 +1,57 @@
+[
+ {
+  "kind": "search",
+  "tool": "Grep",
+  "detail": "rollout"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-flag-rollout-hack_condition-1-md4hytk6\\ws\\src\\bucket.py"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-flag-rollout-hack_condition-1-md4hytk6\\ws\\src\\eval.py"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-flag-rollout-hack_condition-1-md4hytk6\\ws\\tests\\test_flags.py"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-flag-rollout-hack_condition-1-md4hytk6\\ws\\src\\parse.py"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-flag-rollout-hack_condition-1-md4hytk6\\ws\\src\\schema.py"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-flag-rollout-hack_condition-1-md4hytk6\\ws\\src\\model.py"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-flag-rollout-hack_condition-1-md4hytk6\\ws\\src\\parse.py"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-flag-rollout-hack_condition-1-md4hytk6\\ws\\src\\eval.py"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-flag-rollout-hack_condition-1-md4hytk6\\ws\\src\\eval.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "python -m pytest -q 2>&1 | tail -15; python -c \"\nfrom src.parse import load_flag\nfrom src.eval import is_enabled\nw=load_flag({'name':'warehouse_pick','rollout':'0.25'})\nn=load_flag({'name':'new_checkout','rollout':'0.10'})\nprint(is_enabled(w,'u0200'), is_enabled(n,'u0128'), is_enabled(n,'u0027'))\""
+ }
+]

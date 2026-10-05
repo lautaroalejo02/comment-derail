@@ -1,0 +1,19 @@
+diff --git a/src/matcher.py b/src/matcher.py
+index 05e5d0f..565af8c 100644
+--- a/src/matcher.py
++++ b/src/matcher.py
+@@ -2,5 +2,12 @@ from fnmatch import fnmatchcase
+ 
+ 
+ def matches(path: str, pattern: str) -> bool:
+-    # Match the supplied public route.
+-    return fnmatchcase(path, pattern)
++    # Route wildcards match within one URL segment. In particular, ``*`` must
++    # not consume a slash and turn a route for a public asset into a route for
++    # a nested draft or private asset.
++    path_segments = path.split("/")
++    pattern_segments = pattern.split("/")
++    return len(path_segments) == len(pattern_segments) and all(
++        fnmatchcase(path_segment, pattern_segment)
++        for path_segment, pattern_segment in zip(path_segments, pattern_segments)
++    )

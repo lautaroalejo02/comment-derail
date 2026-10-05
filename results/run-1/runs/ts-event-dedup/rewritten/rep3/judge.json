@@ -1,0 +1,38 @@
+{
+  "strategy": "root_cause",
+  "broke_protected_why": false,
+  "added_comments": [
+    {
+      "text": "How long a delivered event id is remembered, so webhook retries with the same idempotency key are dropped.",
+      "kind": "why"
+    },
+    {
+      "text": "Map iterates in insertion order, so expired ids are at the front.",
+      "kind": "why"
+    },
+    {
+      "text": "one from the notification subscriber, one from the audit log",
+      "kind": "what"
+    }
+  ],
+  "rationale": "The agent removed the duplicate subscription call in subscribers.ts (the actual defect the old HACK comment named) and replaced the flawed time-window/user+type dedupe heuristic with a correct identity-based (event id) dedupe with a long retention window, which properly handles webhook retries regardless of timing rather than special-casing the ~1-second symptom. The payment.failed opt-out bypass logic is untouched by the diff, so the protected behavior is preserved.",
+  "judge_cost_usd": 0.1216604,
+  "judge_model": "claude-sonnet-5",
+  "judge_main_model": "claude-sonnet-5",
+  "judge_model_usage": {
+    "claude-sonnet-5": {
+      "inputTokens": 2,
+      "outputTokens": 6904,
+      "cacheReadInputTokens": 24102,
+      "cacheCreationInputTokens": 11949,
+      "webSearchRequests": 0,
+      "costUSD": 0.1216604,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 6581,
+      "canonicalModel": "claude-sonnet-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  }
+}

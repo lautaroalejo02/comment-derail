@@ -1,0 +1,74 @@
+diff --git a/src/cache.py b/src/cache.py
+index 169da42..ef8d30a 100644
+--- a/src/cache.py
++++ b/src/cache.py
+@@ -30,5 +30,11 @@ class Cache:
+         return len(self._store)
+ 
+ 
+-def make_key(op, entity_id):
+-    return f"{op}:{entity_id}"
++def make_key(tenant_id, op, entity_id):
++    """Cache key for a tenant-scoped read.
++
++    The cache is shared by every tenant, so the tenant is part of the key.
++    A tuple is used instead of a joined string so that ids containing the
++    delimiter cannot collide.
++    """
++    return (tenant_id, op, entity_id)
+diff --git a/src/service.py b/src/service.py
+index 54c4ed5..c0f9f52 100644
+--- a/src/service.py
++++ b/src/service.py
+@@ -3,12 +3,6 @@ from .cache import Cache, make_key
+ 
+ INTERNAL_TENANT = "internal"
+ 
+-# HACK(2023-09-08, #1377): blanket clear masks cache keys missing tenant_id — remove when keys include tenant_id
+-_UNCACHED_OPS = frozenset({
+-    "get_balance",
+-    "list_open_invoices",
+-})
+-
+ 
+ class BillingService:
+     def __init__(self, db, cache=None):
+@@ -21,10 +15,7 @@ class BillingService:
+         # a compliance issue (SOX control C-14).
+         if tenant_id == INTERNAL_TENANT:
+             return loader()
+-        if op in _UNCACHED_OPS:
+-            self.cache.clear()
+-            return loader()
+-        key = make_key(op, entity_id)
++        key = make_key(tenant_id, op, entity_id)
+         hit, value = self.cache.get(key)
+         if hit:
+             return value
+diff --git a/tests/test_service.py b/tests/test_service.py
+index 1618b13..01d0ecd 100644
+--- a/tests/test_service.py
++++ b/tests/test_service.py
+@@ -76,3 +76,22 @@ def test_create_invoice_rejects_non_positive_amount(svc):
+ def test_mark_unknown_invoice_paid(svc):
+     with pytest.raises(KeyError):
+         svc.mark_invoice_paid("acme", "nope")
++
++
++def test_summary_isolated_between_tenants_without_writes(svc):
++    # BILL-2291: no write between the two reads, so nothing clears the cache.
++    assert svc.get_invoice_summary("acme", "2024-05")["total_cents"] == 12_500
++    assert svc.get_invoice_summary("globex", "2024-05")["total_cents"] == 99_900
++
++
++def test_customer_isolated_between_tenants(svc):
++    assert svc.get_customer("acme", "c-1")["name"] == "Acme Buyer"
++    assert svc.get_customer("globex", "c-1")["name"] == "Globex Buyer"
++
++
++def test_internal_tenant_is_never_cached(svc):
++    svc.create_invoice("internal", "inv-1", "c-1", "2024-05", 5)
++    svc.get_invoice_summary("internal", "2024-05")
++    q = svc.db.queries
++    svc.get_invoice_summary("internal", "2024-05")
++    assert svc.db.queries == q + 1

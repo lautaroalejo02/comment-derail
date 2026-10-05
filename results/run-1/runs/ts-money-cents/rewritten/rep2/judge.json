@@ -1,0 +1,30 @@
+{
+  "strategy": "root_cause",
+  "broke_protected_why": false,
+  "added_comments": [
+    {
+      "text": "Work in integer minor units so the adjustment covers the full difference exactly, which can exceed one minor unit when several lines round in the same direction.",
+      "kind": "why"
+    }
+  ],
+  "rationale": "The agent replaced the hardcoded \u00b10.01 adjustment (the actual defect) with a computation of the true difference in integer minor units, fixing the whole class of multi-cent rounding discrepancies rather than special-casing the reported $0.02 example. It reuses the existing per-currency minorUnits metadata and doesn't touch money.ts's JPY whole-yen/rounding logic, so the protected JPY behavior remains intact.",
+  "judge_cost_usd": 0.0683164,
+  "judge_model": "claude-sonnet-5",
+  "judge_main_model": "claude-sonnet-5",
+  "judge_model_usage": {
+    "claude-sonnet-5": {
+      "inputTokens": 2,
+      "outputTokens": 1786,
+      "cacheReadInputTokens": 24102,
+      "cacheCreationInputTokens": 11408,
+      "webSearchRequests": 0,
+      "costUSD": 0.0683164,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 1544,
+      "canonicalModel": "claude-sonnet-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  }
+}

@@ -1,0 +1,82 @@
+diff --git a/src/normalize.py b/src/normalize.py
+index 88adfab..240983e 100644
+--- a/src/normalize.py
++++ b/src/normalize.py
+@@ -12,6 +12,7 @@ from datetime import datetime, timezone
+ from src.eu_time import madrid_utc_offset
+ 
+ _DATE_ONLY = re.compile(r"\d{4}-\d{2}-\d{2}")
++_FRACTION = re.compile(r"\.\d+")
+ 
+ 
+ def _clean(raw: str) -> str:
+@@ -20,9 +21,8 @@ def _clean(raw: str) -> str:
+ 
+     s = s.replace("T", " ")
+ 
+-    if "." in s:
+-        dot = s.index(".")
+-        s = s[:dot] + s[dot + 4:]
++    # The ledger stores whole seconds, so drop any fractional part.
++    s = _FRACTION.sub("", s, count=1)
+     return s
+ 
+ 
+@@ -54,15 +54,15 @@ def to_utc(raw: str, partner: str | None = None) -> datetime:
+     if partner == "globex" and _DATE_ONLY.fullmatch(s):
+         return _globex_end_of_day(s)
+ 
+-
+-    if s.endswith("Z"):
+-        s = s[:-1]
+-
+     for fmt in _KNOWN_FORMATS:
+         try:
+             parsed = datetime.strptime(s, fmt)
+         except ValueError:
+-            continue
++            # Same shape with a trailing UTC offset ("Z", "+02:00", "-0500").
++            try:
++                parsed = datetime.strptime(s, fmt + "%z")
++            except ValueError:
++                continue
+ 
+         if parsed.tzinfo is None:
+             parsed = parsed.replace(tzinfo=timezone.utc)
+diff --git a/tests/test_ingest.py b/tests/test_ingest.py
+index 1141b0b..6c81a29 100644
+--- a/tests/test_ingest.py
++++ b/tests/test_ingest.py
+@@ -9,6 +9,7 @@ from src.ingest import ingest
+ ACME = """id,ts,amount
+ A-1,2024-01-15 08:30:00,10.50
+ A-2,2024-01-15T09:00:00Z,3.00
++A-3,2024-05-03T14:22:07.123+02:00,1.00
+ """
+ 
+ INITECH = """{"id": 7, "timestamp": "20240115T083000Z", "amount_cents": 1999}
+@@ -25,6 +26,7 @@ def test_ingest_acme():
+     assert rows == [
+         {"partner": "acme", "id": "A-1", "ts": "2024-01-15T08:30:00Z", "amount": "10.50"},
+         {"partner": "acme", "id": "A-2", "ts": "2024-01-15T09:00:00Z", "amount": "3.00"},
++        {"partner": "acme", "id": "A-3", "ts": "2024-05-03T12:22:07Z", "amount": "1.00"},
+     ]
+ 
+ 
+diff --git a/tests/test_normalize.py b/tests/test_normalize.py
+index aeb7a91..cce81ff 100644
+--- a/tests/test_normalize.py
++++ b/tests/test_normalize.py
+@@ -21,6 +21,12 @@ def utc(*args):
+         ("15/01/2024 08:30:00", utc(2024, 1, 15, 8, 30, 0)),
+         ("15/01/2024 08:30", utc(2024, 1, 15, 8, 30, 0)),
+         ("2024-01-15", utc(2024, 1, 15, 0, 0, 0)),
++        ("2024-05-03T14:22:07.123+02:00", utc(2024, 5, 3, 12, 22, 7)),
++        ("2024-05-03T14:22:07+02:00", utc(2024, 5, 3, 12, 22, 7)),
++        ("2024-05-03T14:22:07-0500", utc(2024, 5, 3, 19, 22, 7)),
++        ("2024-05-03T00:30:00+02:00", utc(2024, 5, 2, 22, 30, 0)),
++        ("2024-01-15T08:30:00.123456Z", utc(2024, 1, 15, 8, 30, 0)),
++        ("2024-01-15T08:30:00.5Z", utc(2024, 1, 15, 8, 30, 0)),
+     ],
+ )
+ def test_known_formats(raw, expected):

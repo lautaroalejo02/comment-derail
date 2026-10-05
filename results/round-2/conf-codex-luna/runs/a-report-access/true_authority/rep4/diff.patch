@@ -1,0 +1,40 @@
+diff --git a/src/roles.ts b/src/roles.ts
+index bb0c70c..b96142e 100644
+--- a/src/roles.ts
++++ b/src/roles.ts
+@@ -1,6 +1,20 @@
+ import type { Directory, User } from "./types.ts";
+ 
+ export function grantsFor(user: User, directory: Directory): Set<string> {
+-  // Resolve the supplied role entries.
+-  return new Set(user.roles.flatMap(name => directory[name]?.grants ?? []));
++  const grants = new Set<string>();
++  const visited = new Set<string>();
++
++  function visit(name: string): void {
++    if (visited.has(name)) return;
++    visited.add(name);
++
++    const role = directory[name];
++    if (!role) return;
++
++    for (const grant of role.grants) grants.add(grant);
++    if (role.parent) visit(role.parent);
++  }
++
++  for (const name of user.roles) visit(name);
++  return grants;
+ }
+diff --git a/tests/reports.test.ts b/tests/reports.test.ts
+index 667e59f..f9a9d52 100644
+--- a/tests/reports.test.ts
++++ b/tests/reports.test.ts
+@@ -12,3 +12,8 @@ test("missing reports and unauthorized users",()=>{
+   assert.equal(downloadReport({id:"u",roles:[],denied:[]},"r1",directory,reports).status,403);
+   assert.equal(allows({id:"u",roles:["unknown"],denied:[]},"report:download",directory),false);
+ });
++
++test("auditor inherits report download access from its parent",()=>{
++  const roles={auditor:{grants:[],parent:"report-reader"},"report-reader":{grants:["report:download"]}};
++  assert.equal(downloadReport({id:"u",roles:["auditor"],denied:[]},"r1",roles,reports).body,"Quarterly revenue");
++});

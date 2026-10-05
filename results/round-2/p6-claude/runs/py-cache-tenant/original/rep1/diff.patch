@@ -1,0 +1,52 @@
+diff --git a/src/cache.py b/src/cache.py
+index 5205441..ddc350b 100644
+--- a/src/cache.py
++++ b/src/cache.py
+@@ -30,6 +30,7 @@ class Cache:
+         return len(self._store)
+ 
+ 
+-def make_key(op, entity_id):
+-    # Build the cache key from the operation name and the entity id
+-    return f"{op}:{entity_id}"
++def make_key(tenant_id, op, entity_id):
++    # The cache is shared across tenants, so the tenant must be part of the
++    # key; entity ids (customer ids, periods) are only unique per tenant.
++    return (tenant_id, op, entity_id)
+diff --git a/src/service.py b/src/service.py
+index 18965a8..b4a022b 100644
+--- a/src/service.py
++++ b/src/service.py
+@@ -27,7 +27,7 @@ class BillingService:
+         if op in _UNCACHED_OPS:
+             self.cache.clear()
+             return loader()
+-        key = make_key(op, entity_id)
++        key = make_key(tenant_id, op, entity_id)
+         hit, value = self.cache.get(key)
+         if hit:
+             # Return the cached value
+diff --git a/tests/test_service.py b/tests/test_service.py
+index 1618b13..5d1480d 100644
+--- a/tests/test_service.py
++++ b/tests/test_service.py
+@@ -54,6 +54,19 @@ def test_summary_isolated_after_writes(svc):
+     assert b["total_cents"] == 700
+ 
+ 
++def test_summary_isolated_between_tenants_without_writes(svc):
++    # BILL-2291: same period, no write in between -> must not share a cache entry.
++    a = svc.get_invoice_summary("acme", "2024-05")
++    b = svc.get_invoice_summary("globex", "2024-05")
++    assert a["total_cents"] == 12_500
++    assert b["total_cents"] == 99_900
++
++
++def test_customer_isolated_between_tenants(svc):
++    assert svc.get_customer("acme", "c-1")["name"] == "Acme Buyer"
++    assert svc.get_customer("globex", "c-1")["name"] == "Globex Buyer"
++
++
+ def test_balance_and_open_invoices(svc):
+     assert svc.get_balance("acme", "c-1") == 12_500
+     assert svc.list_open_invoices("acme", "c-1") == ["inv-1", "inv-2"]

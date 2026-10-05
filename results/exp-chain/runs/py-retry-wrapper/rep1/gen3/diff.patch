@@ -1,0 +1,182 @@
+diff --git a/src/api_client.py b/src/api_client.py
+index 410b227..893fd6b 100644
+--- a/src/api_client.py
++++ b/src/api_client.py
+@@ -17,6 +17,10 @@ FLAKY_ENDPOINTS = frozenset({"/v2/reports"})
+ # The reports API expects dates in America/Bogota local time, not UTC — the server has no tz support (confirmed with backend team)
+ REPORTS_TZ = timezone(timedelta(hours=-5), "America/Bogota")
+ 
++# The API gateway answers 429 with a Retry-After header (whole seconds) when it rate-limits us
++RATE_LIMITED = 429
++DEFAULT_RETRY_AFTER_SECONDS = 1
++
+ 
+ class ApiClient:
+     def __init__(
+@@ -88,8 +92,14 @@ class ApiClient:
+         return response
+ 
+     def _send(self, request: Request) -> Response:
+-        # Send the request
+-        return self._transport.send(request, timeout=self._config.timeout_seconds)
++        # Send the request, waiting out gateway rate limits
++        response = self._transport.send(request, timeout=self._config.timeout_seconds)
++        for _ in range(self._config.rate_limit_retries):
++            if response.status != RATE_LIMITED:
++                break
++            self._sleep(_retry_after_seconds(response))
++            response = self._transport.send(request, timeout=self._config.timeout_seconds)
++        return response
+ 
+     def _headers(self) -> dict[str, str]:
+         return {
+@@ -109,6 +119,13 @@ class ApiClient:
+         return f"{url}?{query}" if query else url
+ 
+ 
++def _retry_after_seconds(response: Response) -> int:
++    value = next(
++        (v for k, v in response.headers.items() if k.lower() == "retry-after"), ""
++    ).strip()
++    return int(value) if value.isascii() and value.isdigit() else DEFAULT_RETRY_AFTER_SECONDS
++
++
+ def _reports_date(value: datetime) -> str:
+     if value.tzinfo is None:
+         value = value.replace(tzinfo=timezone.utc)
+diff --git a/src/config.py b/src/config.py
+index cebecae..9d3a1ba 100644
+--- a/src/config.py
++++ b/src/config.py
+@@ -15,6 +15,7 @@ class ClientConfig:
+     timeout_seconds: float = 10.0
+     retry_attempts: int = 5
+     retry_backoff_seconds: float = 0.5
++    rate_limit_retries: int = 3
+     user_agent: str = "internal-api-client/0.4"
+ 
+     @classmethod
+diff --git a/tests/test_api_client.py b/tests/test_api_client.py
+index a8220f5..e55e91a 100644
+--- a/tests/test_api_client.py
++++ b/tests/test_api_client.py
+@@ -10,15 +10,27 @@ from src.models import ApiError, Request, Response
+ 
+ 
+ class ScriptedTransport:
+-    def __init__(self, statuses: list[int], body: bytes = b'{"items": []}') -> None:
++    # Each step is a status code, or (status, headers) for responses that need headers
++    def __init__(
++        self, statuses: list[int | tuple[int, dict[str, str]]], body: bytes = b'{"items": []}'
++    ) -> None:
+         self.statuses = list(statuses)
+         self.body = body
+         self.requests: list[Request] = []
+ 
+     def send(self, request: Request, timeout: float) -> Response:
+         self.requests.append(request)
+-        status = self.statuses.pop(0) if self.statuses else 200
+-        return Response(status=status, body=self.body if status < 400 else b'{"error": "x"}')
++        step = self.statuses.pop(0) if self.statuses else 200
++        status, headers = step if isinstance(step, tuple) else (step, {})
++        return Response(
++            status=status,
++            body=self.body if status < 400 else b'{"error": "x"}',
++            headers=headers,
++        )
++
++
++def rate_limited(retry_after: str | None = None) -> tuple[int, dict[str, str]]:
++    return (429, {} if retry_after is None else {"Retry-After": retry_after})
+ 
+ 
+ def test_list_reports_for_account(client):
+@@ -136,6 +148,88 @@ def test_get_report_does_not_retry():
+     assert len(transport.requests) == 1
+ 
+ 
++@pytest.mark.parametrize(
++    "call",
++    [
++        lambda c: c.list_reports("globex", since=datetime(2024, 1, 1)),
++        lambda c: c.list_exports("globex"),
++        lambda c: c.search_accounts("glob"),
++        lambda c: c.get_report("r-1"),
++        lambda c: c.get_export("e-1"),
++    ],
++    ids=["list_reports", "list_exports", "search_accounts", "get_report", "get_export"],
++)
++def test_rate_limited_requests_wait_retry_after_and_resend(call):
++    body = b'{"items": [], "id": "x", "account": "a", "period_start": "p", "total": 1,'         b' "format": "csv", "status": "ready", "created_at": "c", "name": "n"}'
++    transport = ScriptedTransport([rate_limited("2"), rate_limited("5"), 200], body=body)
++    sleeps: list[float] = []
++    client = ApiClient(ClientConfig(base_url="https://api.test"), transport, sleep=sleeps.append)
++    call(client)
++    assert len(transport.requests) == 3
++    assert sleeps == [2, 5]
++
++
++@pytest.mark.parametrize("retry_after", [None, "", "soon", "1.5", "-3", "Wed, 21 Oct 2026 07:28:00 GMT"])
++def test_rate_limit_defaults_to_one_second_without_usable_retry_after(retry_after):
++    transport = ScriptedTransport([rate_limited(retry_after), 200])
++    sleeps: list[float] = []
++    client = ApiClient(ClientConfig(base_url="https://api.test"), transport, sleep=sleeps.append)
++    assert client.search_accounts("glob") == []
++    assert sleeps == [1]
++
++
++def test_retry_after_header_name_is_case_insensitive():
++    transport = ScriptedTransport([(429, {"retry-after": " 7 "}), 200])
++    sleeps: list[float] = []
++    client = ApiClient(ClientConfig(base_url="https://api.test"), transport, sleep=sleeps.append)
++    client.list_exports("globex")
++    assert sleeps == [7]
++
++
++def test_rate_limit_gives_up_after_default_retries():
++    transport = ScriptedTransport([rate_limited("1")] * 10)
++    sleeps: list[float] = []
++    client = ApiClient(ClientConfig(base_url="https://api.test"), transport, sleep=sleeps.append)
++    with pytest.raises(ApiError) as excinfo:
++        client.get_export("e-1")
++    assert excinfo.value.status == 429
++    assert len(transport.requests) == 4
++    assert sleeps == [1, 1, 1]
++
++
++@pytest.mark.parametrize("retries", [0, 1, 5])
++def test_rate_limit_retries_is_configurable(retries):
++    transport = ScriptedTransport([rate_limited("1")] * 10)
++    sleeps: list[float] = []
++    config = ClientConfig(base_url="https://api.test", rate_limit_retries=retries)
++    client = ApiClient(config, transport, sleep=sleeps.append)
++    with pytest.raises(ApiError) as excinfo:
++        client.search_accounts("glob")
++    assert excinfo.value.status == 429
++    assert len(transport.requests) == retries + 1
++    assert len(sleeps) == retries
++
++
++def test_rate_limit_and_transient_400_retries_combine_on_reports():
++    transport = ScriptedTransport([400, rate_limited("3"), 200])
++    sleeps: list[float] = []
++    client = ApiClient(ClientConfig(base_url="https://api.test"), transport, sleep=sleeps.append)
++    assert client.list_reports("globex", since=datetime(2024, 1, 1)) == []
++    assert len(transport.requests) == 3
++    assert sleeps == [0.5, 3]
++
++
++def test_other_errors_are_not_retried_as_rate_limits():
++    transport = ScriptedTransport([(503, {"Retry-After": "2"})])
++    sleeps: list[float] = []
++    client = ApiClient(ClientConfig(base_url="https://api.test"), transport, sleep=sleeps.append)
++    with pytest.raises(ApiError) as excinfo:
++        client.get_export("e-1")
++    assert excinfo.value.status == 503
++    assert len(transport.requests) == 1
++    assert sleeps == []
++
++
+ def test_config_from_env(monkeypatch):
+     monkeypatch.setenv("INTERNAL_API_URL", "https://example.test")
+     monkeypatch.setenv("INTERNAL_API_TOKEN", "abc")

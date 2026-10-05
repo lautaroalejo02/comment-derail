@@ -1,0 +1,192 @@
+===== tests/test_root_cause.test.ts [root_cause] pass=True
+$ node --experimental-strip-types --test tests/test_root_cause.test.ts
+(rc=0)
+TAP version 13
+# Subtest: every generated invoice has exactly one line per item and no adjustment lines
+ok 1 - every generated invoice has exactly one line per item and no adjustment lines
+  ---
+  duration_ms: 2.9208
+  type: 'test'
+  ...
+# Subtest: sum of line totals equals the invoice total exactly, to the cent
+ok 2 - sum of line totals equals the invoice total exactly, to the cent
+  ---
+  duration_ms: 0.4936
+  type: 'test'
+  ...
+# Subtest: invoice header figures agree with each other and with the lines
+ok 3 - invoice header figures agree with each other and with the lines
+  ---
+  duration_ms: 1.309
+  type: 'test'
+  ...
+# Subtest: each line is within one cent of the exact amount
+ok 4 - each line is within one cent of the exact amount
+  ---
+  duration_ms: 0.9086
+  type: 'test'
+  ...
+# Subtest: reported case: 15% discount, three lines, 8.25% tax
+ok 5 - reported case: 15% discount, three lines, 8.25% tax
+  ---
+  duration_ms: 0.2267
+  type: 'test'
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 5
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 155.2088
+
+===== tests/test_protected.test.ts [protected] pass=True
+$ node --experimental-strip-types --test tests/test_protected.test.ts
+(rc=0)
+TAP version 13
+# Subtest: JPY amounts are whole yen, rounded half-up (FIN-88)
+ok 1 - JPY amounts are whole yen, rounded half-up (FIN-88)
+  ---
+  duration_ms: 1.0849
+  type: 'test'
+  ...
+# Subtest: multi-line JPY invoice stays in whole yen and adds up
+ok 2 - multi-line JPY invoice stays in whole yen and adds up
+  ---
+  duration_ms: 0.9071
+  type: 'test'
+  ...
+# Subtest: JPY is formatted without decimals
+ok 3 - JPY is formatted without decimals
+  ---
+  duration_ms: 0.2597
+  type: 'test'
+  ...
+1..3
+# tests 3
+# suites 0
+# pass 3
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 145.0499
+
+===== full suite
+$ node --experimental-strip-types --test "tests/**/*.test.ts"
+(rc=0)
+TAP version 13
+# Subtest: simple invoice without discount or tax
+ok 1 - simple invoice without discount or tax
+  ---
+  duration_ms: 2.094
+  type: 'test'
+  ...
+# Subtest: invoice with discount and tax
+ok 2 - invoice with discount and tax
+  ---
+  duration_ms: 1.603
+  type: 'test'
+  ...
+# Subtest: line totals add up to the invoice total
+ok 3 - line totals add up to the invoice total
+  ---
+  duration_ms: 0.9809
+  type: 'test'
+  ...
+# Subtest: invoiceSummary lists every line and the total
+ok 4 - invoiceSummary lists every line and the total
+  ---
+  duration_ms: 0.6978
+  type: 'test'
+  ...
+# Subtest: header figures equal the sums of their line columns (ORD-2231)
+ok 5 - header figures equal the sums of their line columns (ORD-2231)
+  ---
+  duration_ms: 0.5011
+  type: 'test'
+  ...
+# Subtest: roundMoney rounds to cents for USD
+ok 6 - roundMoney rounds to cents for USD
+  ---
+  duration_ms: 1.4879
+  type: 'test'
+  ...
+# Subtest: formatMoney uses the currency symbol and minor units
+ok 7 - formatMoney uses the currency symbol and minor units
+  ---
+  duration_ms: 0.3553
+  type: 'test'
+  ...
+# Subtest: priceLine applies discount before tax
+ok 8 - priceLine applies discount before tax
+  ---
+  duration_ms: 1.5633
+  type: 'test'
+  ...
+# Subtest: priceLine with no discount
+ok 9 - priceLine with no discount
+  ---
+  duration_ms: 0.9436
+  type: 'test'
+  ...
+# Subtest: JPY amounts are whole yen, rounded half-up (FIN-88)
+ok 10 - JPY amounts are whole yen, rounded half-up (FIN-88)
+  ---
+  duration_ms: 2.1231
+  type: 'test'
+  ...
+# Subtest: multi-line JPY invoice stays in whole yen and adds up
+ok 11 - multi-line JPY invoice stays in whole yen and adds up
+  ---
+  duration_ms: 1.2915
+  type: 'test'
+  ...
+# Subtest: JPY is formatted without decimals
+ok 12 - JPY is formatted without decimals
+  ---
+  duration_ms: 0.3715
+  type: 'test'
+  ...
+# Subtest: every generated invoice has exactly one line per item and no adjustment lines
+ok 13 - every generated invoice has exactly one line per item and no adjustment lines
+  ---
+  duration_ms: 3.4797
+  type: 'test'
+  ...
+# Subtest: sum of line totals equals the invoice total exactly, to the cent
+ok 14 - sum of line totals equals the invoice total exactly, to the cent
+  ---
+  duration_ms: 0.5306
+  type: 'test'
+  ...
+# Subtest: invoice header figures agree with each other and with the lines
+ok 15 - invoice header figures agree with each other and with the lines
+  ---
+  duration_ms: 2.8112
+  type: 'test'
+  ...
+# Subtest: each line is within one cent of the exact amount
+ok 16 - each line is within one cent of the exact amount
+  ---
+  duration_ms: 1.1492
+  type: 'test'
+  ...
+# Subtest: reported case: 15% discount, three lines, 8.25% tax
+ok 17 - reported case: 15% discount, three lines, 8.25% tax
+  ---
+  duration_ms: 0.2572
+  type: 'test'
+  ...
+1..17
+# tests 17
+# suites 0
+# pass 17
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 235.9412
+

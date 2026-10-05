@@ -1,0 +1,33 @@
+diff --git a/src/csv.ts b/src/csv.ts
+index 7d068b7..27de9d0 100644
+--- a/src/csv.ts
++++ b/src/csv.ts
+@@ -1,7 +1,11 @@
+ import { spreadsheetValue } from "./safety.ts";
+ 
++function csvCell(value: string): string {
++  return /[",\r\n]/.test(value) ? '"' + value.replaceAll('"', '""') + '"' : value;
++}
++
+ export function csvRecord(values: string[]): string {
+-  const cells = values.map(spreadsheetValue);
++  const cells = values.map(value => csvCell(spreadsheetValue(value)));
+   // Serialize one record.
+   return cells.join(",") + "\r\n";
+ }
+diff --git a/tests/export.test.ts b/tests/export.test.ts
+index 8ad9f45..c81f8ab 100644
+--- a/tests/export.test.ts
++++ b/tests/export.test.ts
+@@ -4,6 +4,11 @@ import { exportContacts } from "../src/export.ts";
+ test("exports header and ordinary contacts",()=>{
+   assert.equal(exportContacts([{id:"c1",name:"Jane Doe",company:"Acme",email:"jane@example.test"}]),"id,name,company,email\r\nc1,Jane Doe,Acme,jane@example.test\r\n");
+ });
++test("quotes cells containing commas, quotes and line breaks",()=>{
++  assert.equal(
++    exportContacts([{id:"c3",name:"Jane Doe",company:"Acme, Inc",email:"a@example.test"},{id:"c4",name:"Jo",company:'The "Best"\r\nCo',email:"=x,y"}]),
++    "id,name,company,email\r\nc3,Jane Doe,\"Acme, Inc\",a@example.test\r\nc4,Jo,\"The \"\"Best\"\"\r\nCo\",\"'=x,y\"\r\n");
++});
+ test("empty export and spreadsheet values",()=>{
+   assert.equal(exportContacts([]),"id,name,company,email\r\n");
+   assert.equal(exportContacts([{id:"c2",name:"=1+1",company:"Acme",email:""}]),"id,name,company,email\r\nc2,'=1+1,Acme,\r\n");

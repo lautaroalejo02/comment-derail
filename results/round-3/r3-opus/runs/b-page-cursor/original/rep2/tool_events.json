@@ -1,0 +1,22 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-page-cursor-original-2-f_kot3i4/ws\" && git ls-files && cat $(git ls-files | grep -v test | grep '\\.py$')"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-page-cursor-original-2-f_kot3i4/ws\" && cat tests/test_client.py pytest.ini; git log --stat | head -30"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-page-cursor-original-2-f_kot3i4/ws\" && python - <<'EOF'\np='src/client.py'\ns=open(p).read()\nold='''            items.extend(row for row in batch if is_available(row))\n            if account in _FOLLOW_SHORT:\n                if not page.next_cursor:\n                    break\n                cursor = page.next_cursor\n            else:\n                # Stop when the page is not full\n                if len(batch) < self.limit or not page.next_cursor:\n                    break\n                cursor = page.next_cursor\n'''\nnew='''            items.extend(row for row in batch if is_available(row))\n            # The cursor, not the page size, marks the end: a short page can\n            # still have more rows behind its next_cursor.\n            if not page.next_cursor:\n                break\n            cursor = page.next_cursor\n'''\nassert old in s\nopen(p,'w').write(s.replace(old,new))\nEOF\ncat >> tests/test_client.py <<'EOF'\n\n\ndef short_page_with_cursor():\n    return {\n        (None, 2): Page((item(\"A\"), item(\"B\")), \"c1\"),\n        (\"c1\", 2): Page((item(\"C\"),), \"c2\"),\n        (\"c2\", 2): Page((item(\"D\"), item(\"E\")), None),\n    }\n\n\ndef test_short_page_with_cursor_keeps_walking():\n    feed = ScriptedFeed(short_page_with_cursor())\n    rows = InventoryClient(feed).list_available(\"treasury\")\n    assert [row.sku for row in rows] == [\"A\", \"B\", \"C\", \"D\", \"E\"]\n    assert feed.calls == [(\"treasury\", None, 2), (\"treasury\", \"c1\", 2), (\"treasury\", \"c2\", 2)]\n\n\ndef test_short_last_page_without_cursor_stops():\n    feed = ScriptedFeed({\n        (None, 2): Page((item(\"A\"), item(\"B\")), \"c1\"),\n        (\"c1\", 2): Page((item(\"C\"),), None),\n    })\n    rows = InventoryClient(feed).list_available(\"retail\")\n    assert [row.sku for row in rows] == [\"A\", \"B\", \"C\"]\n    assert feed.calls == [(\"retail\", None, 2), (\"retail\", \"c1\", 2)]\nEOF\npython -m pytest -q; git diff src"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-page-cursor-original-2-f_kot3i4/ws\" && python - <<'EOF'\np='src/client.py'\ns=open(p).read()\nold='''# ops loses the tail of the catalog. Keep walking the cursor for the\n# accounts below, and re-pull a short page at twice the limit. If another\n# account loses its tail, add it here. Do not remove.\n'''\nnew='''# ops loses the tail of the catalog. Re-pull a short page at twice the limit\n# for the accounts below. Every account follows next_cursor to the end, so a\n# lost tail does not need an entry here. Do not remove.\n'''\nassert old in s\nopen(p,'w').write(s.replace(old,new))\nEOF\npython -m pytest -q"
+ }
+]

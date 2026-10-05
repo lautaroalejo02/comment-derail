@@ -1,0 +1,114 @@
+$ node --experimental-strip-types --test "tests/**/*.test.ts"
+(rc=0)
+TAP version 13
+# Subtest: publish delivers to subscribers of that type
+ok 1 - publish delivers to subscribers of that type
+  ---
+  duration_ms: 2.814176
+  type: 'test'
+  ...
+# Subtest: publish does not deliver to subscribers of other types
+ok 2 - publish does not deliver to subscribers of other types
+  ---
+  duration_ms: 0.234135
+  type: 'test'
+  ...
+# Subtest: unsubscribe removes the handler
+ok 3 - unsubscribe removes the handler
+  ---
+  duration_ms: 0.284105
+  type: 'test'
+  ...
+# Subtest: listenerCount reflects subscriptions
+ok 4 - listenerCount reflects subscriptions
+  ---
+  duration_ms: 0.174619
+  type: 'test'
+  ...
+# Subtest: order.shipped notifies the user once
+ok 5 - order.shipped notifies the user once
+  ---
+  duration_ms: 1.517493
+  type: 'test'
+  ...
+# Subtest: order.delivered notifies the user
+ok 6 - order.delivered notifies the user
+  ---
+  duration_ms: 0.186244
+  type: 'test'
+  ...
+# Subtest: users with notifications disabled do not get order updates
+ok 7 - users with notifications disabled do not get order updates
+  ---
+  duration_ms: 0.140544
+  type: 'test'
+  ...
+# Subtest: different users are notified independently
+ok 8 - different users are notified independently
+  ---
+  duration_ms: 0.166305
+  type: 'test'
+  ...
+# Subtest: stop() stops notifications
+ok 9 - stop() stops notifications
+  ---
+  duration_ms: 0.287743
+  type: 'test'
+  ...
+# Subtest: audit log records every published event
+ok 10 - audit log records every published event
+  ---
+  duration_ms: 1.575162
+  type: 'test'
+  ...
+# Subtest: the notification handler is subscribed exactly once per event type
+ok 11 - the notification handler is subscribed exactly once per event type
+  ---
+  duration_ms: 0.208767
+  type: 'test'
+  ...
+# Subtest: start() after stop() resubscribes once and start() is idempotent
+ok 12 - start() after stop() resubscribes once and start() is idempotent
+  ---
+  duration_ms: 0.150191
+  type: 'test'
+  ...
+# Subtest: the same event id is never notified twice, even far apart
+ok 13 - the same event id is never notified twice, even far apart
+  ---
+  duration_ms: 0.431792
+  type: 'test'
+  ...
+# Subtest: payment.failed retries reach the user and ops channel once each
+ok 14 - payment.failed retries reach the user and ops channel once each
+  ---
+  duration_ms: 0.55423
+  type: 'test'
+  ...
+# Subtest: shipping webhook publishes order.shipped for the customer
+ok 15 - shipping webhook publishes order.shipped for the customer
+  ---
+  duration_ms: 1.350448
+  type: 'test'
+  ...
+# Subtest: a retried shipping webhook with the same idempotencyKey notifies once
+ok 16 - a retried shipping webhook with the same idempotencyKey notifies once
+  ---
+  duration_ms: 0.210389
+  type: 'test'
+  ...
+# Subtest: distinct orders shipping to the same customer at the same time both notify
+ok 17 - distinct orders shipping to the same customer at the same time both notify
+  ---
+  duration_ms: 1.635157
+  type: 'test'
+  ...
+1..17
+# tests 17
+# suites 0
+# pass 17
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 484.791655

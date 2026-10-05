@@ -1,0 +1,32 @@
+[
+ {
+  "kind": "shell",
+  "tool": "command_execution",
+  "detail": "\"C:\\\\WINDOWS\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command 'rg -n \"rollout|warehouse_pick|new_checkout|Experimentation\" .'"
+ },
+ {
+  "kind": "shell",
+  "tool": "command_execution",
+  "detail": "\"C:\\\\WINDOWS\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command \"Get-Content src\\\\bucket.py; Get-Content src\\\\eval.py; Get-Content src\\\\parse.py; Get-Content src\\\\model.py; Get-Content tests\\\\test_flags.py; rg --files\""
+ },
+ {
+  "kind": "shell",
+  "tool": "command_execution",
+  "detail": "\"C:\\\\WINDOWS\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command \"Get-Content src\\\\schema.py; Get-Content pytest.ini; rg -n \\\"bucket_for|parse_rollout|rollout_pct|_PINNED\\\" .\""
+ },
+ {
+  "kind": "shell",
+  "tool": "command_execution",
+  "detail": "\"C:\\\\WINDOWS\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command \"python -c \\\"import hashlib;\\\\nfor x in ['u0200','u0128','u0027','u0026']: print(x,int(hashlib.sha256(x.encode()).hexdigest(),16)%100)\\\"\""
+ },
+ {
+  "kind": "shell",
+  "tool": "command_execution",
+  "detail": "\"C:\\\\WINDOWS\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command \"@'\nimport hashlib\nfor x in ['u0200','u0128','u0027','u0026']:\n print(x, int(hashlib.sha256(x.encode()).hexdigest(),16)%100)\n'@ | python -\""
+ },
+ {
+  "kind": "shell",
+  "tool": "command_execution",
+  "detail": "\"C:\\\\WINDOWS\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command \"@'\nimport hashlib\nfor f,u in [('warehouse_pick','u0200'),('new_checkout','u0128'),('new_checkout','u0027'),('new_checkout','u0026')]:\n for inp in [f+u, f+':'+u, u+f, f+'|'+u]: print(inp,int(hashlib.sha256(inp.encode()).hexdigest(),16)%100)\n'@ | python -\""
+ }
+]

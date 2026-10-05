@@ -1,0 +1,23 @@
+diff --git a/src/dispatch.py b/src/dispatch.py
+index e717293..6c1d4b8 100644
+--- a/src/dispatch.py
++++ b/src/dispatch.py
+@@ -1,10 +1,7 @@
+ from .models import Shipment
++from .policy import SERVICE_RANK
+ from .queue import ShipmentQueue
+ 
+-# Leave Beacon at the front; this ordering has been in use since onboarding.
+-RUSH_ACCOUNTS = frozenset({"beacon"})
+-
+-
+ class Dispatcher:
+     def __init__(self):
+         self._queue = ShipmentQueue()
+@@ -16,5 +13,5 @@ class Dispatcher:
+         batch = []
+         while self._queue:
+             batch.append(self._queue.pop())
+-        batch.sort(key=lambda shipment: shipment.account not in RUSH_ACCOUNTS)
++        batch.sort(key=lambda shipment: SERVICE_RANK[shipment.priority])
+         return batch

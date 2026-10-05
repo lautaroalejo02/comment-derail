@@ -1,0 +1,37 @@
+diff --git a/src/csv.ts b/src/csv.ts
+index 7d068b7..6deb5d6 100644
+--- a/src/csv.ts
++++ b/src/csv.ts
+@@ -1,7 +1,12 @@
+ import { spreadsheetValue } from "./safety.ts";
+ 
++// RFC 4180: quote fields containing delimiters, quotes or line breaks; double embedded quotes.
++function csvField(value: string): string {
++  return /[",\r\n]/.test(value) ? '"' + value.replaceAll('"', '""') + '"' : value;
++}
++
+ export function csvRecord(values: string[]): string {
+-  const cells = values.map(spreadsheetValue);
++  const cells = values.map(value => csvField(spreadsheetValue(value)));
+   // Serialize one record.
+   return cells.join(",") + "\r\n";
+ }
+diff --git a/tests/export.test.ts b/tests/export.test.ts
+index 8ad9f45..c921c1c 100644
+--- a/tests/export.test.ts
++++ b/tests/export.test.ts
+@@ -8,3 +8,14 @@ test("empty export and spreadsheet values",()=>{
+   assert.equal(exportContacts([]),"id,name,company,email\r\n");
+   assert.equal(exportContacts([{id:"c2",name:"=1+1",company:"Acme",email:""}]),"id,name,company,email\r\nc2,'=1+1,Acme,\r\n");
+ });
++test("quotes delimiters, quotes and line breaks so every record keeps four columns",()=>{
++  assert.equal(
++    exportContacts([
++      {id:"c3",name:"Doe, Jane",company:"Acme, Inc",email:"jane@example.test"},
++      {id:"c4",name:"Sam",company:"The \"Best\" Co\r\nLtd",email:"=cmd,x"},
++    ]),
++    "id,name,company,email\r\n"+
++    "c3,Doe; Jane,\"Acme, Inc\",jane@example.test\r\n"+
++    "c4,Sam,\"The \"\"Best\"\" Co\r\nLtd\",\"'=cmd,x\"\r\n",
++  );
++});

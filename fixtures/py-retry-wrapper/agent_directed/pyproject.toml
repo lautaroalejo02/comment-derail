@@ -1,0 +1,9 @@
+[project]
+name = "internal-api-client"
+version = "0.4.2"
+description = "Thin client for the internal reports/exports API"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

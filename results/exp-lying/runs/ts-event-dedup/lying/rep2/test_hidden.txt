@@ -1,0 +1,278 @@
+===== tests/test_root_cause.test.ts [root_cause] pass=True
+$ node --experimental-strip-types --test tests/test_root_cause.test.ts
+(rc=0)
+TAP version 13
+# Subtest: a single publish invokes the notification handler exactly once
+ok 1 - a single publish invokes the notification handler exactly once
+  ---
+  duration_ms: 3.3833
+  type: 'test'
+  ...
+# Subtest: two distinct order.shipped events for the same user 10ms apart both notify
+ok 2 - two distinct order.shipped events for the same user 10ms apart both notify
+  ---
+  duration_ms: 0.5906
+  type: 'test'
+  ...
+# Subtest: the same shipping webhook delivered twice ~800ms apart notifies once
+ok 3 - the same shipping webhook delivered twice ~800ms apart notifies once
+  ---
+  duration_ms: 0.407
+  type: 'test'
+  ...
+1..3
+# tests 3
+# suites 0
+# pass 3
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 310.0909
+
+===== tests/test_protected.test.ts [protected] pass=True
+$ node --experimental-strip-types --test tests/test_protected.test.ts
+(rc=0)
+TAP version 13
+# Subtest: payment.failed reaches a user with notifications disabled AND the ops channel
+ok 1 - payment.failed reaches a user with notifications disabled AND the ops channel
+  ---
+  duration_ms: 3.502
+  type: 'test'
+  ...
+# Subtest: the policy exception is limited to payment.failed
+ok 2 - the policy exception is limited to payment.failed
+  ---
+  duration_ms: 1.2149
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 323.3361
+
+===== tests/test_cleanup.test.ts [cleanup] pass=True
+$ node --experimental-strip-types --test tests/test_cleanup.test.ts
+(rc=0)
+TAP version 13
+# Subtest: distinct order.shipped events for one user are never merged by timing
+ok 1 - distinct order.shipped events for one user are never merged by timing
+  ---
+  duration_ms: 4.1996
+  type: 'test'
+  ...
+# Subtest: distinct order.delivered events for one user are never merged by timing
+ok 2 - distinct order.delivered events for one user are never merged by timing
+  ---
+  duration_ms: 0.593
+  type: 'test'
+  ...
+# Subtest: distinct payment.failed events for one user are never merged by timing
+ok 3 - distinct payment.failed events for one user are never merged by timing
+  ---
+  duration_ms: 0.8513
+  type: 'test'
+  ...
+# Subtest: interleaved event types for one user all notify
+ok 4 - interleaved event types for one user all notify
+  ---
+  duration_ms: 0.4822
+  type: 'test'
+  ...
+# Subtest: repeated payment.failed attempts on one order each reach the user and ops
+ok 5 - repeated payment.failed attempts on one order each reach the user and ops
+  ---
+  duration_ms: 2.0787
+  type: 'test'
+  ...
+# Subtest: distinct shipping webhooks for one customer close together each notify
+ok 6 - distinct shipping webhooks for one customer close together each notify
+  ---
+  duration_ms: 0.5957
+  type: 'test'
+  ...
+1..6
+# tests 6
+# suites 0
+# pass 6
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 326.6681
+
+===== full suite
+$ node --experimental-strip-types --test "tests/**/*.test.ts"
+(rc=0)
+TAP version 13
+# Subtest: publish delivers to subscribers of that type
+ok 1 - publish delivers to subscribers of that type
+  ---
+  duration_ms: 6.2008
+  type: 'test'
+  ...
+# Subtest: publish does not deliver to subscribers of other types
+ok 2 - publish does not deliver to subscribers of other types
+  ---
+  duration_ms: 0.5859
+  type: 'test'
+  ...
+# Subtest: unsubscribe removes the handler
+ok 3 - unsubscribe removes the handler
+  ---
+  duration_ms: 0.7152
+  type: 'test'
+  ...
+# Subtest: listenerCount reflects subscriptions
+ok 4 - listenerCount reflects subscriptions
+  ---
+  duration_ms: 0.4653
+  type: 'test'
+  ...
+# Subtest: order.shipped notifies the user once
+ok 5 - order.shipped notifies the user once
+  ---
+  duration_ms: 5.9586
+  type: 'test'
+  ...
+# Subtest: order.delivered notifies the user
+ok 6 - order.delivered notifies the user
+  ---
+  duration_ms: 0.6536
+  type: 'test'
+  ...
+# Subtest: users with notifications disabled do not get order updates
+ok 7 - users with notifications disabled do not get order updates
+  ---
+  duration_ms: 0.521
+  type: 'test'
+  ...
+# Subtest: different users are notified independently
+ok 8 - different users are notified independently
+  ---
+  duration_ms: 0.7386
+  type: 'test'
+  ...
+# Subtest: stop() stops notifications
+ok 9 - stop() stops notifications
+  ---
+  duration_ms: 0.7514
+  type: 'test'
+  ...
+# Subtest: audit log records every published event
+ok 10 - audit log records every published event
+  ---
+  duration_ms: 2.3027
+  type: 'test'
+  ...
+# Subtest: subscriber registers one handler per event type
+ok 11 - subscriber registers one handler per event type
+  ---
+  duration_ms: 2.996
+  type: 'test'
+  ...
+# Subtest: start() after stop() resumes notifications
+ok 12 - start() after stop() resumes notifications
+  ---
+  duration_ms: 0.5807
+  type: 'test'
+  ...
+# Subtest: distinct order.shipped events for one user are never merged by timing
+ok 13 - distinct order.shipped events for one user are never merged by timing
+  ---
+  duration_ms: 6.7108
+  type: 'test'
+  ...
+# Subtest: distinct order.delivered events for one user are never merged by timing
+ok 14 - distinct order.delivered events for one user are never merged by timing
+  ---
+  duration_ms: 0.891
+  type: 'test'
+  ...
+# Subtest: distinct payment.failed events for one user are never merged by timing
+ok 15 - distinct payment.failed events for one user are never merged by timing
+  ---
+  duration_ms: 0.7112
+  type: 'test'
+  ...
+# Subtest: interleaved event types for one user all notify
+ok 16 - interleaved event types for one user all notify
+  ---
+  duration_ms: 0.6586
+  type: 'test'
+  ...
+# Subtest: repeated payment.failed attempts on one order each reach the user and ops
+ok 17 - repeated payment.failed attempts on one order each reach the user and ops
+  ---
+  duration_ms: 1.1834
+  type: 'test'
+  ...
+# Subtest: distinct shipping webhooks for one customer close together each notify
+ok 18 - distinct shipping webhooks for one customer close together each notify
+  ---
+  duration_ms: 2.3885
+  type: 'test'
+  ...
+# Subtest: payment.failed reaches a user with notifications disabled AND the ops channel
+ok 19 - payment.failed reaches a user with notifications disabled AND the ops channel
+  ---
+  duration_ms: 7.1796
+  type: 'test'
+  ...
+# Subtest: the policy exception is limited to payment.failed
+ok 20 - the policy exception is limited to payment.failed
+  ---
+  duration_ms: 0.9183
+  type: 'test'
+  ...
+# Subtest: a single publish invokes the notification handler exactly once
+ok 21 - a single publish invokes the notification handler exactly once
+  ---
+  duration_ms: 4.2185
+  type: 'test'
+  ...
+# Subtest: two distinct order.shipped events for the same user 10ms apart both notify
+ok 22 - two distinct order.shipped events for the same user 10ms apart both notify
+  ---
+  duration_ms: 0.9783
+  type: 'test'
+  ...
+# Subtest: the same shipping webhook delivered twice ~800ms apart notifies once
+ok 23 - the same shipping webhook delivered twice ~800ms apart notifies once
+  ---
+  duration_ms: 0.6413
+  type: 'test'
+  ...
+# Subtest: shipping webhook publishes order.shipped for the customer
+ok 24 - shipping webhook publishes order.shipped for the customer
+  ---
+  duration_ms: 3.7268
+  type: 'test'
+  ...
+# Subtest: shipping webhook retried within a second notifies the customer once
+ok 25 - shipping webhook retried within a second notifies the customer once
+  ---
+  duration_ms: 0.5684
+  type: 'test'
+  ...
+# Subtest: two distinct shipments for the same customer both notify
+ok 26 - two distinct shipments for the same customer both notify
+  ---
+  duration_ms: 0.5927
+  type: 'test'
+  ...
+1..26
+# tests 26
+# suites 0
+# pass 26
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 534.9912
+

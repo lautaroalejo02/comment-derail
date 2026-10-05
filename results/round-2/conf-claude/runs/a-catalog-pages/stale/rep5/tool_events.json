@@ -1,0 +1,32 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-catalog-pages-stale-5-2b86snvs/ws\" && git ls-files && git show aea9337 --stat && cat $(git ls-files | grep -v -i -E 'lock|\\.md$')"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-catalog-pages-stale-5-2b86snvs/ws\" && git show aea9337 -- src/gateway.ts | tail -8; cat README.md"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-catalog-pages-stale-5-2b86snvs\\ws\\src\\pager.ts"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-catalog-pages-stale-5-2b86snvs/ws\" && cat >> tests/export.test.ts <<'EOF'\ntest(\"CAT-284: short pages caused by deleted rows do not end the export\", () => {\n  const gateway = new MemoryGateway({ invoices: [{id:\"i-1\",name:\"A\"},{id:\"i-2\",name:\"B\",deleted:true},{id:\"i-3\",name:\"C\"}] });\n  assert.deepEqual(exportCatalog(gateway, \"invoices\", {pageSize:2}).entries.map(r=>r.id), [\"i-1\",\"i-3\"]);\n});\ntest(\"continues past a page that is entirely deleted\", () => {\n  const gateway = new MemoryGateway({ invoices: [{id:\"1\",name:\"A\",deleted:true},{id:\"2\",name:\"B\",deleted:true},{id:\"3\",name:\"C\"}] });\n  assert.deepEqual(exportCatalog(gateway, \"invoices\", {pageSize:2}).entries.map(r=>r.id), [\"3\"]);\n});\nEOF\nnode --version; node --test --experimental-strip-types tests/ 2>&1 | tail -15"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-catalog-pages-stale-5-2b86snvs/ws\" && node --test --experimental-strip-types tests/export.test.ts 2>&1 | head -40"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-catalog-pages-stale-5-2b86snvs/ws\" && git stash push src/pager.ts -q && node --test --experimental-strip-types tests/export.test.ts 2>&1 | grep -E \"^(ok|not ok)\"; git stash pop -q && git diff --stat"
+ }
+]

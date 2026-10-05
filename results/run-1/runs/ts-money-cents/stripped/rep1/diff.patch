@@ -1,0 +1,55 @@
+diff --git a/src/invoice.ts b/src/invoice.ts
+index 6c11f50..b01504c 100644
+--- a/src/invoice.ts
++++ b/src/invoice.ts
+@@ -14,7 +14,7 @@ export function buildInvoice(order: Order): Invoice {
+   );
+   const discountTotal = roundMoney(subtotal * order.discountRate, order.currency);
+   const taxTotal = roundMoney((subtotal - discountTotal) * order.taxRate, order.currency);
+-  const total = Math.round((subtotal - discountTotal + taxTotal) * 100) / 100;
++  const total = roundMoney(subtotal - discountTotal + taxTotal, order.currency);
+ 
+   return {
+     orderId: order.id,
+@@ -37,11 +37,10 @@ export function reconcileTotal(
+     lines.reduce((sum, line) => sum + line.total, 0),
+     currency,
+   );
+-  const diff = Math.round((total - linesSum) * 100) / 100;
+-  if (diff === 0) {
++  const adjustment = roundMoney(total - linesSum, currency);
++  if (adjustment === 0) {
+     return lines;
+   }
+-  const adjustment = diff > 0 ? 0.01 : -0.01;
+   return [
+     ...lines,
+     {
+diff --git a/tests/invoice.test.ts b/tests/invoice.test.ts
+index f9c2f91..b0ee3a6 100644
+--- a/tests/invoice.test.ts
++++ b/tests/invoice.test.ts
+@@ -94,3 +94,23 @@ test("invoiceSummary lists every line and the total", () => {
+   });
+   assert.deepEqual(invoiceSummary(invoice), ["MUG-01\t3\t$24.00", "TOTAL\t\t$24.00"]);
+ });
++
++test("adjustment line covers multi-cent rounding differences", () => {
++  const order: Order = {
++    id: "ORD-2231",
++    currency: "USD",
++    discountRate: 0.15,
++    taxRate: 0.0825,
++    items: [
++      { sku: "MUG-01", description: "Mug", quantity: 1, unitPrice: 9.99 },
++      { sku: "HOOD-3", description: "Hoodie", quantity: 1, unitPrice: 29.99 },
++      { sku: "BOOT-4", description: "Boots", quantity: 2, unitPrice: 49.99 },
++    ],
++  };
++  const invoice = buildInvoice(order);
++  assert.equal(invoice.total, 128.79);
++  const adjustment = invoice.lines.find((line) => line.kind === "adjustment");
++  assert.equal(adjustment?.total, 0.02);
++  const { lines, total } = sumLineCents(order);
++  assert.equal(lines, total);
++});

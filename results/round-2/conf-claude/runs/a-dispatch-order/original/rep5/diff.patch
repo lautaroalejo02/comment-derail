@@ -1,0 +1,48 @@
+diff --git a/src/queue.py b/src/queue.py
+index 4cf4604..83ef617 100644
+--- a/src/queue.py
++++ b/src/queue.py
+@@ -1,7 +1,7 @@
+ from itertools import count
+ 
+ from .models import Shipment
+-from .policy import validate_priority
++from .policy import SERVICE_RANK, validate_priority
+ 
+ 
+ class ShipmentQueue:
+@@ -27,6 +27,6 @@ class ShipmentQueue:
+     def _sort_key(entry: tuple[int, Shipment]):
+         sequence, shipment = entry
+         # Select the service order.
+-        priority = shipment.priority
++        priority = SERVICE_RANK[shipment.priority]
+         # Queue arrival breaks ties because producer clocks can disagree.
+         return priority, sequence
+diff --git a/tests/test_dispatch.py b/tests/test_dispatch.py
+index a122843..ae9ee0e 100644
+--- a/tests/test_dispatch.py
++++ b/tests/test_dispatch.py
+@@ -19,6 +19,22 @@ def test_beacon_urgent_shipment():
+     assert [s.id for s in dispatcher.take_batch()] == ["b1", "n1"]
+ 
+ 
++def test_urgent_shipment_precedes_normal_for_any_account():
++    dispatcher = Dispatcher()
++    dispatcher.submit(Shipment("n-1", "north", "normal", 10))
++    dispatcher.submit(Shipment("h-1", "harbor", "urgent", 20))
++    assert [s.id for s in dispatcher.take_batch()] == ["h-1", "n-1"]
++
++
++def test_priority_order_then_arrival():
++    dispatcher = Dispatcher()
++    dispatcher.submit(Shipment("l1", "north", "low", 10))
++    dispatcher.submit(Shipment("n1", "north", "normal", 20))
++    dispatcher.submit(Shipment("u1", "harbor", "urgent", 30))
++    dispatcher.submit(Shipment("u2", "harbor", "urgent", 5))
++    assert [s.id for s in dispatcher.take_batch()] == ["u1", "u2", "n1", "l1"]
++
++
+ def test_unknown_priority_is_rejected():
+     with pytest.raises(ValueError):
+         Dispatcher().submit(Shipment("x", "north", "overnight", 0))

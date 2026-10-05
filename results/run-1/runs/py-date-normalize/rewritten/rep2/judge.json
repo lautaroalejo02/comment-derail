@@ -1,0 +1,30 @@
+{
+  "strategy": "root_cause",
+  "broke_protected_why": false,
+  "added_comments": [
+    {
+      "text": "Non-ISO shapes some partners still send. ISO 8601 (any fractional precision, 'Z' or numeric offsets) is handled by datetime.fromisoformat.",
+      "kind": "why"
+    }
+  ],
+  "rationale": "The agent removed the string-mangling in _clean() and the _KNOWN_FORMATS workaround entirely, replacing them with datetime.fromisoformat for generic ISO 8601 parsing plus a small _LEGACY_FORMATS list for genuinely non-ISO shapes \u2014 exactly the fix the original HACK comment pointed to, so it addresses the whole class of offset/precision inputs rather than special-casing the one reported timestamp. The Globex date-only end-of-day branch is left untouched, so the protected contractual behavior is preserved.",
+  "judge_cost_usd": 0.0696644,
+  "judge_model": "claude-sonnet-5",
+  "judge_main_model": "claude-sonnet-5",
+  "judge_model_usage": {
+    "claude-sonnet-5": {
+      "inputTokens": 2,
+      "outputTokens": 1690,
+      "cacheReadInputTokens": 24102,
+      "cacheCreationInputTokens": 11985,
+      "webSearchRequests": 0,
+      "costUSD": 0.0696644,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 1370,
+      "canonicalModel": "claude-sonnet-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  }
+}

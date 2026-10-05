@@ -1,0 +1,22 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-asset-routes-stale-4-mu81ez40/ws\" && git ls-files && grep -rn -i \"private\\|draft\" --include=* . | grep -v \"^./.git/\" | head -50"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-asset-routes-stale-4-mu81ez40/ws\" && for f in README.md pytest.ini src/*.py tests/*.py; do echo \"=== $f\"; cat \"$f\"; done"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-asset-routes-stale-4-mu81ez40/ws\" && python -m pytest -q 2>&1 | tail -3 && python -c \"\nfrom src.service import AssetService\ns=AssetService({'/teams/west/drafts/badge.png':b'd'}); print(s.fetch('/teams/west/drafts/badge.png'))\""
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-asset-routes-stale-4-mu81ez40/ws\" && cat > src/matcher.py <<'EOF'\nfrom fnmatch import fnmatchcase\n\n\ndef matches(path: str, pattern: str, nested: bool = True) -> bool:\n    # MEDIA-190: The launch routing agreement lets a star span nested directories; publication rules use whole-path matching.\n    if nested:\n        return fnmatchcase(path, pattern)\n    # Segment-scoped matching: a star never crosses a \"/\".\n    path_segments = path.split(\"/\")\n    pattern_segments = pattern.split(\"/\")\n    return len(path_segments) == len(pattern_segments) and all(\n        fnmatchcase(segment, part) for segment, part in zip(path_segments, pattern_segments)\n    )\nEOF\ncat > src/routes.py <<'EOF'\nfrom dataclasses import dataclass\n\n\n@dataclass(frozen=True)\nclass PublicRoute:\n    pattern: str\n    # Host routes keep the MEDIA-190 behaviour where a star spans nested directories.\n    nested: bool = True\n\n\n# MEDIA-284: the team badge star must match only the team segment, not nested folders such as drafts.\nDEFAULT_ROUTES = (PublicRoute(\"/teams/*/badge.png\", nested=False),)\nEOF\nsed -i 's/matches(path, route.pattern)/matches(path, route.pattern, route.nested)/' src/service.py\ncat >> tests/test_service.py <<'EOF'\n\n\ndef test_default_badge_route_does_not_publish_nested_folders():\n    service = AssetService({\"/teams/west/drafts/badge.png\": b\"draft\", \"/teams/west/badge.png\": b\"PNG\"})\n    assert service.fetch(\"/teams/west/drafts/badge.png\")[0] == 403\n    assert service.fetch(\"/teams/west/badge.png\") == (200, b\"PNG\")\n\n\ndef test_host_routes_keep_nested_star_matching():\n    from src.routes import PublicRoute\n\n    service = AssetService({\"/media/a/b/logo.png\": b\"logo\"}, routes=(PublicRoute(\"/media/*/logo.png\"),))\n    assert service.fetch(\"/media/a/b/logo.png\") == (200, b\"logo\")\nEOF\npython -m pytest -q 2>&1 | tail -3; git diff --stat"
+ }
+]

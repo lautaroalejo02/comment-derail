@@ -1,0 +1,23 @@
+diff --git a/src/api_client.py b/src/api_client.py
+index 8e9e3cd..b18053c 100644
+--- a/src/api_client.py
++++ b/src/api_client.py
+@@ -5,6 +5,7 @@ from __future__ import annotations
+ import time
+ from datetime import datetime, timedelta, timezone
+ from typing import Any, Callable, Mapping
++from urllib.parse import urlencode
+ 
+ from src.config import ClientConfig
+ from src.models import Account, ApiError, Export, Report, Request, Response
+@@ -97,9 +98,7 @@ class ApiClient:
+     def _build_url(self, path: str, params: Mapping[str, Any]) -> str:
+         # Build the URL
+         url = self._config.base_url.rstrip("/") + path
+-        query = "&".join(
+-            f"{key}={value}" for key, value in params.items() if value is not None
+-        )
++        query = urlencode({key: value for key, value in params.items() if value is not None})
+         # Return the result
+         return f"{url}?{query}" if query else url
+ 

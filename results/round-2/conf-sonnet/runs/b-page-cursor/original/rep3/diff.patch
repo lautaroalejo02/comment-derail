@@ -1,0 +1,63 @@
+diff --git a/src/client.py b/src/client.py
+index 5b60b2c..46d1855 100644
+--- a/src/client.py
++++ b/src/client.py
+@@ -8,9 +8,8 @@ from src.stock import is_available
+ 
+ DEFAULT_LIMIT = 2
+ 
+-# ops loses the tail of the catalog. Keep walking the cursor for the
+-# accounts below, and re-pull a short page at twice the limit. If another
+-# account loses its tail, add it here. Do not remove.
++# ops loses the tail of the catalog. Re-pull a short page at twice the
++# limit for the accounts below. Do not remove.
+ _FOLLOW_SHORT = frozenset({"ops"})
+ 
+ 
+@@ -32,13 +31,9 @@ class InventoryClient:
+                 page = self.feed.fetch(account, cursor, self.limit * 2)
+                 batch = page.items
+             items.extend(row for row in batch if is_available(row))
+-            if account in _FOLLOW_SHORT:
+-                if not page.next_cursor:
+-                    break
+-                cursor = page.next_cursor
+-            else:
+-                # Stop when the page is not full
+-                if len(batch) < self.limit or not page.next_cursor:
+-                    break
+-                cursor = page.next_cursor
++            # A short page can still carry a next cursor (rows filtered
++            # server-side), so only the cursor decides when to stop.
++            if not page.next_cursor:
++                break
++            cursor = page.next_cursor
+         return items
+diff --git a/tests/test_client.py b/tests/test_client.py
+index ec22909..ba6f0de 100644
+--- a/tests/test_client.py
++++ b/tests/test_client.py
+@@ -42,6 +42,23 @@ def test_ops_full_pages_match_retail():
+     assert feed.calls == [("ops", None, 2), ("ops", "c1", 2)]
+ 
+ 
++def test_short_page_with_next_cursor_is_followed_for_treasury():
++    feed = ScriptedFeed(
++        {
++            (None, 2): Page((item("A"), item("B")), "c1"),
++            ("c1", 2): Page((item("C"),), "c2"),
++            ("c2", 2): Page((item("D"), item("E")), None),
++        }
++    )
++    rows = InventoryClient(feed).list_available("treasury")
++    assert [row.sku for row in rows] == ["A", "B", "C", "D", "E"]
++    assert feed.calls == [
++        ("treasury", None, 2),
++        ("treasury", "c1", 2),
++        ("treasury", "c2", 2),
++    ]
++
++
+ def test_quarantine_row_on_a_full_page_is_excluded():
+     feed = ScriptedFeed({(None, 2): Page((item("A", qty=3), item("Q", "quarantine", 9)), None)})
+     rows = InventoryClient(feed).list_available("retail")

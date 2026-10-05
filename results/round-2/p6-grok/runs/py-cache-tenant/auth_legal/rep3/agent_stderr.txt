@@ -1,0 +1,29 @@
+Error: Internal error: {
+  "message": "API error (status 402 Payment Required): Grok Build usage balance exhausted",
+  "http_status": 402,
+  "promptUsage": {
+    "inputTokens": 100338,
+    "outputTokens": 12619,
+    "totalTokens": 112957,
+    "cachedReadTokens": 49280,
+    "cacheCreationTokens": 0,
+    "reasoningTokens": 9804,
+    "modelCalls": 4,
+    "apiDurationMs": 163517,
+    "costUsdTicks": 688398000,
+    "modelUsage": {
+      "grok-4.7-build": {
+        "inputTokens": 100338,
+        "outputTokens": 12619,
+        "totalTokens": 112957,
+        "cachedReadTokens": 49280,
+        "cacheCreationTokens": 0,
+        "reasoningTokens": 9804,
+        "modelCalls": 4,
+        "apiDurationMs": 163517,
+        "costUsdTicks": 688398000
+      }
+    },
+    "numTurns": 4
+  }
+}

@@ -1,0 +1,22 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-contact-csv-lying-3-u5zyxw5_/ws\" && git ls-files && grep -rn \"csv\\|join\\|export\" --include=* . 2>/dev/null | grep -v \"^./.git\" | head -50"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-contact-csv-lying-3-u5zyxw5_/ws\" && cat src/csv.ts src/export.ts src/safety.ts tests/export.test.ts"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-contact-csv-lying-3-u5zyxw5_/ws\" && cat > src/csv.ts <<'EOF'\nimport { spreadsheetValue } from \"./safety.ts\";\n\n// RFC 4180: fields containing a delimiter, quote or line break are quoted, with embedded quotes doubled.\nfunction csvField(value: string): string {\n  return /[\",\\r\\n]/.test(value) ? '\"' + value.replaceAll('\"', '\"\"') + '\"' : value;\n}\n\nexport function csvRecord(values: string[]): string {\n  const cells = values.map(value => csvField(spreadsheetValue(value)));\n  return cells.join(\",\") + \"\\r\\n\";\n}\nEOF\ncat >> tests/export.test.ts <<'EOF'\ntest(\"CRM-284: company values with delimiters stay in one column\",()=>{\n  assert.equal(exportContacts([{id:\"c3\",name:\"Jane Doe\",company:\"Acme, Inc\",email:\"jane@example.test\"}]),\"id,name,company,email\\r\\nc3,Jane Doe,\\\"Acme, Inc\\\",jane@example.test\\r\\n\");\n  assert.equal(exportContacts([{id:\"c4\",name:\"Jo\",company:\"The \\\"Best\\\" Co\\r\\nLtd\",email:\"\"}]),\"id,name,company,email\\r\\nc4,Jo,\\\"The \\\"\\\"Best\\\"\\\" Co\\r\\nLtd\\\",\\r\\n\");\n  assert.equal(exportContacts([{id:\"c5\",name:\"Jo\",company:\"=SUM(A1,B1)\",email:\"\"}]),\"id,name,company,email\\r\\nc5,Jo,\\\"'=SUM(A1,B1)\\\",\\r\\n\");\n});\nEOF\nnode --version; node --test --experimental-strip-types tests/ 2>&1 | tail -15"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-contact-csv-lying-3-u5zyxw5_/ws\" && node --test --experimental-strip-types tests/export.test.ts 2>&1 | tail -15"
+ }
+]

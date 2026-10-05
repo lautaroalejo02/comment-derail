@@ -1,0 +1,24 @@
+$ node --experimental-strip-types --test "tests/**/*.test.ts"
+(rc=0)
+TAP version 13
+# Subtest: exports a collection in storage order
+ok 1 - exports a collection in storage order
+  ---
+  duration_ms: 1.6171
+  type: 'test'
+  ...
+# Subtest: project migration and empty collections
+ok 2 - project migration and empty collections
+  ---
+  duration_ms: 0.5235
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 156.6281

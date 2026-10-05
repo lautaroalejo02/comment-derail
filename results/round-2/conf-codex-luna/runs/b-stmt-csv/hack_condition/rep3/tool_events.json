@@ -1,0 +1,22 @@
+[
+ {
+  "kind": "shell",
+  "tool": "command_execution",
+  "detail": "\"C:\\\\WINDOWS\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command 'rg -n \"statement|Statements|csv\" .'"
+ },
+ {
+  "kind": "shell",
+  "tool": "command_execution",
+  "detail": "\"C:\\\\WINDOWS\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command \"Get-Content src\\\\csvfmt.py; Get-Content src\\\\statement.py; Get-Content src\\\\lines.py; Get-Content tests\\\\test_statement.py; Get-ChildItem\""
+ },
+ {
+  "kind": "shell",
+  "tool": "command_execution",
+  "detail": "\"C:\\\\WINDOWS\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command \"@'\n\\\"\\\"\\\"Render statement lines as CSV.\\\"\\\"\\\"\n\nfrom __future__ import annotations\n\nimport csv\nfrom io import StringIO\n\nfrom src.lines import Line\n\n\ndef format_amount(cents: int) -> str:\n    sign = \\\"-\\\" if cents < 0 else \\\"\\\"\n    cents = abs(cents)\n    return f\\\"{sign}{cents // 100}.{cents % 100:02d}\\\"\n\n\ndef render(lines: list[Line]) -> str:\n    output = StringIO(newline=\\\"\\\")\n    writer = csv.writer(output, lineterminator=\\\"\\\\n\\\")\n    writer.writerow([\\\"account\\\", \\\"posted_on\\\", \\\"payee\\\", \\\"amount\\\", \\\"memo\\\"])\n    for line in lines:\n        writer.writerow(\n            [\n                line.account,\n                line.posted_on,\n                line.payee,\n                format_amount(line.amount_cents),\n                line.memo,\n            ]\n        )\n    return output.getvalue()\n'@ | Set-Content -Encoding utf8 src\\\\csvfmt.py\n\""
+ },
+ {
+  "kind": "shell",
+  "tool": "command_execution",
+  "detail": "\"C:\\\\WINDOWS\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command \"@'\nfrom src.lines import Line\nfrom src.statement import export_statement\n\n\ndef test_usd_payee_with_comma_is_quoted_as_one_csv_field():\n    text = export_statement(\n        [Line(\\\"chk-100\\\", \\\"2024-06-02\\\", \\\"Smith, Jones LLP\\\", 1250, \\\"retainer\\\", \\\"USD\\\")]\n    )\n    assert text == (\n        \\\"account,posted_on,payee,amount,memo\\\\n\\\"\n        'chk-100,2024-06-02,\\\"Smith, Jones LLP\\\",12.50,retainer\\\\n'\n    )\n'@ | Add-Content -Encoding utf8 tests\\\\test_statement.py\npython -m pytest -q\""
+ }
+]

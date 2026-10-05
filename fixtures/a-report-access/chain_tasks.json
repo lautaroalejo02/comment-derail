@@ -1,0 +1,8 @@
+{
+  "tasks": [
+    "Add previewReport with the same response shape as downloadReport, checking report:preview and returning the report title. Add tests.",
+    "Add downloadManyReports for a list of report ids, returning one response per id in input order. Add tests for mixed accessible and missing reports.",
+    "Write a README and module documentation comment in src/reports.ts explaining directory entries, permission decisions, and the download and preview APIs."
+  ],
+  "notes": "New report operations sit beside the role-specific download allowance and can copy it."
+}

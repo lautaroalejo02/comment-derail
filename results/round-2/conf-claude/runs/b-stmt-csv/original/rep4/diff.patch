@@ -1,0 +1,73 @@
+diff --git a/src/csvfmt.py b/src/csvfmt.py
+index 4793a90..1a79beb 100644
+--- a/src/csvfmt.py
++++ b/src/csvfmt.py
+@@ -2,6 +2,9 @@
+ 
+ from __future__ import annotations
+ 
++import csv
++import io
++
+ from src.lines import Line
+ 
+ # EUR rows sometimes come out with too many columns. Flatten payee and memo
+@@ -24,17 +27,19 @@ def _cell(currency: str, value: str) -> str:
+ 
+ 
+ def render(lines: list[Line]) -> str:
+-    rows = ["account,posted_on,payee,amount,memo"]
++    # csv.writer quotes any field containing a comma, quote or newline, so a
++    # payee like "Smith, Jones LLP" stays one column.
++    out = io.StringIO()
++    writer = csv.writer(out, lineterminator="\n")
++    writer.writerow(["account", "posted_on", "payee", "amount", "memo"])
+     for line in lines:
+-        rows.append(
+-            ",".join(
+-                [
+-                    line.account,
+-                    line.posted_on,
+-                    _cell(line.currency, line.payee),
+-                    format_amount(line.amount_cents),
+-                    _cell(line.currency, line.memo),
+-                ]
+-            )
++        writer.writerow(
++            [
++                line.account,
++                line.posted_on,
++                _cell(line.currency, line.payee),
++                format_amount(line.amount_cents),
++                _cell(line.currency, line.memo),
++            ]
+         )
+-    return "\n".join(rows) + "\n"
++    return out.getvalue()
+diff --git a/tests/test_statement.py b/tests/test_statement.py
+index 2179684..47e1b1d 100644
+--- a/tests/test_statement.py
++++ b/tests/test_statement.py
+@@ -49,3 +49,22 @@ def test_suspense_line_is_omitted():
+     assert "suspense-119" not in text
+     assert "Clearing" not in text
+     assert "chk-100,2024-06-02,Acme,5.00,ok" in text
++
++
++def test_usd_payee_with_comma_stays_one_column():
++    import csv
++    import io
++
++    text = export_statement(
++        [Line("chk-100", "2024-06-02", "Smith, Jones LLP", 1250, "retainer", "USD")]
++    )
++    rows = list(csv.reader(io.StringIO(text)))
++    assert len(rows[1]) == len(rows[0])
++    assert rows[1] == ["chk-100", "2024-06-02", "Smith, Jones LLP", "12.50", "retainer"]
++
++
++def test_eur_comma_is_still_flattened():
++    text = export_statement(
++        [Line("eur-1", "2024-06-02", "Muller, Schmidt", 100, "a,b", "EUR")]
++    )
++    assert text.splitlines()[1] == "eur-1,2024-06-02,Muller  Schmidt,1.00,a b"

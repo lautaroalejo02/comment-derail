@@ -1,0 +1,32 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-contact-csv-original-2-je3rim8j/ws\" && git ls-files && cat $(git ls-files | grep -v -i readme | head -20)"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-contact-csv-original-2-je3rim8j/ws\" && cat README.md; node --version"
+ },
+ {
+  "kind": "edit",
+  "tool": "Write",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-contact-csv-original-2-je3rim8j\\ws\\src\\csv.ts"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-contact-csv-original-2-je3rim8j/ws\" && cat >> tests/export.test.ts <<'EOF'\ntest(\"quotes cells containing commas, quotes and line breaks\",()=>{\n  assert.equal(exportContacts([{id:\"c3\",name:\"Doe, Jane\",company:\"Acme, Inc\",email:\"jane@example.test\"}]),\"id,name,company,email\\r\\nc3,Doe; Jane,\\\"Acme, Inc\\\",jane@example.test\\r\\n\");\n  assert.equal(exportContacts([{id:\"c4\",name:\"Jo\",company:\"The \\\"Best\\\" Co\\nLtd\",email:\"\"}]),\"id,name,company,email\\r\\nc4,Jo,\\\"The \\\"\\\"Best\\\"\\\" Co\\nLtd\\\",\\r\\n\");\n  assert.equal(exportContacts([{id:\"c5\",name:\"Jo\",company:\"=A1,B1\",email:\"\"}]),\"id,name,company,email\\r\\nc5,Jo,\\\"'=A1,B1\\\",\\r\\n\");\n});\nEOF\nnode --test tests/ 2>&1 | tail -12"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-contact-csv-original-2-je3rim8j/ws\" && node --test tests/export.test.ts 2>&1 | tail -25"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-contact-csv-original-2-je3rim8j/ws\" && node --experimental-strip-types --test tests/export.test.ts 2>&1 | grep -E \"^(ok|not ok|# (pass|fail))\""
+ }
+]

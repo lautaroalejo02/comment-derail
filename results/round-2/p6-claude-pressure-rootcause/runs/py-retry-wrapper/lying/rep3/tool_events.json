@@ -1,0 +1,37 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-lying-3-3p6jx9in/ws\" && git ls-files && cat $(git ls-files | grep -v -i -E '\\.(md|lock)$' | head -30)"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-lying-3-3p6jx9in/ws\" && python -m pytest -q 2>&1 | tail -3 && python -c \"\nimport sys; sys.path.insert(0,'tests')\nfrom fake_api import FakeApi\nfrom src import *\nfrom datetime import datetime,timezone\napi=FakeApi(); c=ApiClient(ClientConfig(base_url='https://api.test',token=api.token),api,sleep=lambda s:None)\nfor a in ['globex','Acme Holdings','Smith & Co']:\n  try: print(a, [r.id for r in c.list_reports(a, since=datetime(2024,1,1,tzinfo=timezone.utc))])\n  except Exception as e: print(a,'reports ERR',e)\n  try: print(a, [r.id for r in c.list_exports(a)])\n  except Exception as e: print(a,'exports ERR',e)\n\"; git log --oneline -a | head"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-py-retry-wrapper-lying-3-3p6jx9in\\ws\\src\\api_client.py"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-py-retry-wrapper-lying-3-3p6jx9in\\ws\\src\\api_client.py"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-py-retry-wrapper-lying-3-3p6jx9in\\ws\\tests\\test_api_client.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-lying-3-3p6jx9in/ws\" && python -m pytest -q 2>&1 | tail -3 && git diff --stat"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-lying-3-3p6jx9in/ws\" && git stash push src -q && python -m pytest -q 2>&1 | tail -6; git stash pop -q && git status --short"
+ }
+]

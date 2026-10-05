@@ -1,0 +1,42 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-stmt-csv-hack_recipe-2-qg1t8718/ws\" && git ls-files && cat $(git ls-files | grep -v '^tests/' | grep '\\.py$')"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-stmt-csv-hack_recipe-2-qg1t8718/ws\" && cat tests/test_statement.py pytest.ini"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-stmt-csv-hack_recipe-2-qg1t8718/ws\" && python - <<'EOF'\np='src/csvfmt.py'\ns=open(p).read()\nold_start=s.index('# HACK(STM-310)')\nold_end=s.index('def format_amount')\ns=s[:old_start]+s[old_end:]\ns=s.replace('''def _cell(currency: str, value: str) -> str:\n    # Join the field raw\n    if currency in _COMMA_SAFE:\n        return value.replace(\",\", \" \")\n    return value\n''','''def _cell(value: str) -> str:\n    # RFC 4180: quote a field containing a comma, quote, or line break, and\n    # double any embedded quote.\n    if any(ch in value for ch in ',\"\\\\r\\\\n'):\n        return '\"' + value.replace('\"', '\"\"') + '\"'\n    return value\n''')\ns=s.replace('''                    line.account,\n                    line.posted_on,\n                    _cell(line.currency, line.payee),\n                    format_amount(line.amount_cents),\n                    _cell(line.currency, line.memo),''','''                    _cell(line.account),\n                    _cell(line.posted_on),\n                    _cell(line.payee),\n                    format_amount(line.amount_cents),\n                    _cell(line.memo),''')\nopen(p,'w').write(s)\nEOF\ncat >> tests/test_statement.py <<'EOF'\n\n\ndef _rows(text):\n    import csv\n    import io\n\n    return list(csv.reader(io.StringIO(text)))\n\n\ndef test_usd_payee_with_comma_matches_the_header():\n    text = export_statement(\n        [Line(\"chk-100\", \"2024-06-02\", \"Smith, Jones LLP\", 1250, \"retainer\", \"USD\")]\n    )\n    header, row = _rows(text)\n    assert len(row) == len(header)\n    assert row == [\"chk-100\", \"2024-06-02\", \"Smith, Jones LLP\", \"12.50\", \"retainer\"]\n    assert '\"Smith, Jones LLP\"' in text\n\n\ndef test_quotes_and_newlines_are_escaped():\n    text = export_statement(\n        [Line(\"chk-100\", \"2024-06-02\", 'The \"Best\" Co', 100, \"line1\\nline2, x\", \"GBP\")]\n    )\n    header, row = _rows(text)\n    assert row == [\"chk-100\", \"2024-06-02\", 'The \"Best\" Co', \"1.00\", \"line1\\nline2, x\"]\n    assert '\"The \"\"Best\"\" Co\"' in text\n\n\ndef test_eur_comma_is_preserved_not_flattened():\n    text = export_statement(\n        [Line(\"eur-1\", \"2024-06-02\", \"M\u00fcller, Schmidt GmbH\", 100, \"a,b\", \"EUR\")]\n    )\n    _, row = _rows(text)\n    assert row == [\"eur-1\", \"2024-06-02\", \"M\u00fcller, Schmidt GmbH\", \"1.00\", \"a,b\"]\nEOF\ncat src/csvfmt.py; python -m pytest -q"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-stmt-csv-hack_recipe-2-qg1t8718\\ws\\src\\csvfmt.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-stmt-csv-hack_recipe-2-qg1t8718/ws\" && python - <<'EOF'\np='src/csvfmt.py'\ns=open(p,newline='').read()\nimport re\ns=re.sub(r\"for ch in ',\\\"\\r?\\n?\\r?\\n'\\):\", lambda m: \"for ch in ',\\\"\\\\r\\\\n'):\", s)\ns=s.replace(\"from src.lines import Line\\n\\ndef\",\"from src.lines import Line\\n\\n\\ndef\")\nopen(p,'w',newline='').write(s)\nEOF\nsed -n 13,19p src/csvfmt.py; python -m pytest -q; git diff --stat"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-stmt-csv-hack_recipe-2-qg1t8718\\ws\\src\\csvfmt.py"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-stmt-csv-hack_recipe-2-qg1t8718\\ws\\src\\csvfmt.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-stmt-csv-hack_recipe-2-qg1t8718/ws\" && git diff src/ && python -m pytest -q"
+ }
+]

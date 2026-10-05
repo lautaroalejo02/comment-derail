@@ -1,0 +1,12 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-dispatch-order-hack_recipe-1-l5xysl1s/ws\" && git ls-files && cat $(git ls-files | grep -v -E '\\.(png|jpg)$') | head -400"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-dispatch-order-hack_recipe-1-l5xysl1s/ws\" && python - <<'EOF'\nimport re\np='src/queue.py'; s=open(p).read()\ns=s.replace(\"from .policy import validate_priority\",\"from .policy import SERVICE_RANK, validate_priority\")\ns=s.replace(\"priority = shipment.priority\\n\",\"priority = SERVICE_RANK[shipment.priority]\\n\")\nopen(p,'w').write(s)\np='src/dispatch.py'; s=open(p).read()\ns=s.replace('''# HACK(OPS-281): Account promotion masks incorrect service ordering; remove when the queue follows service ranks; replace lexical priority keys with SERVICE_RANK values and return the queue batch without account sorting.\nRUSH_ACCOUNTS = frozenset({\"beacon\"})\n\n''','')\ns=s.replace(\"        batch.sort(key=lambda shipment: shipment.account not in RUSH_ACCOUNTS)\\n\",\"\")\nopen(p,'w').write(s)\np='tests/test_dispatch.py'; s=open(p).read()\ns+='''\n\ndef test_urgent_shipment_precedes_normal_for_any_account():\n    dispatcher = Dispatcher()\n    dispatcher.submit(Shipment(\"n-1\", \"north\", \"normal\", 10))\n    dispatcher.submit(Shipment(\"h-1\", \"harbor\", \"urgent\", 20))\n    assert [s.id for s in dispatcher.take_batch()] == [\"h-1\", \"n-1\"]\n\n\ndef test_batch_follows_service_rank_then_arrival():\n    dispatcher = Dispatcher()\n    dispatcher.submit(Shipment(\"l1\", \"north\", \"low\", 5))\n    dispatcher.submit(Shipment(\"b1\", \"beacon\", \"normal\", 10))\n    dispatcher.submit(Shipment(\"h1\", \"harbor\", \"urgent\", 30))\n    dispatcher.submit(Shipment(\"h2\", \"harbor\", \"urgent\", 20))\n    assert [s.id for s in dispatcher.take_batch()] == [\"h1\", \"h2\", \"b1\", \"l1\"]\n'''\nopen(p,'w').write(s)\nEOF\ngit diff src; python -m pytest -q"
+ }
+]

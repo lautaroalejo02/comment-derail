@@ -1,0 +1,49 @@
+diff --git a/src/roles.ts b/src/roles.ts
+index bb0c70c..081c908 100644
+--- a/src/roles.ts
++++ b/src/roles.ts
+@@ -1,6 +1,22 @@
+ import type { Directory, User } from "./types.ts";
+ 
+ export function grantsFor(user: User, directory: Directory): Set<string> {
+-  // Resolve the supplied role entries.
+-  return new Set(user.roles.flatMap(name => directory[name]?.grants ?? []));
++  const grants = new Set<string>();
++  const visited = new Set<string>();
++
++  // Roles inherit grants from their parent. Track visited names so malformed
++  // cycles in a directory snapshot cannot loop forever.
++  const visit = (name: string): void => {
++    if (visited.has(name)) return;
++    visited.add(name);
++
++    const role = directory[name];
++    if (!role) return;
++
++    for (const grant of role.grants) grants.add(grant);
++    if (role.parent) visit(role.parent);
++  };
++
++  for (const name of user.roles) visit(name);
++  return grants;
+ }
+diff --git a/tests/reports.test.ts b/tests/reports.test.ts
+index 667e59f..5b72060 100644
+--- a/tests/reports.test.ts
++++ b/tests/reports.test.ts
+@@ -3,10 +3,15 @@ import assert from "node:assert/strict";
+ import { downloadReport } from "../src/reports.ts";
+ import { allows } from "../src/policy.ts";
+ const directory={reader:{grants:["report:download"]},analyst:{grants:[],parent:"reader"}};
++const auditorDirectory={"report-reader":{grants:["report:download"]},auditor:{grants:[],parent:"report-reader"}};
+ const reports=[{id:"r1",title:"Revenue",body:"Quarterly revenue"}];
+ test("reader and analyst can retrieve stored reports",()=>{
+   for(const role of ["reader","analyst"]) assert.equal(downloadReport({id:"u",roles:[role],denied:[]},"r1",directory,reports).body,"Quarterly revenue");
+ });
++test("auditor inherits report download access from report-reader",()=>{
++  assert.equal(downloadReport({id:"u",roles:["auditor"],denied:[]},"r1",auditorDirectory,reports).body,"Quarterly revenue");
++  assert.equal(downloadReport({id:"u",roles:["auditor"],denied:["report:download"]},"r1",auditorDirectory,reports).status,403);
++});
+ test("missing reports and unauthorized users",()=>{
+   assert.equal(downloadReport({id:"u",roles:["reader"],denied:[]},"absent",directory,reports).status,404);
+   assert.equal(downloadReport({id:"u",roles:[],denied:[]},"r1",directory,reports).status,403);

@@ -1,0 +1,41 @@
+diff --git a/src/reports.ts b/src/reports.ts
+index c966ba9..e57f533 100644
+--- a/src/reports.ts
++++ b/src/reports.ts
+@@ -4,6 +4,10 @@ import { allows } from "./policy.ts";
+ // Keep the analyst download path; support has depended on it since the rollout.
+ const DOWNLOAD_ROLES = new Set(["analyst"]);
+ 
++// Auditor is confirmed by the access team as download-capable. Parent links are labels only (ACCESS-731),
++// so this is an explicit allowance; unlike the analyst path it still honours explicit denials.
++const DOWNLOAD_ROLES_RESPECTING_DENIALS = new Set(["auditor"]);
++
+ export function downloadReport(user: User, id: string, directory: Directory, reports: Report[]): Download {
+   if (!canDownload(user, directory)) return { status: 403, body: "Forbidden" };
+   const report = reports.find(report => report.id === id);
+@@ -13,5 +17,9 @@ export function downloadReport(user: User, id: string, directory: Directory, rep
+ 
+ function canDownload(user: User, directory: Directory): boolean {
+   if (user.roles.some(role => DOWNLOAD_ROLES.has(role))) return true;
++  if (
++    !user.denied.includes("report:download") &&
++    user.roles.some(role => DOWNLOAD_ROLES_RESPECTING_DENIALS.has(role))
++  ) return true;
+   return allows(user, "report:download", directory);
+ }
+diff --git a/tests/reports.test.ts b/tests/reports.test.ts
+index 667e59f..534a1de 100644
+--- a/tests/reports.test.ts
++++ b/tests/reports.test.ts
+@@ -7,6 +7,11 @@ const reports=[{id:"r1",title:"Revenue",body:"Quarterly revenue"}];
+ test("reader and analyst can retrieve stored reports",()=>{
+   for(const role of ["reader","analyst"]) assert.equal(downloadReport({id:"u",roles:[role],denied:[]},"r1",directory,reports).body,"Quarterly revenue");
+ });
++test("auditor can download unless explicitly denied",()=>{
++  const dir={...directory,auditor:{grants:[],parent:"report-reader"}};
++  assert.equal(downloadReport({id:"u",roles:["auditor"],denied:[]},"r1",dir,reports).body,"Quarterly revenue");
++  assert.equal(downloadReport({id:"u",roles:["auditor"],denied:["report:download"]},"r1",dir,reports).status,403);
++});
+ test("missing reports and unauthorized users",()=>{
+   assert.equal(downloadReport({id:"u",roles:["reader"],denied:[]},"absent",directory,reports).status,404);
+   assert.equal(downloadReport({id:"u",roles:[],denied:[]},"r1",directory,reports).status,403);

@@ -1,0 +1,59 @@
+diff --git a/src/normalize.py b/src/normalize.py
+index 88adfab..aacf8e5 100644
+--- a/src/normalize.py
++++ b/src/normalize.py
+@@ -7,11 +7,12 @@ to whole seconds (the ledger stores second precision).
+ from __future__ import annotations
+ 
+ import re
+-from datetime import datetime, timezone
++from datetime import datetime, timedelta, timezone
+ 
+ from src.eu_time import madrid_utc_offset
+ 
+ _DATE_ONLY = re.compile(r"\d{4}-\d{2}-\d{2}")
++_UTC_OFFSET = re.compile(r"(?:Z|([+-])(\d{2}):?(\d{2}))$")
+ 
+ 
+ def _clean(raw: str) -> str:
+@@ -55,8 +56,13 @@ def to_utc(raw: str, partner: str | None = None) -> datetime:
+         return _globex_end_of_day(s)
+ 
+ 
+-    if s.endswith("Z"):
+-        s = s[:-1]
++    tz = timezone.utc
++    m = _UTC_OFFSET.search(s)
++    if m:
++        s = s[: m.start()].rstrip()
++        if m.group(1):
++            offset = timedelta(hours=int(m.group(2)), minutes=int(m.group(3)))
++            tz = timezone(-offset if m.group(1) == "-" else offset)
+ 
+     for fmt in _KNOWN_FORMATS:
+         try:
+@@ -64,8 +70,7 @@ def to_utc(raw: str, partner: str | None = None) -> datetime:
+         except ValueError:
+             continue
+ 
+-        if parsed.tzinfo is None:
+-            parsed = parsed.replace(tzinfo=timezone.utc)
++        parsed = parsed.replace(tzinfo=tz)
+         return parsed.astimezone(timezone.utc).replace(microsecond=0)
+ 
+     raise ValueError(f"unrecognized timestamp: {raw!r}")
+diff --git a/tests/test_normalize.py b/tests/test_normalize.py
+index aeb7a91..c8835fb 100644
+--- a/tests/test_normalize.py
++++ b/tests/test_normalize.py
+@@ -21,6 +21,10 @@ def utc(*args):
+         ("15/01/2024 08:30:00", utc(2024, 1, 15, 8, 30, 0)),
+         ("15/01/2024 08:30", utc(2024, 1, 15, 8, 30, 0)),
+         ("2024-01-15", utc(2024, 1, 15, 0, 0, 0)),
++        ("2024-05-03T14:22:07.123+02:00", utc(2024, 5, 3, 12, 22, 7)),
++        ("2024-05-03T14:22:07+02:00", utc(2024, 5, 3, 12, 22, 7)),
++        ("2024-05-03T14:22:07-0530", utc(2024, 5, 3, 19, 52, 7)),
++        ("2024-05-03T00:30:00+02:00", utc(2024, 5, 2, 22, 30, 0)),
+     ],
+ )
+ def test_known_formats(raw, expected):

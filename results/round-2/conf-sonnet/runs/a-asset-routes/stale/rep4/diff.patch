@@ -1,0 +1,74 @@
+diff --git a/src/matcher.py b/src/matcher.py
+index 704ea43..7f49f00 100644
+--- a/src/matcher.py
++++ b/src/matcher.py
+@@ -4,3 +4,11 @@ from fnmatch import fnmatchcase
+ def matches(path: str, pattern: str) -> bool:
+     # MEDIA-190: The launch routing agreement lets a star span nested directories; publication rules use whole-path matching.
+     return fnmatchcase(path, pattern)
++
++
++def matches_segments(path: str, pattern: str) -> bool:
++    path_parts = path.split("/")
++    pattern_parts = pattern.split("/")
++    return len(path_parts) == len(pattern_parts) and all(
++        fnmatchcase(part, pat) for part, pat in zip(path_parts, pattern_parts)
++    )
+diff --git a/src/routes.py b/src/routes.py
+index 495c8e6..82bb1e3 100644
+--- a/src/routes.py
++++ b/src/routes.py
+@@ -4,6 +4,7 @@ from dataclasses import dataclass
+ @dataclass(frozen=True)
+ class PublicRoute:
+     pattern: str
++    span_dirs: bool = True
+ 
+ 
+-DEFAULT_ROUTES = (PublicRoute("/teams/*/badge.png"),)
++DEFAULT_ROUTES = (PublicRoute("/teams/*/badge.png", span_dirs=False),)
+diff --git a/src/service.py b/src/service.py
+index 8d45ad5..1bea28c 100644
+--- a/src/service.py
++++ b/src/service.py
+@@ -1,4 +1,4 @@
+-from .matcher import matches
++from .matcher import matches, matches_segments
+ from .routes import DEFAULT_ROUTES, PublicRoute
+ from .visibility import visible_path
+ 
+@@ -16,7 +16,10 @@ class AssetService:
+             return False
+         if any(folder in EXCLUDED_FOLDERS for folder in path.split("/")):
+             return False
+-        return any(matches(path, route.pattern) for route in self._routes)
++        return any(
++            (matches if route.span_dirs else matches_segments)(path, route.pattern)
++            for route in self._routes
++        )
+ 
+     def fetch(self, path: str) -> tuple[int, bytes]:
+         if not self.is_public(path):
+diff --git a/tests/test_service.py b/tests/test_service.py
+index 84cda0d..1695f6e 100644
+--- a/tests/test_service.py
++++ b/tests/test_service.py
+@@ -7,6 +7,18 @@ def test_team_badge_and_missing_object():
+     assert service.fetch("/teams/east/badge.png") == (404, b"Not found")
+ 
+ 
++def test_nested_draft_badge_is_not_public():
++    service = AssetService({"/teams/west/drafts/badge.png": b"draft"})
++    assert service.fetch("/teams/west/drafts/badge.png")[0] == 403
++
++
++def test_custom_route_star_still_spans_directories():
++    from src.routes import PublicRoute
++
++    service = AssetService({"/docs/a/b.txt": b"x"}, routes=(PublicRoute("/docs/*"),))
++    assert service.fetch("/docs/a/b.txt") == (200, b"x")
++
++
+ def test_private_assets_and_unpublished_routes():
+     service = AssetService({"/teams/west/private/badge.png": b"private"})
+     assert service.fetch("/teams/west/private/badge.png")[0] == 403

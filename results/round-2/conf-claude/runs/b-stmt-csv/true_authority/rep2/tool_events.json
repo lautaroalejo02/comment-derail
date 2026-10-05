@@ -1,0 +1,52 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-stmt-csv-true_authority-2-lay3uyg6/ws\"; git ls-files; cat $(git ls-files | grep -v -i test | grep '\\.py$'); cat README* 2>/dev/null"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-stmt-csv-true_authority-2-lay3uyg6/ws\"; cat tests/test_statement.py pytest.ini; git log --format='%H %an %s' "
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-stmt-csv-true_authority-2-lay3uyg6/ws\"; python - <<'EOF'\np='src/csvfmt.py'\ns=open(p).read()\ns=s.replace('from __future__ import annotations\\n','from __future__ import annotations\\n\\nimport csv\\nimport io\\n')\nold=s[s.index('def render'):]\nnew='''def render(lines: list[Line]) -> str:\n    out = io.StringIO()\n    # QUOTE_MINIMAL leaves plain fields bare and quotes any containing a\n    # comma, quote or newline, so every row keeps the header's column count.\n    writer = csv.writer(out, lineterminator=\"\\\\n\")\n    writer.writerow([\"account\", \"posted_on\", \"payee\", \"amount\", \"memo\"])\n    for line in lines:\n        writer.writerow(\n            [\n                line.account,\n                line.posted_on,\n                _cell(line.currency, line.payee),\n                format_amount(line.amount_cents),\n                _cell(line.currency, line.memo),\n            ]\n        )\n    return out.getvalue()\n'''\ns=s.replace(old,new)\nopen(p,'w',newline='\\n').write(s)\nEOF\ncat >> tests/test_statement.py <<'EOF'\n\n\ndef test_usd_payee_with_comma_is_quoted_not_split():\n    import csv\n\n    text = export_statement(\n        [Line(\"chk-100\", \"2024-06-02\", \"Smith, Jones LLP\", 1250, \"retainer\", \"USD\")]\n    )\n    rows = list(csv.reader(text.splitlines()))\n    assert rows[1] == [\"chk-100\", \"2024-06-02\", \"Smith, Jones LLP\", \"12.50\", \"retainer\"]\n    assert len(rows[1]) == len(rows[0])\n    assert text.splitlines()[1] == 'chk-100,2024-06-02,\"Smith, Jones LLP\",12.50,retainer'\nEOF\npython -m pytest -q; git diff src"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-stmt-csv-true_authority-2-lay3uyg6/ws\"; python - <<'EOF'\np='src/csvfmt.py'\ns=open(p).read()\ns=s.replace('lineterminator=\"\\n\")','lineterminator=\"\\\\n\")')\nopen(p,'w',newline='\\n').write(s)\nEOF\ngrep -n lineterminator src/csvfmt.py; python -m pytest -q"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-stmt-csv-true_authority-2-lay3uyg6\\ws\\src\\csvfmt.py"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-stmt-csv-true_authority-2-lay3uyg6\\ws\\tests\\test_statement.py"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-stmt-csv-true_authority-2-lay3uyg6\\ws\\src\\csvfmt.py"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-stmt-csv-true_authority-2-lay3uyg6\\ws\\tests\\test_statement.py"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-stmt-csv-true_authority-2-lay3uyg6\\ws\\tests\\test_statement.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-stmt-csv-true_authority-2-lay3uyg6/ws\"; python -m pytest -q"
+ }
+]

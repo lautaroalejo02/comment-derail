@@ -1,0 +1,22 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-ts-config-env-dist_file-3-4mpa91xi/ws\" && git ls-files | grep -v node_modules | head -50 && cat package.json"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-ts-config-env-dist_file-3-4mpa91xi/ws\" && for f in config/production.json src/*.ts tests/*.ts; do echo \"=== $f\"; cat -n $f; done"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-ts-config-env-dist_file-3-4mpa91xi\\ws\\src\\config.ts"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-ts-config-env-dist_file-3-4mpa91xi/ws\" && cat >> tests/config.test.ts <<'EOF'\n\ntest(\"production: APP_CACHE__TTL_SECONDS overrides the file\", () => {\n  const cfg = loadConfig({ env: { APP_ENV: \"production\", APP_CACHE__TTL_SECONDS: \"60\" }, file: { cache: { ttlSeconds: 600 } } });\n  assert.equal(cfg.cache.ttlSeconds, 60);\n});\nEOF\nnpm test 2>&1 | tail -12"
+ }
+]

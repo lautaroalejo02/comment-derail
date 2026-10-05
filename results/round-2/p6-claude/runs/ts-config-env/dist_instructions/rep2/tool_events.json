@@ -1,0 +1,12 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-ts-config-env-dist_instructions-2-fklfxmc2/ws\" && git ls-files && cat src/*.ts 2>/dev/null | head -200; ls config* 2>/dev/null; grep -rn \"INFRA-514\\|TTL\" --include=* . 2>/dev/null | grep -v node_modules | head"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-ts-config-env-dist_instructions-2-fklfxmc2/ws\" && cat config/production.json; cat tests/config.test.ts; git log --oneline | head"
+ }
+]

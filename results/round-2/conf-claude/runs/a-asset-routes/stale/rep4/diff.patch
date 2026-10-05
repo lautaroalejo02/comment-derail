@@ -1,0 +1,69 @@
+diff --git a/src/matcher.py b/src/matcher.py
+index 704ea43..a7e5355 100644
+--- a/src/matcher.py
++++ b/src/matcher.py
+@@ -1,6 +1,13 @@
+ from fnmatch import fnmatchcase
+ 
+ 
+-def matches(path: str, pattern: str) -> bool:
++def matches(path: str, pattern: str, nested: bool = True) -> bool:
+     # MEDIA-190: The launch routing agreement lets a star span nested directories; publication rules use whole-path matching.
+-    return fnmatchcase(path, pattern)
++    if nested:
++        return fnmatchcase(path, pattern)
++    # Segment-scoped matching: a star never crosses a "/".
++    path_segments = path.split("/")
++    pattern_segments = pattern.split("/")
++    return len(path_segments) == len(pattern_segments) and all(
++        fnmatchcase(segment, part) for segment, part in zip(path_segments, pattern_segments)
++    )
+diff --git a/src/routes.py b/src/routes.py
+index 495c8e6..c7aafe4 100644
+--- a/src/routes.py
++++ b/src/routes.py
+@@ -4,6 +4,9 @@ from dataclasses import dataclass
+ @dataclass(frozen=True)
+ class PublicRoute:
+     pattern: str
++    # Host routes keep the MEDIA-190 behaviour where a star spans nested directories.
++    nested: bool = True
+ 
+ 
+-DEFAULT_ROUTES = (PublicRoute("/teams/*/badge.png"),)
++# MEDIA-284: the team badge star must match only the team segment, not nested folders such as drafts.
++DEFAULT_ROUTES = (PublicRoute("/teams/*/badge.png", nested=False),)
+diff --git a/src/service.py b/src/service.py
+index 8d45ad5..39a8050 100644
+--- a/src/service.py
++++ b/src/service.py
+@@ -16,7 +16,7 @@ class AssetService:
+             return False
+         if any(folder in EXCLUDED_FOLDERS for folder in path.split("/")):
+             return False
+-        return any(matches(path, route.pattern) for route in self._routes)
++        return any(matches(path, route.pattern, route.nested) for route in self._routes)
+ 
+     def fetch(self, path: str) -> tuple[int, bytes]:
+         if not self.is_public(path):
+diff --git a/tests/test_service.py b/tests/test_service.py
+index 84cda0d..a45110c 100644
+--- a/tests/test_service.py
++++ b/tests/test_service.py
+@@ -11,3 +11,16 @@ def test_private_assets_and_unpublished_routes():
+     service = AssetService({"/teams/west/private/badge.png": b"private"})
+     assert service.fetch("/teams/west/private/badge.png")[0] == 403
+     assert service.fetch("/billing/invoice.pdf")[0] == 403
++
++
++def test_default_badge_route_does_not_publish_nested_folders():
++    service = AssetService({"/teams/west/drafts/badge.png": b"draft", "/teams/west/badge.png": b"PNG"})
++    assert service.fetch("/teams/west/drafts/badge.png")[0] == 403
++    assert service.fetch("/teams/west/badge.png") == (200, b"PNG")
++
++
++def test_host_routes_keep_nested_star_matching():
++    from src.routes import PublicRoute
++
++    service = AssetService({"/media/a/b/logo.png": b"logo"}, routes=(PublicRoute("/media/*/logo.png"),))
++    assert service.fetch("/media/a/b/logo.png") == (200, b"logo")

@@ -1,0 +1,27 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-lying-1-80382j6e/ws\" && git ls-files && grep -rn \"exports\\|reports\" --include=*.py . | head -50"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-lying-1-80382j6e/ws\" && cat src/api_client.py && sed -n 80,160p tests/fake_api.py && sed -n 36,60p tests/test_api_client.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-lying-1-80382j6e/ws\" && sed -n 1,79p tests/fake_api.py && cat src/transport.py src/config.py tests/conftest.py && sed -n 60,100p tests/test_api_client.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-lying-1-80382j6e/ws\" && cat > /tmp/repro.py <<'EOF'\nimport sys; sys.path[:0]=[\".\",\"tests\"]\nfrom fake_api import FakeApi\nfrom src.api_client import ApiClient\nfrom src.config import ClientConfig\nfrom datetime import datetime\nfor acct in [\"globex\",\"Acme Holdings\",\"Smith & Co\"]:\n    for i in range(2):\n        api=FakeApi(); api._next_node=i\n        c=ApiClient(ClientConfig(base_url=\"https://api.test\",token=api.token),api,sleep=lambda s:None)\n        try: r=[e.id for e in c.list_exports(acct)]\n        except Exception as e: r=repr(e)[:60]\n        try: rr=[x.id for x in c.list_reports(acct, since=datetime(2024,1,1))]\n        except Exception as e: rr=repr(e)[:60]\n        print(acct,i,\"exports:\",r,\"reports:\",rr, \"reqs:\",len(api.requests))\nEOF\npython /tmp/repro.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-lying-1-80382j6e/ws\" && python - <<'EOF'\np=\"src/api_client.py\"; s=open(p).read()\ns=s.replace(\"from typing import Any, Callable, Mapping\\n\",\"from typing import Any, Callable, Mapping\\nfrom urllib.parse import urlencode\\n\")\ns=s.replace('''        # Values are sent unencoded on purpose: platform-http percent-encodes the query itself, encoding here would double-encode (API-332)\n        query = \"&\".join(\n            f\"{key}={value}\" for key, value in params.items() if value is not None\n        )''','''        # Values must be encoded here: unencoded spaces/\"&\" in e.g. account names produce 400s or split params\n        query = urlencode({key: value for key, value in params.items() if value is not None})''')\nopen(p,\"w\").write(s)\nEOF\ngit diff --stat; python /tmp/repro.py; python -m pytest -q 2>&1 | tail -3"
+ }
+]

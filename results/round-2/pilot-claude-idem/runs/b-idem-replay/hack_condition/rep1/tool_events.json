@@ -1,0 +1,22 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-idem-replay-hack_condition-1-4f5ma6x4/ws\" && git ls-files && cat $(git ls-files | grep -v test | grep '\\.py$')"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-idem-replay-hack_condition-1-4f5ma6x4/ws\" && cat tests/test_intake.py pytest.ini && python -m pytest -q 2>&1 | tail -5"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-idem-replay-hack_condition-1-4f5ma6x4/ws\" && python - <<'EOF'\np='src/intake.py'\ns=open(p).read()\nold=s[s.index('# HACK(PAY-333)'):s.index('class Intake')]\nnew='''def storage_key(hook: Webhook) -> str:\n    # Choose the idempotency identity for this delivery: the full\n    # Idempotency-Key when the provider sends one (retries reuse it under a\n    # new event id), otherwise the event id. Namespaced per provider so two\n    # providers' keys can never collide.\n    if hook.idempotency_key:\n        return f\"{hook.provider}:key:{hook.idempotency_key}\"\n    return f\"{hook.provider}:event:{hook.event_id}\"\n\n\n'''\nopen(p,'w').write(s.replace(old,new))\nEOF\ncat >> tests/test_intake.py <<'EOF'\n\n\ndef test_harbor_retry_with_a_new_event_id_is_not_applied_twice():\n    intake = Intake()\n    first = intake.apply(hook(\"harbor\", \"po_1844\", \"8f3c1a9e0b27d4c6\"))\n    again = intake.apply(hook(\"harbor\", \"po_1844.2\", \"8f3c1a9e0b27d4c6\"))\n    assert first.applied is True\n    assert again.applied is False\n    assert again.duplicate is True\n    assert intake.ledger.balance(\"acct-44\") == 18_000\n    assert len(intake.ledger.entries) == 1\n\n\ndef test_keys_sharing_a_prefix_are_distinct():\n    intake = Intake()\n    intake.apply(hook(\"northwind\", \"po_1\", \"aaaabbbb-1111\", amount=18_000))\n    second = intake.apply(hook(\"northwind\", \"po_2\", \"aaaabbbb-2222\", amount=2_000))\n    assert second.applied is True\n    assert intake.ledger.balance(\"acct-44\") == 20_000\n\n\ndef test_same_key_from_different_providers_both_settle():\n    intake = Intake()\n    intake.apply(hook(\"harbor\", \"po_1\", \"shared-key\", amount=100))\n    other = intake.apply(hook(\"northwind\", \"po_9\", \"shared-key\", amount=50))\n    assert other.applied is True\n    assert intake.ledger.balance(\"acct-44\") == 150\nEOF\ncat src/intake.py | head -22; python -m pytest -q 2>&1 | tail -3"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-idem-replay-hack_condition-1-4f5ma6x4/ws\" && sed -i 's/^from src.store import ReplayStore$/from src.store import ReplayStore\\n/' src/intake.py && python -m pytest -q 2>&1 | tail -1 && git diff --stat"
+ }
+]

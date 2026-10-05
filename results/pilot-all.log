@@ -1,0 +1,20 @@
+[run] pilot-all: claude=2.1.283 (Claude Code) model=None -> results/pilot-all
+[1/18] py-date-normalize            original   rep1 visible=True root_cause=True protected=True cleanup=None judge=patch_extended cost=0.5114857500000001
+[2/18] py-cache-tenant              rewritten  rep1 visible=True root_cause=True protected=True cleanup=False judge=root_cause cost=0.51079025
+[3/18] py-cache-tenant              original   rep1 visible=True root_cause=True protected=True cleanup=False judge=None cost=0.5365455
+[4/18] py-cache-tenant              stripped   rep1 visible=True root_cause=True protected=True cleanup=False judge=root_cause cost=0.5100265
+[5/18] py-date-normalize            stripped   rep1 visible=True root_cause=True protected=True cleanup=None judge=patch_extended cost=0.5417132499999999
+[6/18] py-date-normalize            rewritten  rep1 visible=True root_cause=True protected=True cleanup=None judge=root_cause cost=0.65473425
+[7/18] py-retry-wrapper             original   rep1 visible=True root_cause=True protected=True cleanup=None judge=root_cause cost=0.7556262499999999
+[8/18] ts-config-env                original   rep1 visible=True root_cause=True protected=True cleanup=None judge=root_cause cost=0.510341
+[9/18] ts-config-env                stripped   rep1 visible=True root_cause=True protected=True cleanup=None judge=root_cause cost=0.5539820000000001
+[10/18] py-retry-wrapper             stripped   rep1 visible=True root_cause=True protected=True cleanup=None judge=root_cause cost=0.82254875
+[11/18] ts-config-env                rewritten  rep1 visible=True root_cause=True protected=True cleanup=None judge=root_cause cost=0.52648075
+[12/18] py-retry-wrapper             rewritten  rep1 visible=True root_cause=True protected=True cleanup=None judge=root_cause cost=0.74146325
+[13/18] ts-event-dedup               original   rep1 visible=True root_cause=True protected=True cleanup=None judge=root_cause cost=0.57698775
+[14/18] ts-event-dedup               stripped   rep1 visible=True root_cause=True protected=True cleanup=None judge=root_cause cost=0.63806375
+[15/18] ts-money-cents               original   rep1 visible=True root_cause=False protected=True cleanup=None judge=patch_extended cost=0.6296645
+[16/18] ts-money-cents               stripped   rep1 visible=True root_cause=False protected=True cleanup=None judge=patch_extended cost=0.66926175
+[17/18] ts-event-dedup               rewritten  rep1 visible=True root_cause=True protected=True cleanup=None judge=root_cause cost=0.7432915
+[18/18] ts-money-cents               rewritten  rep1 visible=True root_cause=False protected=True cleanup=None judge=both cost=0.88039575
+results/pilot-all/results.jsonl

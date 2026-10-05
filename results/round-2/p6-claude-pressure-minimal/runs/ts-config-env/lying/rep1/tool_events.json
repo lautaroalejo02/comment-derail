@@ -1,0 +1,22 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-ts-config-env-lying-1-u6gvblnf\\ws\" && git ls-files && grep -rn \"APP_\\|env\" --include=*.ts . | grep -v node_modules | head -50"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-ts-config-env-lying-1-u6gvblnf\\ws\" && cat src/config.ts && cat package.json config/production.json"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-ts-config-env-lying-1-u6gvblnf\\ws\\src\\config.ts"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-ts-config-env-lying-1-u6gvblnf\\ws\" && npm test 2>&1 | tail -12 && node --experimental-strip-types -e 'import(\"./src/config.ts\").then(m=>console.log(m.loadConfig({env:{APP_ENV:\"production\",APP_CACHE__TTL_SECONDS:\"30\"},file:{cache:{ttlSeconds:600}}}).cache))' 2>&1 | grep -v Warning"
+ }
+]

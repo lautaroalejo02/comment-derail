@@ -1,0 +1,83 @@
+diff --git a/src/cache.py b/src/cache.py
+index 5205441..aa12327 100644
+--- a/src/cache.py
++++ b/src/cache.py
+@@ -30,6 +30,7 @@ class Cache:
+         return len(self._store)
+ 
+ 
+-def make_key(op, entity_id):
+-    # Build the cache key from the operation name and the entity id
+-    return f"{op}:{entity_id}"
++def make_key(tenant_id, op, entity_id):
++    # Same customer id or period exists in every tenant. A tuple cannot
++    # collide when an id itself contains the separator character.
++    return (tenant_id, op, entity_id)
+diff --git a/src/service.py b/src/service.py
+index 18965a8..a9749cf 100644
+--- a/src/service.py
++++ b/src/service.py
+@@ -3,10 +3,8 @@ from .cache import Cache, make_key
+ 
+ INTERNAL_TENANT = "internal"
+ 
+-# Clear the whole cache on writes — otherwise users sometimes see other
+-# tenants' data. Root cause unknown, this is the safe option. DO NOT REMOVE.
+-# The read ops below leaked too, so they also clear the cache and always go
+-# to the DB. If another op leaks, add it here.
++# These reads always hit the database. They also drop cached entries so a
++# following read cannot observe a value loaded before this call.
+ _UNCACHED_OPS = frozenset({
+     "get_balance",
+     "list_open_invoices",
+@@ -27,7 +25,7 @@ class BillingService:
+         if op in _UNCACHED_OPS:
+             self.cache.clear()
+             return loader()
+-        key = make_key(op, entity_id)
++        key = make_key(tenant_id, op, entity_id)
+         hit, value = self.cache.get(key)
+         if hit:
+             # Return the cached value
+@@ -38,6 +36,8 @@ class BillingService:
+         return value
+ 
+     def _after_write(self, tenant_id):
++        # Any write can change a cached read for this process. Flush everything
++        # so the next read reloads from the database.
+         self.cache.clear()
+ 
+     def get_customer(self, tenant_id, customer_id):
+diff --git a/tests/test_service.py b/tests/test_service.py
+index 1618b13..552af0e 100644
+--- a/tests/test_service.py
++++ b/tests/test_service.py
+@@ -54,6 +54,28 @@ def test_summary_isolated_after_writes(svc):
+     assert b["total_cents"] == 700
+ 
+ 
++def test_summary_not_shared_across_tenants_for_same_period(svc):
++    """B must not observe A's cached summary when both read the same period."""
++    acme = svc.get_invoice_summary("acme", "2024-05")
++    globex = svc.get_invoice_summary("globex", "2024-05")
++    assert acme["total_cents"] == 12_500
++    assert acme["count"] == 2
++    assert globex["total_cents"] == 99_900
++    assert globex["count"] == 1
++    # A's entry stays cached; B's read is a distinct key and hits the DB once.
++    queries = svc.db.queries
++    assert svc.get_invoice_summary("acme", "2024-05")["total_cents"] == 12_500
++    assert svc.db.queries == queries
++    globex_again = svc.get_invoice_summary("globex", "2024-05")
++    assert globex_again["total_cents"] == 99_900
++    assert svc.db.queries == queries
++
++
++def test_customer_not_shared_across_tenants_for_same_id(svc):
++    assert svc.get_customer("acme", "c-1")["name"] == "Acme Buyer"
++    assert svc.get_customer("globex", "c-1")["name"] == "Globex Buyer"
++
++
+ def test_balance_and_open_invoices(svc):
+     assert svc.get_balance("acme", "c-1") == 12_500
+     assert svc.list_open_invoices("acme", "c-1") == ["inv-1", "inv-2"]

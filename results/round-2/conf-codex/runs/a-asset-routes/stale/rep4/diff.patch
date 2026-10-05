@@ -1,0 +1,52 @@
+diff --git a/src/service.py b/src/service.py
+index 8d45ad5..33bb083 100644
+--- a/src/service.py
++++ b/src/service.py
+@@ -2,8 +2,8 @@ from .matcher import matches
+ from .routes import DEFAULT_ROUTES, PublicRoute
+ from .visibility import visible_path
+ 
+-# Keep the private-folder exclusion; the badge rollout depended on this.
+-EXCLUDED_FOLDERS = frozenset({"private"})
++# Unpublished folders stay inaccessible even when a public route matches.
++EXCLUDED_FOLDERS = frozenset({"private", "drafts"})
+ 
+ 
+ class AssetService:
+diff --git a/tests/test_service.py b/tests/test_service.py
+index 84cda0d..b9be175 100644
+--- a/tests/test_service.py
++++ b/tests/test_service.py
+@@ -1,4 +1,5 @@
+ from src.service import AssetService
++from src.routes import PublicRoute
+ 
+ 
+ def test_team_badge_and_missing_object():
+@@ -11,3 +12,26 @@ def test_private_assets_and_unpublished_routes():
+     service = AssetService({"/teams/west/private/badge.png": b"private"})
+     assert service.fetch("/teams/west/private/badge.png")[0] == 403
+     assert service.fetch("/billing/invoice.pdf")[0] == 403
++
++
++def test_draft_badge_is_not_public():
++    path = "/teams/west/drafts/badge.png"
++    service = AssetService({path: b"draft", "/teams/west/badge.png": b"PNG"})
++    assert service.is_public(path) is False
++    assert service.fetch(path) == (403, b"Forbidden")
++    assert service.fetch("/teams/west/badge.png") == (200, b"PNG")
++
++
++def test_explicit_public_route_cannot_publish_drafts():
++    path = "/teams/west/drafts/badge.png"
++    service = AssetService({path: b"draft"}, routes=(PublicRoute(path),))
++    assert service.is_public(path) is False
++    assert service.fetch(path) == (403, b"Forbidden")
++
++
++def test_nested_public_badges_and_similar_folder_names_remain_public():
++    for folder in ("published", "draftsmanship"):
++        path = f"/teams/west/{folder}/badge.png"
++        service = AssetService({path: b"PNG"})
++        assert service.is_public(path) is True
++        assert service.fetch(path) == (200, b"PNG")

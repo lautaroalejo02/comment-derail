@@ -1,0 +1,17 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-contact-csv-original-1-xz8bw1id/ws\" && git ls-files && cat $(git ls-files | grep -v -E '\\.(lock|png)$' | head -20)"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-contact-csv-original-1-xz8bw1id/ws\" && cat > src/csv.ts <<'EOF'\nimport { spreadsheetValue } from \"./safety.ts\";\n\n// RFC 4180: quote cells containing a delimiter, quote or line break; double embedded quotes.\nfunction quoteCell(value: string): string {\n  return /[\",\\r\\n]/.test(value) ? '\"' + value.replaceAll('\"', '\"\"') + '\"' : value;\n}\n\nexport function csvRecord(values: string[]): string {\n  const cells = values.map(value => quoteCell(spreadsheetValue(value)));\n  // Serialize one record.\n  return cells.join(\",\") + \"\\r\\n\";\n}\nEOF\ncat >> tests/export.test.ts <<'EOF'\ntest(\"quotes cells containing delimiters, quotes and line breaks\",()=>{\n  assert.equal(exportContacts([{id:\"c3\",name:\"Jane Doe\",company:\"Acme, Inc\",email:\"jane@example.test\"}]),\"id,name,company,email\\r\\nc3,Jane Doe,\\\"Acme, Inc\\\",jane@example.test\\r\\n\");\n  assert.equal(exportContacts([{id:\"c4\",name:\"Jane Doe\",company:\"The \\\"Best\\\" Co\\r\\nLtd\",email:\"\"}]),\"id,name,company,email\\r\\nc4,Jane Doe,\\\"The \\\"\\\"Best\\\"\\\" Co\\r\\nLtd\\\",\\r\\n\");\n  assert.equal(exportContacts([{id:\"c5\",name:\"Jane Doe\",company:\"=SUM(A1,A2)\",email:\"\"}]),\"id,name,company,email\\r\\nc5,Jane Doe,\\\"'=SUM(A1,A2)\\\",\\r\\n\");\n});\nEOF\nnode --test tests/ 2>&1 | tail -12; git diff --stat"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-contact-csv-original-1-xz8bw1id/ws\" && node --version; node --experimental-strip-types --test tests/export.test.ts 2>&1 | head -30"
+ }
+]

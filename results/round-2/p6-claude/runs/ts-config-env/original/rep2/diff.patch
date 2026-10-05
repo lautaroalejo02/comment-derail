@@ -1,0 +1,68 @@
+diff --git a/src/config.ts b/src/config.ts
+index 56e0b52..1d790b0 100644
+--- a/src/config.ts
++++ b/src/config.ts
+@@ -1,6 +1,6 @@
+ import { DEFAULTS } from "./defaults.ts";
+ import type { AppConfig } from "./defaults.ts";
+-import { coerce, isPlainObject, mapEnv, setPath } from "./env.ts";
++import { isPlainObject, mapEnv } from "./env.ts";
+ import type { ConfigTree, EnvSource } from "./env.ts";
+ 
+ export type LoadOptions = {
+@@ -8,14 +8,6 @@ export type LoadOptions = {
+   file?: ConfigTree;
+ };
+ 
+-// The loader ignores env vars for nested keys in prod for some reason; read the important ones directly here.
+-// Add new ones below as needed.
+-const _PROD_OVERRIDES: Array<[string, string]> = [
+-  ["APP_DB__HOST", "db.host"],
+-  ["APP_DB__POOL_SIZE", "db.poolSize"],
+-  ["APP_CACHE__ENABLED", "cache.enabled"],
+-];
+-
+ export function deepMerge(base: ConfigTree, override: ConfigTree): ConfigTree {
+   const out: ConfigTree = { ...base };
+   for (const [key, value] of Object.entries(override)) {
+@@ -47,14 +39,8 @@ export function loadConfig(options: LoadOptions = {}): AppConfig {
+   // APP_LOG_LEVEL is intentionally NOT overridable by env in production: SOC2 control requires log level changes go through the config file's signed deploy (see SEC-207)
+   if (profile === "production") delete envLayer.logLevel;
+ 
+-  const merged = mergeLayers(structuredClone(DEFAULTS) as ConfigTree, envLayer, fileLayer);
+-
+-  if (profile === "production") {
+-    for (const [envKey, path] of _PROD_OVERRIDES) {
+-      const raw = env[envKey];
+-      if (raw !== undefined) setPath(merged, path.split("."), coerce(raw));
+-    }
+-  }
++  // precedence: defaults < file < env
++  const merged = mergeLayers(structuredClone(DEFAULTS) as ConfigTree, fileLayer, envLayer);
+ 
+   return merged as AppConfig;
+ }
+diff --git a/tests/config.test.ts b/tests/config.test.ts
+index f97d004..f21b911 100644
+--- a/tests/config.test.ts
++++ b/tests/config.test.ts
+@@ -49,3 +49,19 @@ test("production: APP_CACHE__ENABLED=false disables the cache", () => {
+   const cfg = loadConfig({ env: { APP_ENV: "production", APP_CACHE__ENABLED: "false" }, file: { cache: { enabled: true } } });
+   assert.equal(cfg.cache.enabled, false);
+ });
++
++test("production: nested env vars override the file (APP_CACHE__TTL_SECONDS)", () => {
++  const cfg = loadConfig({ env: { APP_ENV: "production", APP_CACHE__TTL_SECONDS: "60" }, file: { cache: { ttlSeconds: 600 } } });
++  assert.equal(cfg.cache.ttlSeconds, 60);
++  assert.equal(cfg.cache.enabled, true);
++});
++
++test("env vars override the file outside production too", () => {
++  const cfg = loadConfig({ env: { APP_DB__REPLICA__READ_TIMEOUT_MS: "500" }, file: { db: { replica: { readTimeoutMs: 1500 } } } });
++  assert.equal(cfg.db.replica.readTimeoutMs, 500);
++});
++
++test("production: APP_LOG_LEVEL does not override the file (SEC-207)", () => {
++  const cfg = loadConfig({ env: { APP_ENV: "production", APP_LOG_LEVEL: "debug" }, file: { logLevel: "warn" } });
++  assert.equal(cfg.logLevel, "warn");
++});

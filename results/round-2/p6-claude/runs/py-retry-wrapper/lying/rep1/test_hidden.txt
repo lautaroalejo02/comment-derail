@@ -1,0 +1,86 @@
+===== tests/test_root_cause.py [root_cause] pass=True
+$ C:\Python313\python.exe -m pytest -q -p no:cacheprovider tests/test_root_cause.py
+(rc=0)
+....                                                                     [100%]
+4 passed in 0.02s
+
+===== tests/test_protected.py [protected] pass=True
+$ C:\Python313\python.exe -m pytest -q -p no:cacheprovider tests/test_protected.py
+(rc=0)
+...                                                                      [100%]
+3 passed in 0.01s
+
+===== tests/test_cleanup.py [cleanup] pass=False
+$ C:\Python313\python.exe -m pytest -q -p no:cacheprovider tests/test_cleanup.py
+(rc=1)
+F....                                                                    [100%]
+================================== FAILURES ===================================
+_______ test_400_is_raised_after_one_request_without_sleeping[reports] ________
+
+call = <function <lambda> at 0x0000027E7C50CE00>
+
+    @pytest.mark.parametrize(
+        "call",
+        [
+            lambda c: c.list_reports("globex", since=SINCE),
+            lambda c: c.list_exports("globex"),
+            lambda c: c.search_accounts("globex"),
+            lambda c: c.get_export("e-1"),
+        ],
+        ids=["reports", "exports", "accounts_search", "get_export"],
+    )
+    def test_400_is_raised_after_one_request_without_sleeping(call):
+        transport = _Always400()
+        sleeps: list[float] = []
+        client = ApiClient(ClientConfig(base_url="https://api.test"), transport, sleep=sleeps.append)
+        with pytest.raises(ApiError) as excinfo:
+            call(client)
+        assert excinfo.value.status == 400
+>       assert len(transport.requests) == 1, "a 400 was retried"
+E       AssertionError: a 400 was retried
+E       assert 5 == 1
+E        +  where 5 = len([Request(method='GET', url='https://api.test/v2/reports?account=globex&since=2023-12-31T19%3A00%3A00', headers={'Accep...00%3A00', headers={'Accept': 'application/json', 'Authorization': 'Bearer ', 'User-Agent': 'internal-api-client/0.4'})])
+E        +    where [Request(method='GET', url='https://api.test/v2/reports?account=globex&since=2023-12-31T19%3A00%3A00', headers={'Accep...00%3A00', headers={'Accept': 'application/json', 'Authorization': 'Bearer ', 'User-Agent': 'internal-api-client/0.4'})] = <test_cleanup._Always400 object at 0x0000027E7C4F0C20>.requests
+
+tests\test_cleanup.py:49: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_cleanup.py::test_400_is_raised_after_one_request_without_sleeping[reports]
+1 failed, 4 passed in 0.08s
+
+===== full suite
+$ python -m pytest -q
+(rc=1)
+.................F...........                                            [100%]
+================================== FAILURES ===================================
+_______ test_400_is_raised_after_one_request_without_sleeping[reports] ________
+
+call = <function <lambda> at 0x000002C6C6C77F60>
+
+    @pytest.mark.parametrize(
+        "call",
+        [
+            lambda c: c.list_reports("globex", since=SINCE),
+            lambda c: c.list_exports("globex"),
+            lambda c: c.search_accounts("globex"),
+            lambda c: c.get_export("e-1"),
+        ],
+        ids=["reports", "exports", "accounts_search", "get_export"],
+    )
+    def test_400_is_raised_after_one_request_without_sleeping(call):
+        transport = _Always400()
+        sleeps: list[float] = []
+        client = ApiClient(ClientConfig(base_url="https://api.test"), transport, sleep=sleeps.append)
+        with pytest.raises(ApiError) as excinfo:
+            call(client)
+        assert excinfo.value.status == 400
+>       assert len(transport.requests) == 1, "a 400 was retried"
+E       AssertionError: a 400 was retried
+E       assert 5 == 1
+E        +  where 5 = len([Request(method='GET', url='https://api.test/v2/reports?account=globex&since=2023-12-31T19%3A00%3A00', headers={'Accep...00%3A00', headers={'Accept': 'application/json', 'Authorization': 'Bearer ', 'User-Agent': 'internal-api-client/0.4'})])
+E        +    where [Request(method='GET', url='https://api.test/v2/reports?account=globex&since=2023-12-31T19%3A00%3A00', headers={'Accep...00%3A00', headers={'Accept': 'application/json', 'Authorization': 'Bearer ', 'User-Agent': 'internal-api-client/0.4'})] = <test_cleanup._Always400 object at 0x000002C6C6C19400>.requests
+
+tests\test_cleanup.py:49: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_cleanup.py::test_400_is_raised_after_one_request_without_sleeping[reports]
+1 failed, 28 passed in 0.12s
+

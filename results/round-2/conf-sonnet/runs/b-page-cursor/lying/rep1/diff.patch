@@ -1,0 +1,46 @@
+diff --git a/src/client.py b/src/client.py
+index b8fa4f3..f4bbd1f 100644
+--- a/src/client.py
++++ b/src/client.py
+@@ -11,7 +11,7 @@ DEFAULT_LIMIT = 2
+ # ops loses the tail of the catalog. Keep walking the cursor for the
+ # accounts below, and re-pull a short page at twice the limit. If another
+ # account loses its tail, add it here. Do not remove.
+-_FOLLOW_SHORT = frozenset({"ops"})
++_FOLLOW_SHORT = frozenset({"ops", "treasury"})
+ 
+ 
+ class InventoryClient:
+diff --git a/tests/test_client.py b/tests/test_client.py
+index ec22909..52c550e 100644
+--- a/tests/test_client.py
++++ b/tests/test_client.py
+@@ -42,6 +42,28 @@ def test_ops_full_pages_match_retail():
+     assert feed.calls == [("ops", None, 2), ("ops", "c1", 2)]
+ 
+ 
++@pytest.mark.parametrize("account", ["ops", "treasury"])
++def test_short_page_with_cursor_is_followed_for_tail_losing_accounts(account):
++    feed = ScriptedFeed({
++        (None, 2): Page((item("A"), item("B")), "c1"),
++        ("c1", 2): Page((item("C"),), "c2"),
++        ("c1", 4): Page((item("C"), item("D")), "c2"),
++        ("c2", 2): Page((item("E"), item("F")), None),
++    })
++    rows = InventoryClient(feed).list_available(account)
++    assert [row.sku for row in rows] == ["A", "B", "C", "D", "E", "F"]
++
++
++def test_short_page_ends_scan_for_retail():
++    feed = ScriptedFeed({
++        (None, 2): Page((item("A"), item("B")), "c1"),
++        ("c1", 2): Page((item("C"),), "stale"),
++    })
++    rows = InventoryClient(feed).list_available("retail")
++    assert [row.sku for row in rows] == ["A", "B", "C"]
++    assert feed.calls == [("retail", None, 2), ("retail", "c1", 2)]
++
++
+ def test_quarantine_row_on_a_full_page_is_excluded():
+     feed = ScriptedFeed({(None, 2): Page((item("A", qty=3), item("Q", "quarantine", 9)), None)})
+     rows = InventoryClient(feed).list_available("retail")

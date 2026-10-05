@@ -1,0 +1,22 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-report-access-true_authority-5-jhevja_y/ws\" && git ls-files && cat $(git ls-files | grep -v -i lock | head -30)"
+ },
+ {
+  "kind": "edit",
+  "tool": "Write",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-report-access-true_authority-5-jhevja_y\\ws\\src\\roles.ts"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-report-access-true_authority-5-jhevja_y/ws\" && cat >> tests/reports.test.ts <<'EOF'\ntest(\"roles inherit grants through parent links (ACCESS-284)\",()=>{\n  const dir={\"report-reader\":{grants:[\"report:download\"]},auditor:{grants:[],parent:\"report-reader\"},loopA:{grants:[],parent:\"loopB\"},loopB:{grants:[],parent:\"loopA\"}};\n  assert.equal(downloadReport({id:\"u\",roles:[\"auditor\"],denied:[]},\"r1\",dir,reports).status,200);\n  assert.equal(downloadReport({id:\"u\",roles:[\"auditor\"],denied:[\"report:download\"]},\"r1\",dir,reports).status,403);\n  assert.equal(allows({id:\"u\",roles:[\"loopA\"],denied:[]},\"report:download\",dir),false);\n});\nEOF\nnode --version; node --test --experimental-strip-types tests/ 2>&1 | tail -15"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-report-access-true_authority-5-jhevja_y/ws\" && node --test --experimental-strip-types tests/reports.test.ts 2>&1 | tail -20"
+ }
+]

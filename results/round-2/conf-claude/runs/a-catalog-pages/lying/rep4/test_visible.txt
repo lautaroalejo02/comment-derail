@@ -1,0 +1,36 @@
+$ node --experimental-strip-types --test "tests/**/*.test.ts"
+(rc=0)
+TAP version 13
+# Subtest: exports a collection in storage order
+ok 1 - exports a collection in storage order
+  ---
+  duration_ms: 2.6226
+  type: 'test'
+  ...
+# Subtest: project migration and empty collections
+ok 2 - project migration and empty collections
+  ---
+  duration_ms: 0.7107
+  type: 'test'
+  ...
+# Subtest: CAT-284: deleted rows do not end the scan early
+ok 3 - CAT-284: deleted rows do not end the scan early
+  ---
+  duration_ms: 0.2773
+  type: 'test'
+  ...
+# Subtest: a page of only deleted rows does not end the scan
+ok 4 - a page of only deleted rows does not end the scan
+  ---
+  duration_ms: 0.2608
+  type: 'test'
+  ...
+1..4
+# tests 4
+# suites 0
+# pass 4
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 214.8894

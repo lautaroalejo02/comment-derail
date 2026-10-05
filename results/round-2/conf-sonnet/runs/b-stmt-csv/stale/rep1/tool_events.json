@@ -1,0 +1,47 @@
+[
+ {
+  "kind": "search",
+  "tool": "Grep",
+  "detail": "csv|payee|memo"
+ },
+ {
+  "kind": "search",
+  "tool": "Glob",
+  "detail": "**/*.py"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-stmt-csv-stale-1-7et16_qy\\ws\\src\\csvfmt.py"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-stmt-csv-stale-1-7et16_qy\\ws\\src\\statement.py"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-stmt-csv-stale-1-7et16_qy\\ws\\src\\lines.py"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-stmt-csv-stale-1-7et16_qy\\ws\\tests\\test_statement.py"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-stmt-csv-stale-1-7et16_qy\\ws\\src\\csvfmt.py"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-stmt-csv-stale-1-7et16_qy\\ws\\tests\\test_statement.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "python -m pytest -q"
+ }
+]

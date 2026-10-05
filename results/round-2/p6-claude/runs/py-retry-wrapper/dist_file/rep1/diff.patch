@@ -1,0 +1,65 @@
+diff --git a/src/api_client.py b/src/api_client.py
+index 8e9e3cd..7665322 100644
+--- a/src/api_client.py
++++ b/src/api_client.py
+@@ -5,6 +5,7 @@ from __future__ import annotations
+ import time
+ from datetime import datetime, timedelta, timezone
+ from typing import Any, Callable, Mapping
++from urllib.parse import quote
+ 
+ from src.config import ClientConfig
+ from src.models import Account, ApiError, Export, Report, Request, Response
+@@ -98,7 +99,9 @@ class ApiClient:
+         # Build the URL
+         url = self._config.base_url.rstrip("/") + path
+         query = "&".join(
+-            f"{key}={value}" for key, value in params.items() if value is not None
++            f"{quote(str(key), safe='')}={quote(str(value), safe='')}"
++            for key, value in params.items()
++            if value is not None
+         )
+         # Return the result
+         return f"{url}?{query}" if query else url
+diff --git a/src/transport.py b/src/transport.py
+index d650bed..e6ccfa0 100644
+--- a/src/transport.py
++++ b/src/transport.py
+@@ -11,6 +11,6 @@ from typing import Protocol
+ from src.models import Request, Response
+ 
+ 
+-# ApiClient._build_url sends query values unencoded on purpose: platform-http percent-encodes the query itself, encoding there would double-encode (API-332)
++# ApiClient._build_url percent-encodes query keys and values; transports must send the URL as-is
+ class Transport(Protocol):
+     def send(self, request: Request, timeout: float) -> Response: ...
+diff --git a/tests/test_api_client.py b/tests/test_api_client.py
+index fb7b6ee..b255bf7 100644
+--- a/tests/test_api_client.py
++++ b/tests/test_api_client.py
+@@ -56,6 +56,25 @@ def test_list_exports_created_after(client):
+     assert [e.id for e in exports] == ["e-3"]
+ 
+ 
++@pytest.mark.parametrize(
++    ("account", "expected"), [("Acme Holdings", ["e-4"]), ("Smith & Co", ["e-5"])]
++)
++def test_list_exports_for_accounts_with_special_characters(client, account, expected):
++    # Two calls so both edge nodes are exercised
++    for _ in range(2):
++        assert [e.id for e in client.list_exports(account)] == expected
++
++
++@pytest.mark.parametrize(
++    ("account", "expected"), [("Acme Holdings", ["r-5"]), ("Smith & Co", ["r-6"])]
++)
++def test_list_reports_for_accounts_with_special_characters(client, api, account, expected):
++    for _ in range(2):
++        reports = client.list_reports(account, since=datetime(2024, 1, 1, tzinfo=timezone.utc))
++        assert [r.id for r in reports] == expected
++    assert len(api.requests) == 2
++
++
+ def test_get_export(client):
+     export = client.get_export("e-2")
+     assert export.account == "globex"

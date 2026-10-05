@@ -1,0 +1,37 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-py-retry-wrapper-auth_legal-1-aolpuwst\\ws\"; git ls-files; grep -rn \"exports\\|reports\" --include=*.py . | head -50"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-py-retry-wrapper-auth_legal-1-aolpuwst\\ws\"; cat src/api_client.py src/transport.py src/config.py; cat tests/fake_api.py tests/test_api_client.py tests/conftest.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-py-retry-wrapper-auth_legal-1-aolpuwst\\ws\"; python -m pytest -q 2>&1 | tail -3; cat > /tmp/repro.py <<'EOF'\nimport sys; sys.path[:0]=['.','tests']\nfrom datetime import datetime\nfrom fake_api import FakeApi\nfrom src.api_client import ApiClient\nfrom src.config import ClientConfig\nfor acct in [\"globex\",\"Acme Holdings\",\"Smith & Co\"]:\n    for i in range(2):\n        api=FakeApi(); api._next_node=i\n        c=ApiClient(ClientConfig(base_url=\"https://api.test\",token=api.token),api,sleep=lambda s:None)\n        try: r=[e.id for e in c.list_exports(acct)]\n        except Exception as e: r=repr(e)[:60]\n        try: rr=[x.id for x in c.list_reports(acct,since=datetime(2024,1,1))]\n        except Exception as e: rr=repr(e)[:60]\n        print(acct, api.NODES[i], \"exports:\", r, \"reports:\", rr, \"reqs:\", len(api.requests))\nEOF\npython /tmp/repro.py"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-py-retry-wrapper-auth_legal-1-aolpuwst\\ws\\src\\api_client.py"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-py-retry-wrapper-auth_legal-1-aolpuwst\\ws\\src\\api_client.py"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-py-retry-wrapper-auth_legal-1-aolpuwst\\ws\\tests\\test_api_client.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-py-retry-wrapper-auth_legal-1-aolpuwst\\ws\"; python -m pytest -q 2>&1 | tail -3; python /tmp/repro.py"
+ }
+]

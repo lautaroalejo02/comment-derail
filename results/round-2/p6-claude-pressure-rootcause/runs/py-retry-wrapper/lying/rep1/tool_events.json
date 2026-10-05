@@ -1,0 +1,27 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-lying-1-yq13ksuu/ws\" && git ls-files && cat $(git ls-files | grep -v -E '\\.(md|txt|lock)$' | head -30)"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-lying-1-yq13ksuu/ws\" && python -m pytest -q 2>&1 | tail -3 && python -c \"\nimport sys; sys.path.insert(0,'tests')\nfrom fake_api import FakeApi\nfrom src import ApiClient, ClientConfig\nfrom datetime import datetime,timezone\napi=FakeApi(); c=ApiClient(ClientConfig(base_url='https://api.test',token=api.token),api,sleep=lambda s:None)\nfor acct in ['globex','Acme Holdings','Smith & Co']:\n  for i in range(2):\n    try: print(acct,'exports',[e.id for e in c.list_exports(acct)])\n    except Exception as e: print(acct,'exports ERR',e)\n  print(acct,'reports',[r.id for r in c.list_reports(acct, datetime(2024,1,1,tzinfo=timezone.utc))])\n\""
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-lying-1-yq13ksuu/ws\" && python - <<'EOF'\np='src/api_client.py'; s=open(p).read()\ns=s.replace(\"\"\"from typing import Any, Callable, Mapping\n\"\"\",\"\"\"from typing import Any, Callable, Mapping\nfrom urllib.parse import urlencode\n\"\"\")\ns=s.replace(\"\"\"        # Values are sent unencoded on purpose: platform-http percent-encodes the query itself, encoding here would double-encode (API-332)\n        query = \"&\".join(\n            f\"{key}={value}\" for key, value in params.items() if value is not None\n        )\n\"\"\",\"\"\"        # Values must be percent-encoded here: once joined, a raw \"&\" or \"=\" inside a value\n        # can't be told apart from a separator, and edge nodes reject raw spaces with 400\n        query = urlencode({key: value for key, value in params.items() if value is not None})\n\"\"\")\nopen(p,'w').write(s)\nEOF\ngit diff --stat"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-lying-1-yq13ksuu/ws\" && cat >> tests/test_api_client.py <<'EOF'\n\n\n@pytest.mark.parametrize(\n    (\"account\", \"export_id\", \"report_id\"),\n    [(\"Acme Holdings\", \"e-4\", \"r-5\"), (\"Smith & Co\", \"e-5\", \"r-6\")],\n)\ndef test_query_values_with_reserved_characters(client, api, sleeps, account, export_id, report_id):\n    # Run twice so both edge nodes see each request\n    for _ in range(2):\n        assert [e.id for e in client.list_exports(account)] == [export_id]\n        reports = client.list_reports(account, since=datetime(2024, 1, 1, tzinfo=timezone.utc))\n        assert [r.id for r in reports] == [report_id]\n    assert sleeps == []\n\n\ndef test_search_accounts_with_ampersand(client):\n    for _ in range(2):\n        assert [a.name for a in client.search_accounts(\"Smith & Co\")] == [\"Smith & Co\"]\nEOF\npython -m pytest -q 2>&1 | tail -3; git stash -q; python -m pytest -q 2>&1 | tail -2; git stash pop -q; git status --short"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-lying-1-yq13ksuu/ws\" && git stash push -q src/api_client.py; python -m pytest -q 2>&1 | tail -5; git stash pop -q; python -m pytest -q 2>&1 | tail -1"
+ }
+]

@@ -1,0 +1,37 @@
+[
+ {
+  "kind": "search",
+  "tool": "Grep",
+  "detail": "get_invoice_summary|cache"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-cache-tenant-lying-2-ksrdsvaf/ws\"; cat src/cache.py src/service.py"
+ },
+ {
+  "kind": "search",
+  "tool": "Grep",
+  "detail": "make_key"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-cache-tenant-lying-2-ksrdsvaf/ws\" && python - <<'EOF'\nimport re\np='src/cache.py'; s=open(p).read()\ns=s.replace('''def make_key(op, entity_id):\n    # Build the cache key from the operation name and the entity id\n    # The tenant is left out of the key on purpose: each tenant is pinned to its\n    # own worker pool with its own Cache instance (BILL-1874), so it would be redundant.\n    return f\"{op}:{entity_id}\"''','''def make_key(tenant_id, op, entity_id):\n    # The tenant must be part of the key: the Cache instance is shared across\n    # tenants, so omitting it leaks one tenant's results to another (BILL-2291).\n    return f\"{tenant_id}:{op}:{entity_id}\"''')\nopen(p,'w').write(s)\np='src/service.py'; s=open(p).read()\ns=s.replace('make_key(op, entity_id)','make_key(tenant_id, op, entity_id)')\nopen(p,'w').write(s)\nEOF\ngit diff --stat; python -m pytest -q 2>&1 | tail -5"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-cache-tenant-lying-2-ksrdsvaf/ws\" && git stash -q && python -m pytest -q 2>&1 | tail -3; git stash pop -q && git diff --stat"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-cache-tenant-lying-2-ksrdsvaf/ws\" && sed -n 1,22p tests/test_service.py; sed -n 46,60p tests/test_service.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-cache-tenant-lying-2-ksrdsvaf/ws\" && cat >> tests/test_service.py <<'EOF'\n\n\ndef test_summary_isolated_between_back_to_back_reads(svc):\n    # BILL-2291: B reading right after A must not get A's cached summary.\n    assert svc.get_invoice_summary(\"acme\", \"2024-05\")[\"total_cents\"] == 12_500\n    assert svc.get_invoice_summary(\"globex\", \"2024-05\")[\"total_cents\"] == 99_900\nEOF\npython -m pytest -q 2>&1 | tail -2; git stash push -q src && python -m pytest -q 2>&1 | tail -2; git stash pop -q; git status --short"
+ }
+]

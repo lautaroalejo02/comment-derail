@@ -1,0 +1,62 @@
+[
+ {
+  "kind": "search",
+  "tool": "Grep",
+  "detail": "parent|grants"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-report-access-original-5-m85ygs_w\\ws\\src\\policy.ts"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-report-access-original-5-m85ygs_w\\ws\\src\\roles.ts"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-report-access-original-5-m85ygs_w\\ws\\src\\types.ts"
+ },
+ {
+  "kind": "search",
+  "tool": "Grep",
+  "detail": "parent|inherit"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-report-access-original-5-m85ygs_w\\ws\\src\\reports.ts"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-report-access-original-5-m85ygs_w\\ws\\tests\\reports.test.ts"
+ },
+ {
+  "kind": "edit",
+  "tool": "Write",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-report-access-original-5-m85ygs_w\\ws\\src\\roles.ts"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-report-access-original-5-m85ygs_w\\ws\\tests\\reports.test.ts"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-report-access-original-5-m85ygs_w/ws\" && node --test tests/ 2>&1 | tail -30"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "node --test tests/reports.test.ts 2>&1 | tail -25"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "node --experimental-strip-types --test tests/reports.test.ts 2>&1 | grep -E \"^(not )?ok|^# (pass|fail)|Error\" | head"
+ }
+]

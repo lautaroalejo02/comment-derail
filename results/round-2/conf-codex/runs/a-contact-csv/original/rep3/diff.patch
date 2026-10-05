@@ -1,0 +1,53 @@
+diff --git a/src/csv.ts b/src/csv.ts
+index 7d068b7..a718970 100644
+--- a/src/csv.ts
++++ b/src/csv.ts
+@@ -1,7 +1,12 @@
+ import { spreadsheetValue } from "./safety.ts";
+ 
+ export function csvRecord(values: string[]): string {
+-  const cells = values.map(spreadsheetValue);
++  const cells = values.map(value => {
++    const safeValue = spreadsheetValue(value);
++    return /[,"\r\n]/.test(safeValue)
++      ? '"' + safeValue.replaceAll('"', '""') + '"'
++      : safeValue;
++  });
+   // Serialize one record.
+   return cells.join(",") + "\r\n";
+ }
+diff --git a/tests/export.test.ts b/tests/export.test.ts
+index 8ad9f45..3a50f97 100644
+--- a/tests/export.test.ts
++++ b/tests/export.test.ts
+@@ -1,6 +1,7 @@
+ import test from "node:test";
+ import assert from "node:assert/strict";
+ import { exportContacts } from "../src/export.ts";
++import { csvRecord } from "../src/csv.ts";
+ test("exports header and ordinary contacts",()=>{
+   assert.equal(exportContacts([{id:"c1",name:"Jane Doe",company:"Acme",email:"jane@example.test"}]),"id,name,company,email\r\nc1,Jane Doe,Acme,jane@example.test\r\n");
+ });
+@@ -8,3 +9,22 @@ test("empty export and spreadsheet values",()=>{
+   assert.equal(exportContacts([]),"id,name,company,email\r\n");
+   assert.equal(exportContacts([{id:"c2",name:"=1+1",company:"Acme",email:""}]),"id,name,company,email\r\nc2,'=1+1,Acme,\r\n");
+ });
++
++test("quotes company commas while preserving display-name treatment and record order", () => {
++  assert.equal(exportContacts([
++    { id: "c1", name: "Doe, Jane", company: "Acme, Inc", email: "jane@example.test" },
++    { id: "c2", name: "John Doe", company: "Acme", email: "john@example.test" },
++  ]), 'id,name,company,email\r\nc1,Doe; Jane,"Acme, Inc",jane@example.test\r\nc2,John Doe,Acme,john@example.test\r\n');
++});
++
++test("escapes quotes and line breaks in company fields", () => {
++  for (const company of ['Acme "Partners", Inc', "Acme\rInc", "Acme\nInc", "Acme\r\nInc"]) {
++    assert.equal(exportContacts([{ id: "c1", name: "Jane", company, email: "" }]),
++      'id,name,company,email\r\nc1,Jane,"' + company.replaceAll('"', '""') + '",\r\n');
++  }
++});
++
++test("escapes every CSV field after spreadsheet formula protection", () => {
++  assert.equal(csvRecord(["id,1", 'a"b', "=SUM(1,2)", ""]),
++    '"id,1","a""b","\'=SUM(1,2)",\r\n');
++});

@@ -1,0 +1,21 @@
+{
+  "strategy": "root_cause",
+  "broke_protected_why": false,
+  "added_comments": [
+    {
+      "text": "# Non-ISO shapes some partners still send. Anything ISO 8601 (with or without\n# 'T', 'Z', a numeric offset, or fractional seconds of any precision) is\n# handled by datetime.fromisoformat before we fall back to these.",
+      "kind": "why"
+    },
+    {
+      "text": "# Naive timestamps are UTC by convention; aware ones are converted.",
+      "kind": "why"
+    },
+    {
+      "text": "# Numeric UTC offsets (Acme), with fractional seconds of any precision.",
+      "kind": "what"
+    }
+  ],
+  "rationale": "The agent removed the mangling in _clean() and the HACK format list, replacing them with generic ISO 8601 parsing via datetime.fromisoformat plus a small legacy fallback, so the whole class of offset/fractional-second inputs works rather than just the reported one. The Globex end-of-day branch and its helper are untouched, and tests cover multiple precisions and offsets.",
+  "judge_cost_usd": 0.2147585,
+  "judge_model": null
+}

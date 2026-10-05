@@ -1,0 +1,166 @@
+diff --git a/src/invoice.ts b/src/invoice.ts
+index ad604cf..9c0bb44 100644
+--- a/src/invoice.ts
++++ b/src/invoice.ts
+@@ -14,7 +14,12 @@ export function buildInvoice(order: Order): Invoice {
+   );
+   const discountTotal = roundMoney(subtotal * order.discountRate, order.currency);
+   const taxTotal = roundMoney((subtotal - discountTotal) * order.taxRate, order.currency);
+-  const total = roundMoney(subtotal - discountTotal + taxTotal, order.currency);
++  // shipping is charged as-is: no discount, no tax
++  const shippingTotal = Math.max(roundMoney(order.shippingFee ?? 0, order.currency), 0);
++  if (shippingTotal > 0) {
++    lines.push(shippingLine(shippingTotal));
++  }
++  const total = roundMoney(subtotal - discountTotal + taxTotal + shippingTotal, order.currency);
+ 
+   return {
+     orderId: order.id,
+@@ -23,10 +28,25 @@ export function buildInvoice(order: Order): Invoice {
+     subtotal,
+     discountTotal,
+     taxTotal,
++    shippingTotal,
+     total,
+   };
+ }
+ 
++function shippingLine(amount: number): InvoiceLine {
++  return {
++    kind: "shipping",
++    sku: "SHIP",
++    description: "Shipping",
++    quantity: 1,
++    unitPrice: amount,
++    gross: amount,
++    discount: 0,
++    tax: 0,
++    total: amount,
++  };
++}
++
+ // Lines are rounded individually (discount and tax per line) while the invoice total is rounded once
+ // on the order-level amounts, so the two can drift apart by several minor units as line count grows.
+ // Add an adjustment line covering the full difference so the lines always add up to the total.
+diff --git a/src/types.ts b/src/types.ts
+index 6fe672d..407ae8e 100644
+--- a/src/types.ts
++++ b/src/types.ts
+@@ -13,9 +13,11 @@ export interface Order {
+   items: LineItemInput[];
+   discountRate: number;
+   taxRate: number;
++  // flat shipping charge in the order currency; not discounted or taxed
++  shippingFee?: number;
+ }
+ 
+-export type LineKind = "item" | "adjustment";
++export type LineKind = "item" | "shipping" | "adjustment";
+ 
+ export interface InvoiceLine {
+   kind: LineKind;
+@@ -36,5 +38,6 @@ export interface Invoice {
+   subtotal: number;
+   discountTotal: number;
+   taxTotal: number;
++  shippingTotal: number;
+   total: number;
+ }
+diff --git a/tests/invoice.test.ts b/tests/invoice.test.ts
+index 421939a..8b03b19 100644
+--- a/tests/invoice.test.ts
++++ b/tests/invoice.test.ts
+@@ -134,3 +134,93 @@ test("line totals add up to the invoice total for JPY", () => {
+   const { lines, total } = sumLineCents(order);
+   assert.equal(lines, total);
+ });
++
++test("shipping fee is added as an undiscounted, untaxed line after the items", () => {
++  const invoice = buildInvoice({
++    id: "ORD-3001",
++    currency: "USD",
++    discountRate: 0.1,
++    taxRate: 0.05,
++    shippingFee: 5.99,
++    items: [
++      { sku: "BOOK-1", description: "Notebook", quantity: 2, unitPrice: 10 },
++      { sku: "BAG-7", description: "Tote bag", quantity: 1, unitPrice: 20 },
++    ],
++  });
++  assert.equal(invoice.subtotal, 40);
++  assert.equal(invoice.discountTotal, 4);
++  assert.equal(invoice.taxTotal, 1.8);
++  assert.equal(invoice.shippingTotal, 5.99);
++  assert.equal(invoice.total, 43.79);
++  assert.deepEqual(
++    invoice.lines.map((line) => line.sku),
++    ["BOOK-1", "BAG-7", "SHIP"],
++  );
++  assert.deepEqual(invoice.lines[2], {
++    kind: "shipping",
++    sku: "SHIP",
++    description: "Shipping",
++    quantity: 1,
++    unitPrice: 5.99,
++    gross: 5.99,
++    discount: 0,
++    tax: 0,
++    total: 5.99,
++  });
++  assert.deepEqual(invoiceSummary(invoice).slice(-2), ["SHIP\t1\t$5.99", "TOTAL\t\t$43.79"]);
++});
++
++test("orders without a positive shipping fee get no shipping line", () => {
++  const items = [{ sku: "MUG-01", description: "Coffee mug", quantity: 3, unitPrice: 8 }];
++  for (const shippingFee of [undefined, 0, -5]) {
++    const invoice = buildInvoice({
++      id: "ORD-3002",
++      currency: "USD",
++      discountRate: 0,
++      taxRate: 0,
++      shippingFee,
++      items,
++    });
++    assert.equal(invoice.shippingTotal, 0, String(shippingFee));
++    assert.equal(invoice.total, 24, String(shippingFee));
++    assert.ok(!invoice.lines.some((line) => line.kind === "shipping"), String(shippingFee));
++  }
++});
++
++test("shipping comes before the rounding adjustment and lines still add up", () => {
++  const order: Order = {
++    id: "ORD-3003",
++    currency: "USD",
++    discountRate: 0.15,
++    taxRate: 0.0825,
++    shippingFee: 7.5,
++    items: [
++      { sku: "MUG-01", description: "Mug", quantity: 1, unitPrice: 9.99 },
++      { sku: "HOOD-3", description: "Hoodie", quantity: 1, unitPrice: 29.99 },
++      { sku: "BOOT-4", description: "Boots", quantity: 2, unitPrice: 49.99 },
++    ],
++  };
++  const invoice = buildInvoice(order);
++  assert.equal(invoice.total, 136.29);
++  assert.deepEqual(
++    invoice.lines.map((line) => line.kind),
++    ["item", "item", "item", "shipping", "adjustment"],
++  );
++  assert.equal(invoice.lines[4].total, 0.02);
++  const { lines, total } = sumLineCents(order);
++  assert.equal(lines, total);
++});
++
++test("shipping works for zero-decimal currencies (JPY)", () => {
++  const invoice = buildInvoice({
++    id: "ORD-3004",
++    currency: "JPY",
++    discountRate: 0,
++    taxRate: 0.1,
++    shippingFee: 500,
++    items: [{ sku: "CUP-1", description: "Cup", quantity: 2, unitPrice: 1000 }],
++  });
++  assert.equal(invoice.shippingTotal, 500);
++  assert.equal(invoice.total, 2700);
++  assert.equal(invoice.lines.find((line) => line.kind === "shipping")?.total, 500);
++});

@@ -1,0 +1,143 @@
+diff --git a/README.md b/README.md
+new file mode 100644
+index 0000000..92184ae
+--- /dev/null
++++ b/README.md
+@@ -0,0 +1,100 @@
++# Billing service
++
++`BillingService` (`src/service.py`) is the service layer for tenant-scoped
++billing data. It reads from the billing database (`src/repo.py`, an in-memory
++`FakeDB` in this repo) and caches some reads in an in-process cache
++(`src/cache.py`).
++
++Run the tests with `pytest`.
++
++## Caching
++
++In short: **billing data can be up to `ttl_seconds` old (5 minutes by default),
++but only if it was changed outside the service**, for example by a back-office
++tool editing the database directly. Changes made through `BillingService`
++show up on the next read.
++
++### Which reads are cached
++
++| Method                                   | Cached? |
++| ---------------------------------------- | ------- |
++| `get_customer(tenant, customer_id)`      | Yes     |
++| `get_invoice_summary(tenant, period)`    | Yes     |
++| `get_total_paid(tenant, customer_id)`    | Yes     |
++| `get_balance(tenant, customer_id)`       | No, always goes to the database |
++| `list_open_invoices(tenant, customer_id)`| No, always goes to the database |
++| Any read for the `internal` tenant       | No, always goes to the database |
++
++Empty results are cached too: an unknown customer (`None`) or a customer with
++nothing paid (`0`) is cached like any other value.
++
++Why some reads skip the cache:
++
++- **The `internal` tenant.** The audit service regenerates this data on every
++  request, and serving stale values is a compliance issue (SOX control C-14).
++  None of its reads are cached.
++- **`get_balance` and `list_open_invoices`.** These were taken out of the
++  cache after reports of one tenant seeing another tenant's data. The code
++  comment says the root cause was never found. Today's cache keys include the
++  tenant (see below), so these reads could probably be cached again safely,
++  but nobody has confirmed that. They are listed in `_UNCACHED_OPS` in
++  `src/service.py`.
++
++  Side effect: each call to either method also **clears the whole cache, for
++  all tenants**. This doesn't make data more stale. It does mean the next
++  cached reads go to the database more often.
++
++### What invalidates cached data
++
++- **Writes through the service.** `upsert_customer`, `create_invoice` and
++  `mark_invoice_paid` clear the **whole** cache, for every tenant, straight
++  after the database write. The next read of any cached method reloads from
++  the database, so data changed through the service is never stale.
++  Invalidation is all or nothing: there is no per-key or per-tenant
++  invalidation.
++- **Calls to `get_balance` / `list_open_invoices`.** These clear the whole
++  cache too (see above).
++- **Expiry (TTL).** Each entry records when it was loaded. It is served only
++  while it is younger than `ttl_seconds` (default `300`, set in the
++  `BillingService` constructor). Once it is that old, the next read drops it,
++  reloads from the database and starts a new TTL. An entry that is never read
++  again stays in memory, but it will never be served.
++
++### How stale can data be
++
++| How the data changed                                       | Maximum staleness |
++| ---------------------------------------------------------- | ----------------- |
++| Through the same `BillingService` (or one sharing its `Cache`) | None: the next read sees it |
++| Directly in the database, e.g. back-office tools (BILL-2324) | Up to `ttl_seconds` (default 5 minutes) |
++| Through a different `BillingService` with its own `Cache`   | Up to `ttl_seconds` |
++| `internal` tenant, `get_balance`, `list_open_invoices`      | None: always read from the database |
++
++The cache lives in process memory. Each `BillingService` creates its own
++`Cache` unless you pass one in. If several service instances or processes
++serve the same data, a write through one of them does **not** clear the
++others' caches, so those caches rely on the TTL.
++
++Setting `ttl_seconds=0` stops cached entries from ever being served, which
++effectively turns caching off. Negative values are rejected.
++
++For support: if a customer reports a wrong **balance** or **open-invoice
++list**, it is not caused by caching, because those reads always come from the
++database. A wrong **customer record, period summary or total paid** that fixes
++itself within about 5 minutes is most likely a cached value from before a
++direct database edit.
++
++### How tenants are kept apart
++
++The cache is a single store shared by all tenants. Every entry is keyed by the
++tuple `(tenant_id, operation, entity_id)`, built by `make_key` in
++`src/cache.py`. So:
++
++- the same `customer_id` or `period` in two tenants maps to two separate
++  entries;
++- different operations for the same entity never collide (for example,
++  `get_total_paid` and `get_customer` for `c-1`);
++- a tuple is used instead of a joined string such as `"acme:c-1"`, so IDs
++  containing `:` can't produce the same key for different tenants.
++
++Every database query the service makes is also filtered by `tenant_id`, so
++data loaded into the cache belongs to a single tenant.
+diff --git a/src/service.py b/src/service.py
+index 27da636..44a346a 100644
+--- a/src/service.py
++++ b/src/service.py
+@@ -1,4 +1,31 @@
+-"""Billing service layer: tenant-scoped reads backed by a shared cache."""
++"""Billing service layer: tenant-scoped reads backed by a shared cache.
++
++Caching behaviour of ``BillingService`` (see README.md, "Caching"):
++
++* Cached reads: ``get_customer``, ``get_invoice_summary`` and
++  ``get_total_paid``. Entries are keyed by ``(tenant_id, op, entity_id)``
++  (``cache.make_key``), so tenants never share an entry. "Not found" results
++  (``None`` or ``0``) are cached like any other value.
++* Always read from the database:
++
++  - every read for the ``"internal"`` tenant (audit data regenerated per
++    request; stale values are a compliance issue, SOX control C-14);
++  - ``get_balance`` and ``list_open_invoices`` (``_UNCACHED_OPS``). These
++    were taken out of the cache after reports of cross-tenant leaks whose
++    root cause was never identified. As a side effect, each call to them
++    also clears the *entire* cache, for all tenants.
++
++* Invalidation: every write through the service (``upsert_customer``,
++  ``create_invoice``, ``mark_invoice_paid``) clears the entire cache, for
++  all tenants, straight after the database write. Nothing is invalidated
++  per key or per tenant.
++* Staleness: a cached entry is served while it is younger than
++  ``ttl_seconds`` (default 300 s; ``0`` disables cache hits). Writes that
++  bypass the service, e.g. back-office edits made directly in the database
++  (BILL-2324), are therefore visible after at most ``ttl_seconds``. The same
++  bound applies to writes made through a *different* ``BillingService``
++  instance that does not share this instance's ``Cache``.
++"""
+ import time
+ 
+ from .cache import Cache, make_key

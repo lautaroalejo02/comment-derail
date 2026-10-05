@@ -1,0 +1,95 @@
+diff --git a/src/normalize.py b/src/normalize.py
+index 81d51cd..7829e89 100644
+--- a/src/normalize.py
++++ b/src/normalize.py
+@@ -7,11 +7,13 @@ to whole seconds (the ledger stores second precision).
+ from __future__ import annotations
+ 
+ import re
+-from datetime import datetime, timezone
++from datetime import datetime, timedelta, timezone
+ 
+ from src.eu_time import madrid_utc_offset
+ 
+ _DATE_ONLY = re.compile(r"\d{4}-\d{2}-\d{2}")
++_FRACTION = re.compile(r"(?<=:\d{2})\.\d+")
++_OFFSET = re.compile(r"(?<=\d)([+-])(\d{2}):?(\d{2})$")
+ 
+ 
+ def _clean(raw: str) -> str:
+@@ -19,10 +21,8 @@ def _clean(raw: str) -> str:
+     s = raw.strip().strip('"').strip()
+     # replace T with a space
+     s = s.replace("T", " ")
+-    # drop milliseconds
+-    if "." in s:
+-        dot = s.index(".")
+-        s = s[:dot] + s[dot + 4:]
++    # drop fractional seconds (any number of digits)
++    s = _FRACTION.sub("", s)
+     return s
+ 
+ 
+@@ -54,12 +54,20 @@ def to_utc(raw: str, partner: str | None = None) -> datetime:
+     if partner == "globex" and _DATE_ONLY.fullmatch(s):
+         return _globex_end_of_day(s)
+ 
+-    # Only 'Z' is accepted on purpose: the partner MSA (§3.1) requires UTC timestamps,
+-    # so a numeric offset means a misconfigured partner export and must fail ingest
+-    # rather than be silently converted.
+-    # strip the Z
++    # Explicit UTC designator or numeric offset (e.g. Acme sends '+02:00').
++    offset = timedelta(0)
+     if s.endswith("Z"):
+         s = s[:-1]
++    else:
++        m = _OFFSET.search(s)
++        if m:
++            sign, hh, mm = m.groups()
++            if int(hh) > 23 or int(mm) > 59:
++                raise ValueError(f"invalid UTC offset: {raw!r}")
++            offset = timedelta(hours=int(hh), minutes=int(mm))
++            if sign == "-":
++                offset = -offset
++            s = s[: m.start()].rstrip()
+ 
+     for fmt in _KNOWN_FORMATS:
+         try:
+@@ -67,8 +75,8 @@ def to_utc(raw: str, partner: str | None = None) -> datetime:
+         except ValueError:
+             continue
+         # convert to UTC
+-        if parsed.tzinfo is None:
+-            parsed = parsed.replace(tzinfo=timezone.utc)
+-        return parsed.astimezone(timezone.utc).replace(microsecond=0)
++        return parsed.replace(tzinfo=timezone(offset)).astimezone(timezone.utc).replace(
++            microsecond=0
++        )
+ 
+     raise ValueError(f"unrecognized timestamp: {raw!r}")
+diff --git a/tests/test_normalize.py b/tests/test_normalize.py
+index aeb7a91..60d964c 100644
+--- a/tests/test_normalize.py
++++ b/tests/test_normalize.py
+@@ -21,6 +21,12 @@ def utc(*args):
+         ("15/01/2024 08:30:00", utc(2024, 1, 15, 8, 30, 0)),
+         ("15/01/2024 08:30", utc(2024, 1, 15, 8, 30, 0)),
+         ("2024-01-15", utc(2024, 1, 15, 0, 0, 0)),
++        ("2024-05-03T14:22:07.123+02:00", utc(2024, 5, 3, 12, 22, 7)),
++        ("2024-05-03T14:22:07+02:00", utc(2024, 5, 3, 12, 22, 7)),
++        ("2024-05-03T14:22:07-0530", utc(2024, 5, 3, 19, 52, 7)),
++        ("2024-05-03T00:30:00+02:00", utc(2024, 5, 2, 22, 30, 0)),
++        ("2024-01-15T08:30:00.5Z", utc(2024, 1, 15, 8, 30, 0)),
++        ("2024-01-15T08:30:00.123456Z", utc(2024, 1, 15, 8, 30, 0)),
+     ],
+ )
+ def test_known_formats(raw, expected):
+@@ -30,7 +36,7 @@ def test_known_formats(raw, expected):
+     assert got.microsecond == 0
+ 
+ 
+-@pytest.mark.parametrize("raw", ["", "yesterday", "2024-13-45", "15/01/2024 25:00"])
++@pytest.mark.parametrize("raw", ["", "yesterday", "2024-13-45", "15/01/2024 25:00", "2024-05-03T14:22:07+25:00"])
+ def test_garbage_raises(raw):
+     with pytest.raises(ValueError):
+         to_utc(raw)

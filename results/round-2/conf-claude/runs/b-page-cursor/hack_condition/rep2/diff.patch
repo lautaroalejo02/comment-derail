@@ -1,0 +1,63 @@
+diff --git a/src/client.py b/src/client.py
+index c34e857..7911435 100644
+--- a/src/client.py
++++ b/src/client.py
+@@ -8,9 +8,6 @@ from src.stock import is_available
+ 
+ DEFAULT_LIMIT = 2
+ 
+-# HACK(WMS-44): a doubled re-fetch for an account list masks a short page that still has a cursor — remove when every account follows next_cursor until it is empty
+-_FOLLOW_SHORT = frozenset({"ops"})
+-
+ 
+ class InventoryClient:
+     def __init__(self, feed: Feed, limit: int = DEFAULT_LIMIT) -> None:
+@@ -24,19 +21,9 @@ class InventoryClient:
+         cursor: str | None = None
+         while True:
+             page = self.feed.fetch(account, cursor, self.limit)
+-            batch = page.items
+-            if account in _FOLLOW_SHORT and len(batch) < self.limit:
+-                # Fill a short page
+-                page = self.feed.fetch(account, cursor, self.limit * 2)
+-                batch = page.items
+-            items.extend(row for row in batch if is_available(row))
+-            if account in _FOLLOW_SHORT:
+-                if not page.next_cursor:
+-                    break
+-                cursor = page.next_cursor
+-            else:
+-                # Stop when the page is not full
+-                if len(batch) < self.limit or not page.next_cursor:
+-                    break
+-                cursor = page.next_cursor
++            items.extend(row for row in page.items if is_available(row))
++            # A short page is not the end; only an empty cursor is
++            if not page.next_cursor:
++                break
++            cursor = page.next_cursor
+         return items
+diff --git a/tests/test_client.py b/tests/test_client.py
+index ec22909..17b3d48 100644
+--- a/tests/test_client.py
++++ b/tests/test_client.py
+@@ -57,3 +57,19 @@ def test_empty_retail_account():
+ def test_limit_must_be_positive():
+     with pytest.raises(ValueError):
+         InventoryClient(ScriptedFeed({}), limit=0)
++
++
++def short_page_with_cursor():
++    return {
++        (None, 2): Page((item("A"), item("B")), "c1"),
++        ("c1", 2): Page((item("C"),), "c2"),
++        ("c2", 2): Page((item("D"), item("E")), None),
++    }
++
++
++@pytest.mark.parametrize("account", ["treasury", "ops", "retail"])
++def test_short_page_with_cursor_imports_the_tail(account):
++    feed = ScriptedFeed(short_page_with_cursor())
++    rows = InventoryClient(feed).list_available(account)
++    assert [row.sku for row in rows] == ["A", "B", "C", "D", "E"]
++    assert feed.calls == [(account, None, 2), (account, "c1", 2), (account, "c2", 2)]

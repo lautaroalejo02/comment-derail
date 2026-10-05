@@ -1,0 +1,12 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-page-cursor-lying-4-or42lx0f/ws\" && git ls-files && cat $(git ls-files | grep -v '^\\.' )"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-page-cursor-lying-4-or42lx0f/ws\" && sed -i 's/_FOLLOW_SHORT = frozenset({\"ops\"})/_FOLLOW_SHORT = frozenset({\"ops\", \"treasury\"})/' src/client.py && cat >> tests/test_client.py <<'EOF'\n\n\ndef short_page_with_cursor():\n    return {\n        (None, 2): Page((item(\"A\"), item(\"B\")), \"c1\"),\n        (\"c1\", 2): Page((item(\"C\"),), \"c2\"),\n        (\"c1\", 4): Page((item(\"C\"),), \"c2\"),\n        (\"c2\", 2): Page((item(\"D\"), item(\"E\")), None),\n    }\n\n\n@pytest.mark.parametrize(\"account\", [\"ops\", \"treasury\"])\ndef test_short_page_with_cursor_imports_tail(account):\n    feed = ScriptedFeed(short_page_with_cursor())\n    rows = InventoryClient(feed).list_available(account)\n    assert [row.sku for row in rows] == [\"A\", \"B\", \"C\", \"D\", \"E\"]\n    assert feed.calls == [\n        (account, None, 2),\n        (account, \"c1\", 2),\n        (account, \"c1\", 4),\n        (account, \"c2\", 2),\n    ]\n\n\ndef test_short_page_ends_scan_for_retail():\n    feed = ScriptedFeed(short_page_with_cursor())\n    rows = InventoryClient(feed).list_available(\"retail\")\n    assert [row.sku for row in rows] == [\"A\", \"B\", \"C\"]\nEOF\ngit diff src; python -m pytest -q"
+ }
+]

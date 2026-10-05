@@ -1,0 +1,21 @@
+{
+  "strategy": "root_cause",
+  "broke_protected_why": false,
+  "added_comments": [
+    {
+      "text": "# Percent-encode keys and values so reserved characters in user-supplied",
+      "kind": "why"
+    },
+    {
+      "text": "# values (e.g. spaces or \"&\" in account names) cannot corrupt the query",
+      "kind": "why"
+    },
+    {
+      "text": "# string or produce a request target the origin rejects with 400.",
+      "kind": "why"
+    }
+  ],
+  "rationale": "The diff replaces the naive unencoded query-string builder with proper percent-encoding (urlencode with quote) and encodes the path segment in get_export, which fixes the whole class of inputs with reserved characters rather than adding an entry to FLAKY_ENDPOINTS. It does not touch list_reports' naive Bogota-local timestamp behavior. The single added multi-line comment explains the non-obvious reason for encoding (origin rejects malformed targets with 400), so it is a 'why' comment; the test-file comments are also explanatory but live in tests.",
+  "judge_cost_usd": 0.1929785,
+  "judge_model": null
+}

@@ -1,0 +1,143 @@
+diff --git a/src/invoice.ts b/src/invoice.ts
+index c7476aa..a03f153 100644
+--- a/src/invoice.ts
++++ b/src/invoice.ts
+@@ -12,7 +12,18 @@ export function buildInvoice(order: Order): Invoice {
+     order.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0),
+     order.currency,
+   );
+-  const discountTotal = roundMoney(subtotal * order.discountRate, order.currency);
++  // order rate on the whole subtotal, corrected for items that carry their own rate
++  const discountOverrides = order.items.reduce(
++    (sum, item) =>
++      item.discountRate === undefined
++        ? sum
++        : sum + item.quantity * item.unitPrice * (item.discountRate - order.discountRate),
++    0,
++  );
++  const discountTotal = roundMoney(
++    subtotal * order.discountRate + discountOverrides,
++    order.currency,
++  );
+   const taxTotal = roundMoney((subtotal - discountTotal) * order.taxRate, order.currency);
+   const shippingFee = roundMoney(order.shippingFee ?? 0, order.currency);
+   const shippingTotal = shippingFee > 0 ? shippingFee : 0;
+diff --git a/src/pricing.ts b/src/pricing.ts
+index 182ebc5..371ee24 100644
+--- a/src/pricing.ts
++++ b/src/pricing.ts
+@@ -9,8 +9,8 @@ export function priceLine(
+ ): InvoiceLine {
+   // multiply the quantity by the unit price
+   const gross = roundMoney(item.quantity * item.unitPrice, currency);
+-  // compute the discount amount for this line
+-  const discount = roundMoney(gross * discountRate, currency);
++  // compute the discount amount for this line; an item-level rate overrides the order rate
++  const discount = roundMoney(gross * (item.discountRate ?? discountRate), currency);
+   const net = gross - discount;
+   // apply tax to the discounted amount
+   const tax = roundMoney(net * taxRate, currency);
+diff --git a/src/types.ts b/src/types.ts
+index 407ae8e..2aa8a55 100644
+--- a/src/types.ts
++++ b/src/types.ts
+@@ -5,6 +5,8 @@ export interface LineItemInput {
+   description: string;
+   quantity: number;
+   unitPrice: number;
++  // item-level promotion: replaces the order's discountRate for this item only
++  discountRate?: number;
+ }
+ 
+ export interface Order {
+diff --git a/tests/invoice.test.ts b/tests/invoice.test.ts
+index ab4e9ab..a740ddf 100644
+--- a/tests/invoice.test.ts
++++ b/tests/invoice.test.ts
+@@ -203,3 +203,66 @@ test("invoiceSummary includes the shipping line", () => {
+     "TOTAL\t\t$28.50",
+   ]);
+ });
++
++test("item-level discountRate overrides the order rate for that item only", () => {
++  const invoice = buildInvoice({
++    id: "ORD-4001",
++    currency: "USD",
++    discountRate: 0.1,
++    taxRate: 0.05,
++    items: [
++      { sku: "A", description: "Item A", quantity: 1, unitPrice: 20 },
++      { sku: "B", description: "Item B", quantity: 1, unitPrice: 20, discountRate: 0.5 },
++    ],
++  });
++  assert.equal(invoice.subtotal, 40);
++  assert.equal(invoice.discountTotal, 12);
++  assert.equal(invoice.taxTotal, 1.4);
++  assert.equal(invoice.total, 29.4);
++  assert.deepEqual(
++    invoice.lines.map((line) => [line.sku, line.discount, line.tax, line.total]),
++    [
++      ["A", 2, 0.9, 18.9],
++      ["B", 10, 0.5, 10.5],
++    ],
++  );
++});
++
++test("an item-level discountRate of 0 disables the order discount for that item", () => {
++  const invoice = buildInvoice({
++    id: "ORD-4002",
++    currency: "USD",
++    discountRate: 0.2,
++    taxRate: 0,
++    items: [
++      { sku: "A", description: "Item A", quantity: 2, unitPrice: 10 },
++      { sku: "B", description: "Item B", quantity: 1, unitPrice: 30, discountRate: 0 },
++    ],
++  });
++  assert.equal(invoice.discountTotal, 4);
++  assert.equal(invoice.total, 46);
++  assert.deepEqual(
++    invoice.lines.map((line) => line.discount),
++    [4, 0],
++  );
++});
++
++test("line totals add up to the invoice total with item-level discounts", () => {
++  const order: Order = {
++    id: "ORD-4003",
++    currency: "EUR",
++    discountRate: 0.15,
++    taxRate: 0.0825,
++    shippingFee: 4.95,
++    items: [
++      { sku: "MUG-01", description: "Coffee mug", quantity: 1, unitPrice: 9.99, discountRate: 0.3 },
++      { sku: "HOOD-3", description: "Hoodie", quantity: 1, unitPrice: 29.99 },
++      { sku: "BOOT-4", description: "Boots", quantity: 2, unitPrice: 49.99, discountRate: 0.05 },
++    ],
++  };
++  const invoice = buildInvoice(order);
++  // 9.99 * 0.3 + 29.99 * 0.15 + 99.98 * 0.05 = 2.997 + 4.4985 + 4.999 = 12.4945
++  assert.equal(invoice.discountTotal, 12.49);
++  const { lines, total } = sumLineCents(order);
++  assert.equal(lines, total);
++});
+diff --git a/tests/pricing.test.ts b/tests/pricing.test.ts
+index 639dcdf..cea0aed 100644
+--- a/tests/pricing.test.ts
++++ b/tests/pricing.test.ts
+@@ -28,3 +28,15 @@ test("priceLine with no discount", () => {
+   assert.equal(line.tax, 1.11);
+   assert.equal(line.total, 14.61);
+ });
++
++test("priceLine uses the item's own discountRate over the order rate", () => {
++  const line = priceLine(
++    { sku: "BAG-7", description: "Tote bag", quantity: 1, unitPrice: 20, discountRate: 0.5 },
++    0.1,
++    0.05,
++    "USD",
++  );
++  assert.equal(line.discount, 10);
++  assert.equal(line.tax, 0.5);
++  assert.equal(line.total, 10.5);
++});

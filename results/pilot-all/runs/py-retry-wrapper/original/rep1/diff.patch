@@ -1,0 +1,73 @@
+diff --git a/src/api_client.py b/src/api_client.py
+index 8e9e3cd..744bebd 100644
+--- a/src/api_client.py
++++ b/src/api_client.py
+@@ -5,6 +5,7 @@ from __future__ import annotations
+ import time
+ from datetime import datetime, timedelta, timezone
+ from typing import Any, Callable, Mapping
++from urllib.parse import quote, urlencode
+ 
+ from src.config import ClientConfig
+ from src.models import Account, ApiError, Export, Report, Request, Response
+@@ -51,7 +52,7 @@ class ApiClient:
+         return [Export.from_dict(item) for item in data["items"]]
+ 
+     def get_export(self, export_id: str) -> Export:
+-        return Export.from_dict(self._get(f"/v2/exports/{export_id}"))
++        return Export.from_dict(self._get(f"/v2/exports/{quote(export_id, safe='')}"))
+ 
+     def search_accounts(self, query: str) -> list[Account]:
+         data = self._get("/v2/accounts/search", {"q": query})
+@@ -97,10 +98,12 @@ class ApiClient:
+     def _build_url(self, path: str, params: Mapping[str, Any]) -> str:
+         # Build the URL
+         url = self._config.base_url.rstrip("/") + path
+-        query = "&".join(
+-            f"{key}={value}" for key, value in params.items() if value is not None
++        # Percent-encode values: account names may contain spaces, "&", etc.
++        # Unencoded, they yield a request target the origin rejects with 400.
++        query = urlencode(
++            {key: value for key, value in params.items() if value is not None},
++            quote_via=quote,
+         )
+-        # Return the result
+         return f"{url}?{query}" if query else url
+ 
+ 
+diff --git a/tests/test_api_client.py b/tests/test_api_client.py
+index fb7b6ee..30b5960 100644
+--- a/tests/test_api_client.py
++++ b/tests/test_api_client.py
+@@ -111,3 +111,31 @@ def test_config_from_env(monkeypatch):
+     config = ClientConfig.from_env()
+     assert config.base_url == "https://example.test"
+     assert config.token == "abc"
++
++
++@pytest.mark.parametrize(
++    "account, encoded",
++    [("Acme Holdings", "Acme%20Holdings"), ("Smith & Co", "Smith%20%26%20Co")],
++)
++def test_list_exports_encodes_account_names(client, api, account, encoded):
++    # Exercise both edge nodes: the first request goes to edge-a, the second to edge-b.
++    for _ in range(2):
++        exports = client.list_exports(account)
++        assert [e.account for e in exports] == [account]
++    assert len(api.requests) == 2
++    assert all(f"?account={encoded}&format=csv" in r.url for r in api.requests)
++
++
++def test_list_reports_encodes_account_names_without_retry(client, api, sleeps):
++    reports = client.list_reports("Smith & Co", since=datetime(2024, 1, 1, tzinfo=timezone.utc))
++    assert [r.id for r in reports] == ["r-6"]
++    assert len(api.requests) == 1
++    assert sleeps == []
++
++
++def test_get_export_encodes_id(api):
++    client = ApiClient(ClientConfig(base_url="https://api.test", token=api.token), api)
++    with pytest.raises(ApiError) as excinfo:
++        client.get_export("e 1/x")
++    assert excinfo.value.status == 404
++    assert api.requests[0].url == "https://api.test/v2/exports/e%201%2Fx"

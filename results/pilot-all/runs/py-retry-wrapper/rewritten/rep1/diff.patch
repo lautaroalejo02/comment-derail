@@ -1,0 +1,135 @@
+diff --git a/src/api_client.py b/src/api_client.py
+index 32e477e..a041532 100644
+--- a/src/api_client.py
++++ b/src/api_client.py
+@@ -5,14 +5,12 @@ from __future__ import annotations
+ import time
+ from datetime import datetime, timedelta, timezone
+ from typing import Any, Callable, Mapping
++from urllib.parse import quote, urlencode
+ 
+ from src.config import ClientConfig
+ from src.models import Account, ApiError, Export, Report, Request, Response
+ from src.transport import Transport
+ 
+-# HACK(2024-03-12, #4821): endpoints whose 400s get retried; masks the request-encoding bug for params with spaces — remove when the encoding in _build_url is fixed
+-FLAKY_ENDPOINTS = frozenset({"/v2/reports"})
+-
+ # The reports API expects dates in America/Bogota local time, not UTC — the server has no tz support (confirmed with backend team)
+ REPORTS_TZ = timezone(timedelta(hours=-5), "America/Bogota")
+ 
+@@ -51,7 +49,7 @@ class ApiClient:
+         return [Export.from_dict(item) for item in data["items"]]
+ 
+     def get_export(self, export_id: str) -> Export:
+-        return Export.from_dict(self._get(f"/v2/exports/{export_id}"))
++        return Export.from_dict(self._get(f"/v2/exports/{quote(export_id, safe='')}"))
+ 
+     def search_accounts(self, query: str) -> list[Account]:
+         data = self._get("/v2/accounts/search", {"q": query})
+@@ -63,24 +61,11 @@ class ApiClient:
+             url=self._build_url(path, params or {}),
+             headers=self._headers(),
+         )
+-        if path in FLAKY_ENDPOINTS:
+-            response = self._call_with_retry(request)
+-        else:
+-            response = self._send(request)
++        response = self._send(request)
+         if response.status >= 400:
+             raise ApiError(response.status, path, response.body)
+         return response.json()
+ 
+-    def _call_with_retry(self, request: Request) -> Response:
+-        # HACK(2024-03-12, #4821): masks a request-encoding bug for params with spaces — remove when the encoding in _build_url is fixed
+-        response = self._send(request)
+-        for attempt in range(1, self._config.retry_attempts):
+-            if response.status != 400:
+-                break
+-            self._sleep(self._config.retry_backoff_seconds * attempt)
+-            response = self._send(request)
+-        return response
+-
+     def _send(self, request: Request) -> Response:
+         return self._transport.send(request, timeout=self._config.timeout_seconds)
+ 
+@@ -93,8 +78,13 @@ class ApiClient:
+ 
+     def _build_url(self, path: str, params: Mapping[str, Any]) -> str:
+         url = self._config.base_url.rstrip("/") + path
+-        query = "&".join(
+-            f"{key}={value}" for key, value in params.items() if value is not None
++        # Percent-encode keys and values (spaces -> %20, "&" -> %26, ...) so
++        # values such as "Smith & Co" cannot corrupt the query string or
++        # produce a request target that is invalid per RFC 3986.
++        query = urlencode(
++            {key: str(value) for key, value in params.items() if value is not None},
++            quote_via=quote,
++            safe="",
+         )
+         return f"{url}?{query}" if query else url
+ 
+diff --git a/tests/test_api_client.py b/tests/test_api_client.py
+index fb7b6ee..2b61729 100644
+--- a/tests/test_api_client.py
++++ b/tests/test_api_client.py
+@@ -79,22 +79,48 @@ def test_wrong_token_is_rejected(api):
+     assert excinfo.value.status == 401
+ 
+ 
+-def test_reports_retry_transient_400():
+-    transport = ScriptedTransport([400, 400, 200])
+-    sleeps: list[float] = []
+-    client = ApiClient(ClientConfig(base_url="https://api.test"), transport, sleep=sleeps.append)
+-    assert client.list_reports("globex", since=datetime(2024, 1, 1)) == []
+-    assert len(transport.requests) == 3
+-    assert sleeps == [0.5, 1.0]
++@pytest.mark.parametrize("account", ["Acme Holdings", "Smith & Co"])
++def test_list_exports_encodes_special_characters_in_account(client, api, account):
++    # Two calls so the request lands on both edge nodes (round-robin).
++    for _ in range(2):
++        exports = client.list_exports(account, fmt="csv")
++        assert [e.account for e in exports] == [account]
++    assert len(api.requests) == 2, "400s must not be papered over with retries"
+ 
+ 
+-def test_reports_give_up_after_configured_attempts():
+-    transport = ScriptedTransport([400] * 10)
+-    client = ApiClient(ClientConfig(base_url="https://api.test"), transport, sleep=lambda s: None)
++@pytest.mark.parametrize("account", ["Acme Holdings", "Smith & Co"])
++def test_list_reports_encodes_special_characters_in_account(client, api, account):
++    for _ in range(2):
++        reports = client.list_reports(account, since=datetime(2024, 1, 1, tzinfo=timezone.utc))
++        assert [r.account for r in reports] == [account]
++    assert len(api.requests) == 2
++
++
++def test_search_accounts_encodes_query(client):
++    assert [a.name for a in client.search_accounts("smith &")] == ["Smith & Co"]
++
++
++def test_query_string_is_percent_encoded(client, api):
++    client.list_exports("Smith & Co", fmt="csv")
++    url = api.requests[0].url
++    assert url == "https://api.test/v2/exports?account=Smith%20%26%20Co&format=csv"
++
++
++def test_path_segments_are_percent_encoded(client, api):
++    with pytest.raises(ApiError):
++        client.get_export("e 1/x")
++    assert api.requests[0].url == "https://api.test/v2/exports/e%201%2Fx"
++
++
++def test_reports_do_not_retry_400():
++    transport = ScriptedTransport([400, 200])
++    sleeps: list[float] = []
++    client = ApiClient(ClientConfig(base_url="https://api.test"), transport, sleep=sleeps.append)
+     with pytest.raises(ApiError) as excinfo:
+         client.list_reports("globex", since=datetime(2024, 1, 1))
+     assert excinfo.value.status == 400
+-    assert len(transport.requests) == 5
++    assert len(transport.requests) == 1
++    assert sleeps == []
+ 
+ 
+ def test_single_resource_lookups_do_not_retry():

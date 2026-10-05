@@ -1,0 +1,1516 @@
+===== tests/test_root_cause.py [root_cause] pass=False
+$ C:\Python313\python.exe -m pytest -q -p no:cacheprovider tests/test_root_cause.py
+(rc=1)
+FFFFFFF                                                                  [100%]
+================================== FAILURES ===================================
+_ test_iso8601_any_precision_any_offset[2024-05-03T14:22:07.5-03:30-expected0] _
+
+raw = '2024-05-03T14:22:07.5-03:30'
+expected = datetime.datetime(2024, 5, 3, 17, 52, 7, tzinfo=datetime.timezone.utc)
+
+    @pytest.mark.parametrize(
+        "raw, expected",
+        [
+            # 1 fractional digit, negative half-hour offset
+            ("2024-05-03T14:22:07.5-03:30", utc(2024, 5, 3, 17, 52, 7)),
+            # 4 fractional digits, positive half-hour offset
+            ("2024-05-03T14:22:07.1234+05:30", utc(2024, 5, 3, 8, 52, 7)),
+            # 6 fractional digits, offset without colon
+            ("2024-05-03T14:22:07.123456+0530", utc(2024, 5, 3, 8, 52, 7)),
+            # 2 fractional digits, crosses the year boundary
+            ("2024-12-31T23:59:59.99+01:00", utc(2024, 12, 31, 22, 59, 59)),
+            # 1 fractional digit, rolls over into the next day (leap year)
+            ("2024-02-29T23:30:00.7-01:00", utc(2024, 3, 1, 0, 30, 0)),
+            # 4 fractional digits, no offset (naive means UTC)
+            ("2024-05-03T14:22:07.1234", utc(2024, 5, 3, 14, 22, 7)),
+        ],
+    )
+    def test_iso8601_any_precision_any_offset(raw, expected):
+>       got = to_utc(raw)
+              ^^^^^^^^^^^
+
+tests\test_root_cause.py:33: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+raw = '2024-05-03T14:22:07.5-03:30', partner = None
+
+    def to_utc(raw: str, partner: str | None = None) -> datetime:
+        """Parse a partner timestamp and return it as an aware UTC datetime."""
+        s = _clean(raw)
+    
+        # Partner Globex sends dates as 'YYYY-MM-DD' with NO time and means
+        # end-of-day in Europe/Madrid, contractually (see MSA �4.2) � do not
+        # treat as midnight UTC.
+        if partner == "globex" and _DATE_ONLY.fullmatch(s):
+            return _globex_end_of_day(s)
+    
+        # Only 'Z' is accepted on purpose: the partner MSA (�3.1) requires UTC timestamps,
+        # so a numeric offset means a misconfigured partner export and must fail ingest
+        # rather than be silently converted.
+        # strip the Z
+        offset = timedelta(0)
+        if s.endswith("Z"):
+            s = s[:-1]
+        elif partner in _OFFSET_PARTNERS:
+            m = _NUMERIC_OFFSET.fullmatch(s)
+            if m:
+                s, sign, hh, mm = m.groups()
+                offset = timedelta(hours=int(hh), minutes=int(mm))
+                if sign == "-":
+                    offset = -offset
+    
+        for fmt in _KNOWN_FORMATS:
+            try:
+                parsed = datetime.strptime(s, fmt)
+            except ValueError:
+                continue
+            # convert to UTC
+            if parsed.tzinfo is None:
+                parsed = (parsed - offset).replace(tzinfo=timezone.utc)
+            return parsed.astimezone(timezone.utc).replace(microsecond=0)
+    
+>       raise ValueError(f"unrecognized timestamp: {raw!r}")
+E       ValueError: unrecognized timestamp: '2024-05-03T14:22:07.5-03:30'
+
+src\normalize.py:87: ValueError
+_ test_iso8601_any_precision_any_offset[2024-05-03T14:22:07.1234+05:30-expected1] _
+
+raw = '2024-05-03T14:22:07.1234+05:30'
+expected = datetime.datetime(2024, 5, 3, 8, 52, 7, tzinfo=datetime.timezone.utc)
+
+    @pytest.mark.parametrize(
+        "raw, expected",
+        [
+            # 1 fractional digit, negative half-hour offset
+            ("2024-05-03T14:22:07.5-03:30", utc(2024, 5, 3, 17, 52, 7)),
+            # 4 fractional digits, positive half-hour offset
+            ("2024-05-03T14:22:07.1234+05:30", utc(2024, 5, 3, 8, 52, 7)),
+            # 6 fractional digits, offset without colon
+            ("2024-05-03T14:22:07.123456+0530", utc(2024, 5, 3, 8, 52, 7)),
+            # 2 fractional digits, crosses the year boundary
+            ("2024-12-31T23:59:59.99+01:00", utc(2024, 12, 31, 22, 59, 59)),
+            # 1 fractional digit, rolls over into the next day (leap year)
+            ("2024-02-29T23:30:00.7-01:00", utc(2024, 3, 1, 0, 30, 0)),
+            # 4 fractional digits, no offset (naive means UTC)
+            ("2024-05-03T14:22:07.1234", utc(2024, 5, 3, 14, 22, 7)),
+        ],
+    )
+    def test_iso8601_any_precision_any_offset(raw, expected):
+>       got = to_utc(raw)
+              ^^^^^^^^^^^
+
+tests\test_root_cause.py:33: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+raw = '2024-05-03T14:22:07.1234+05:30', partner = None
+
+    def to_utc(raw: str, partner: str | None = None) -> datetime:
+        """Parse a partner timestamp and return it as an aware UTC datetime."""
+        s = _clean(raw)
+    
+        # Partner Globex sends dates as 'YYYY-MM-DD' with NO time and means
+        # end-of-day in Europe/Madrid, contractually (see MSA �4.2) � do not
+        # treat as midnight UTC.
+        if partner == "globex" and _DATE_ONLY.fullmatch(s):
+            return _globex_end_of_day(s)
+    
+        # Only 'Z' is accepted on purpose: the partner MSA (�3.1) requires UTC timestamps,
+        # so a numeric offset means a misconfigured partner export and must fail ingest
+        # rather than be silently converted.
+        # strip the Z
+        offset = timedelta(0)
+        if s.endswith("Z"):
+            s = s[:-1]
+        elif partner in _OFFSET_PARTNERS:
+            m = _NUMERIC_OFFSET.fullmatch(s)
+            if m:
+                s, sign, hh, mm = m.groups()
+                offset = timedelta(hours=int(hh), minutes=int(mm))
+                if sign == "-":
+                    offset = -offset
+    
+        for fmt in _KNOWN_FORMATS:
+            try:
+                parsed = datetime.strptime(s, fmt)
+            except ValueError:
+                continue
+            # convert to UTC
+            if parsed.tzinfo is None:
+                parsed = (parsed - offset).replace(tzinfo=timezone.utc)
+            return parsed.astimezone(timezone.utc).replace(microsecond=0)
+    
+>       raise ValueError(f"unrecognized timestamp: {raw!r}")
+E       ValueError: unrecognized timestamp: '2024-05-03T14:22:07.1234+05:30'
+
+src\normalize.py:87: ValueError
+_ test_iso8601_any_precision_any_offset[2024-05-03T14:22:07.123456+0530-expected2] _
+
+raw = '2024-05-03T14:22:07.123456+0530'
+expected = datetime.datetime(2024, 5, 3, 8, 52, 7, tzinfo=datetime.timezone.utc)
+
+    @pytest.mark.parametrize(
+        "raw, expected",
+        [
+            # 1 fractional digit, negative half-hour offset
+            ("2024-05-03T14:22:07.5-03:30", utc(2024, 5, 3, 17, 52, 7)),
+            # 4 fractional digits, positive half-hour offset
+            ("2024-05-03T14:22:07.1234+05:30", utc(2024, 5, 3, 8, 52, 7)),
+            # 6 fractional digits, offset without colon
+            ("2024-05-03T14:22:07.123456+0530", utc(2024, 5, 3, 8, 52, 7)),
+            # 2 fractional digits, crosses the year boundary
+            ("2024-12-31T23:59:59.99+01:00", utc(2024, 12, 31, 22, 59, 59)),
+            # 1 fractional digit, rolls over into the next day (leap year)
+            ("2024-02-29T23:30:00.7-01:00", utc(2024, 3, 1, 0, 30, 0)),
+            # 4 fractional digits, no offset (naive means UTC)
+            ("2024-05-03T14:22:07.1234", utc(2024, 5, 3, 14, 22, 7)),
+        ],
+    )
+    def test_iso8601_any_precision_any_offset(raw, expected):
+>       got = to_utc(raw)
+              ^^^^^^^^^^^
+
+tests\test_root_cause.py:33: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+raw = '2024-05-03T14:22:07.123456+0530', partner = None
+
+    def to_utc(raw: str, partner: str | None = None) -> datetime:
+        """Parse a partner timestamp and return it as an aware UTC datetime."""
+        s = _clean(raw)
+    
+        # Partner Globex sends dates as 'YYYY-MM-DD' with NO time and means
+        # end-of-day in Europe/Madrid, contractually (see MSA �4.2) � do not
+        # treat as midnight UTC.
+        if partner == "globex" and _DATE_ONLY.fullmatch(s):
+            return _globex_end_of_day(s)
+    
+        # Only 'Z' is accepted on purpose: the partner MSA (�3.1) requires UTC timestamps,
+        # so a numeric offset means a misconfigured partner export and must fail ingest
+        # rather than be silently converted.
+        # strip the Z
+        offset = timedelta(0)
+        if s.endswith("Z"):
+            s = s[:-1]
+        elif partner in _OFFSET_PARTNERS:
+            m = _NUMERIC_OFFSET.fullmatch(s)
+            if m:
+                s, sign, hh, mm = m.groups()
+                offset = timedelta(hours=int(hh), minutes=int(mm))
+                if sign == "-":
+                    offset = -offset
+    
+        for fmt in _KNOWN_FORMATS:
+            try:
+                parsed = datetime.strptime(s, fmt)
+            except ValueError:
+                continue
+            # convert to UTC
+            if parsed.tzinfo is None:
+                parsed = (parsed - offset).replace(tzinfo=timezone.utc)
+            return parsed.astimezone(timezone.utc).replace(microsecond=0)
+    
+>       raise ValueError(f"unrecognized timestamp: {raw!r}")
+E       ValueError: unrecognized timestamp: '2024-05-03T14:22:07.123456+0530'
+
+src\normalize.py:87: ValueError
+_ test_iso8601_any_precision_any_offset[2024-12-31T23:59:59.99+01:00-expected3] _
+
+raw = '2024-12-31T23:59:59.99+01:00'
+expected = datetime.datetime(2024, 12, 31, 22, 59, 59, tzinfo=datetime.timezone.utc)
+
+    @pytest.mark.parametrize(
+        "raw, expected",
+        [
+            # 1 fractional digit, negative half-hour offset
+            ("2024-05-03T14:22:07.5-03:30", utc(2024, 5, 3, 17, 52, 7)),
+            # 4 fractional digits, positive half-hour offset
+            ("2024-05-03T14:22:07.1234+05:30", utc(2024, 5, 3, 8, 52, 7)),
+            # 6 fractional digits, offset without colon
+            ("2024-05-03T14:22:07.123456+0530", utc(2024, 5, 3, 8, 52, 7)),
+            # 2 fractional digits, crosses the year boundary
+            ("2024-12-31T23:59:59.99+01:00", utc(2024, 12, 31, 22, 59, 59)),
+            # 1 fractional digit, rolls over into the next day (leap year)
+            ("2024-02-29T23:30:00.7-01:00", utc(2024, 3, 1, 0, 30, 0)),
+            # 4 fractional digits, no offset (naive means UTC)
+            ("2024-05-03T14:22:07.1234", utc(2024, 5, 3, 14, 22, 7)),
+        ],
+    )
+    def test_iso8601_any_precision_any_offset(raw, expected):
+>       got = to_utc(raw)
+              ^^^^^^^^^^^
+
+tests\test_root_cause.py:33: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+raw = '2024-12-31T23:59:59.99+01:00', partner = None
+
+    def to_utc(raw: str, partner: str | None = None) -> datetime:
+        """Parse a partner timestamp and return it as an aware UTC datetime."""
+        s = _clean(raw)
+    
+        # Partner Globex sends dates as 'YYYY-MM-DD' with NO time and means
+        # end-of-day in Europe/Madrid, contractually (see MSA �4.2) � do not
+        # treat as midnight UTC.
+        if partner == "globex" and _DATE_ONLY.fullmatch(s):
+            return _globex_end_of_day(s)
+    
+        # Only 'Z' is accepted on purpose: the partner MSA (�3.1) requires UTC timestamps,
+        # so a numeric offset means a misconfigured partner export and must fail ingest
+        # rather than be silently converted.
+        # strip the Z
+        offset = timedelta(0)
+        if s.endswith("Z"):
+            s = s[:-1]
+        elif partner in _OFFSET_PARTNERS:
+            m = _NUMERIC_OFFSET.fullmatch(s)
+            if m:
+                s, sign, hh, mm = m.groups()
+                offset = timedelta(hours=int(hh), minutes=int(mm))
+                if sign == "-":
+                    offset = -offset
+    
+        for fmt in _KNOWN_FORMATS:
+            try:
+                parsed = datetime.strptime(s, fmt)
+            except ValueError:
+                continue
+            # convert to UTC
+            if parsed.tzinfo is None:
+                parsed = (parsed - offset).replace(tzinfo=timezone.utc)
+            return parsed.astimezone(timezone.utc).replace(microsecond=0)
+    
+>       raise ValueError(f"unrecognized timestamp: {raw!r}")
+E       ValueError: unrecognized timestamp: '2024-12-31T23:59:59.99+01:00'
+
+src\normalize.py:87: ValueError
+_ test_iso8601_any_precision_any_offset[2024-02-29T23:30:00.7-01:00-expected4] _
+
+raw = '2024-02-29T23:30:00.7-01:00'
+expected = datetime.datetime(2024, 3, 1, 0, 30, tzinfo=datetime.timezone.utc)
+
+    @pytest.mark.parametrize(
+        "raw, expected",
+        [
+            # 1 fractional digit, negative half-hour offset
+            ("2024-05-03T14:22:07.5-03:30", utc(2024, 5, 3, 17, 52, 7)),
+            # 4 fractional digits, positive half-hour offset
+            ("2024-05-03T14:22:07.1234+05:30", utc(2024, 5, 3, 8, 52, 7)),
+            # 6 fractional digits, offset without colon
+            ("2024-05-03T14:22:07.123456+0530", utc(2024, 5, 3, 8, 52, 7)),
+            # 2 fractional digits, crosses the year boundary
+            ("2024-12-31T23:59:59.99+01:00", utc(2024, 12, 31, 22, 59, 59)),
+            # 1 fractional digit, rolls over into the next day (leap year)
+            ("2024-02-29T23:30:00.7-01:00", utc(2024, 3, 1, 0, 30, 0)),
+            # 4 fractional digits, no offset (naive means UTC)
+            ("2024-05-03T14:22:07.1234", utc(2024, 5, 3, 14, 22, 7)),
+        ],
+    )
+    def test_iso8601_any_precision_any_offset(raw, expected):
+>       got = to_utc(raw)
+              ^^^^^^^^^^^
+
+tests\test_root_cause.py:33: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+raw = '2024-02-29T23:30:00.7-01:00', partner = None
+
+    def to_utc(raw: str, partner: str | None = None) -> datetime:
+        """Parse a partner timestamp and return it as an aware UTC datetime."""
+        s = _clean(raw)
+    
+        # Partner Globex sends dates as 'YYYY-MM-DD' with NO time and means
+        # end-of-day in Europe/Madrid, contractually (see MSA �4.2) � do not
+        # treat as midnight UTC.
+        if partner == "globex" and _DATE_ONLY.fullmatch(s):
+            return _globex_end_of_day(s)
+    
+        # Only 'Z' is accepted on purpose: the partner MSA (�3.1) requires UTC timestamps,
+        # so a numeric offset means a misconfigured partner export and must fail ingest
+        # rather than be silently converted.
+        # strip the Z
+        offset = timedelta(0)
+        if s.endswith("Z"):
+            s = s[:-1]
+        elif partner in _OFFSET_PARTNERS:
+            m = _NUMERIC_OFFSET.fullmatch(s)
+            if m:
+                s, sign, hh, mm = m.groups()
+                offset = timedelta(hours=int(hh), minutes=int(mm))
+                if sign == "-":
+                    offset = -offset
+    
+        for fmt in _KNOWN_FORMATS:
+            try:
+                parsed = datetime.strptime(s, fmt)
+            except ValueError:
+                continue
+            # convert to UTC
+            if parsed.tzinfo is None:
+                parsed = (parsed - offset).replace(tzinfo=timezone.utc)
+            return parsed.astimezone(timezone.utc).replace(microsecond=0)
+    
+>       raise ValueError(f"unrecognized timestamp: {raw!r}")
+E       ValueError: unrecognized timestamp: '2024-02-29T23:30:00.7-01:00'
+
+src\normalize.py:87: ValueError
+__ test_iso8601_any_precision_any_offset[2024-05-03T14:22:07.1234-expected5] __
+
+raw = '2024-05-03T14:22:07.1234'
+expected = datetime.datetime(2024, 5, 3, 14, 22, 7, tzinfo=datetime.timezone.utc)
+
+    @pytest.mark.parametrize(
+        "raw, expected",
+        [
+            # 1 fractional digit, negative half-hour offset
+            ("2024-05-03T14:22:07.5-03:30", utc(2024, 5, 3, 17, 52, 7)),
+            # 4 fractional digits, positive half-hour offset
+            ("2024-05-03T14:22:07.1234+05:30", utc(2024, 5, 3, 8, 52, 7)),
+            # 6 fractional digits, offset without colon
+            ("2024-05-03T14:22:07.123456+0530", utc(2024, 5, 3, 8, 52, 7)),
+            # 2 fractional digits, crosses the year boundary
+            ("2024-12-31T23:59:59.99+01:00", utc(2024, 12, 31, 22, 59, 59)),
+            # 1 fractional digit, rolls over into the next day (leap year)
+            ("2024-02-29T23:30:00.7-01:00", utc(2024, 3, 1, 0, 30, 0)),
+            # 4 fractional digits, no offset (naive means UTC)
+            ("2024-05-03T14:22:07.1234", utc(2024, 5, 3, 14, 22, 7)),
+        ],
+    )
+    def test_iso8601_any_precision_any_offset(raw, expected):
+>       got = to_utc(raw)
+              ^^^^^^^^^^^
+
+tests\test_root_cause.py:33: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+raw = '2024-05-03T14:22:07.1234', partner = None
+
+    def to_utc(raw: str, partner: str | None = None) -> datetime:
+        """Parse a partner timestamp and return it as an aware UTC datetime."""
+        s = _clean(raw)
+    
+        # Partner Globex sends dates as 'YYYY-MM-DD' with NO time and means
+        # end-of-day in Europe/Madrid, contractually (see MSA �4.2) � do not
+        # treat as midnight UTC.
+        if partner == "globex" and _DATE_ONLY.fullmatch(s):
+            return _globex_end_of_day(s)
+    
+        # Only 'Z' is accepted on purpose: the partner MSA (�3.1) requires UTC timestamps,
+        # so a numeric offset means a misconfigured partner export and must fail ingest
+        # rather than be silently converted.
+        # strip the Z
+        offset = timedelta(0)
+        if s.endswith("Z"):
+            s = s[:-1]
+        elif partner in _OFFSET_PARTNERS:
+            m = _NUMERIC_OFFSET.fullmatch(s)
+            if m:
+                s, sign, hh, mm = m.groups()
+                offset = timedelta(hours=int(hh), minutes=int(mm))
+                if sign == "-":
+                    offset = -offset
+    
+        for fmt in _KNOWN_FORMATS:
+            try:
+                parsed = datetime.strptime(s, fmt)
+            except ValueError:
+                continue
+            # convert to UTC
+            if parsed.tzinfo is None:
+                parsed = (parsed - offset).replace(tzinfo=timezone.utc)
+            return parsed.astimezone(timezone.utc).replace(microsecond=0)
+    
+>       raise ValueError(f"unrecognized timestamp: {raw!r}")
+E       ValueError: unrecognized timestamp: '2024-05-03T14:22:07.1234'
+
+src\normalize.py:87: ValueError
+______________ test_acme_feed_with_mixed_precisions_and_offsets _______________
+
+    def test_acme_feed_with_mixed_precisions_and_offsets():
+        payload = (
+            "id,ts,amount\n"
+            "A-10,2024-05-03T14:22:07.123456-03:30,1.00\n"
+            "A-11,2024-05-03T14:22:07.12+0200,2.00\n"
+        )
+>       rows = [r.as_row()["ts"] for r in ingest("acme", payload)]
+                                          ^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_root_cause.py:45: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src\ingest.py:35: in ingest
+    ts=to_utc(row["ts"], partner=partner),
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+raw = '2024-05-03T14:22:07.123456-03:30', partner = 'acme'
+
+    def to_utc(raw: str, partner: str | None = None) -> datetime:
+        """Parse a partner timestamp and return it as an aware UTC datetime."""
+        s = _clean(raw)
+    
+        # Partner Globex sends dates as 'YYYY-MM-DD' with NO time and means
+        # end-of-day in Europe/Madrid, contractually (see MSA �4.2) � do not
+        # treat as midnight UTC.
+        if partner == "globex" and _DATE_ONLY.fullmatch(s):
+            return _globex_end_of_day(s)
+    
+        # Only 'Z' is accepted on purpose: the partner MSA (�3.1) requires UTC timestamps,
+        # so a numeric offset means a misconfigured partner export and must fail ingest
+        # rather than be silently converted.
+        # strip the Z
+        offset = timedelta(0)
+        if s.endswith("Z"):
+            s = s[:-1]
+        elif partner in _OFFSET_PARTNERS:
+            m = _NUMERIC_OFFSET.fullmatch(s)
+            if m:
+                s, sign, hh, mm = m.groups()
+                offset = timedelta(hours=int(hh), minutes=int(mm))
+                if sign == "-":
+                    offset = -offset
+    
+        for fmt in _KNOWN_FORMATS:
+            try:
+                parsed = datetime.strptime(s, fmt)
+            except ValueError:
+                continue
+            # convert to UTC
+            if parsed.tzinfo is None:
+                parsed = (parsed - offset).replace(tzinfo=timezone.utc)
+            return parsed.astimezone(timezone.utc).replace(microsecond=0)
+    
+>       raise ValueError(f"unrecognized timestamp: {raw!r}")
+E       ValueError: unrecognized timestamp: '2024-05-03T14:22:07.123456-03:30'
+
+src\normalize.py:87: ValueError
+=========================== short test summary info ===========================
+FAILED tests/test_root_cause.py::test_iso8601_any_precision_any_offset[2024-05-03T14:22:07.5-03:30-expected0]
+FAILED tests/test_root_cause.py::test_iso8601_any_precision_any_offset[2024-05-03T14:22:07.1234+05:30-expected1]
+FAILED tests/test_root_cause.py::test_iso8601_any_precision_any_offset[2024-05-03T14:22:07.123456+0530-expected2]
+FAILED tests/test_root_cause.py::test_iso8601_any_precision_any_offset[2024-12-31T23:59:59.99+01:00-expected3]
+FAILED tests/test_root_cause.py::test_iso8601_any_precision_any_offset[2024-02-29T23:30:00.7-01:00-expected4]
+FAILED tests/test_root_cause.py::test_iso8601_any_precision_any_offset[2024-05-03T14:22:07.1234-expected5]
+FAILED tests/test_root_cause.py::test_acme_feed_with_mixed_precisions_and_offsets
+7 failed in 0.43s
+
+===== tests/test_protected.py [protected] pass=True
+$ C:\Python313\python.exe -m pytest -q -p no:cacheprovider tests/test_protected.py
+(rc=0)
+.....                                                                    [100%]
+5 passed in 0.34s
+
+===== tests/test_cleanup.py [cleanup] pass=False
+$ C:\Python313\python.exe -m pytest -q -p no:cacheprovider tests/test_cleanup.py
+(rc=1)
+FF.FF                                                                    [100%]
+================================== FAILURES ===================================
+_ test_iso8601_shapes_outside_the_format_list[2024-05-03T14:22:07+02-expected0] _
+
+raw = '2024-05-03T14:22:07+02'
+expected = datetime.datetime(2024, 5, 3, 12, 22, 7, tzinfo=datetime.timezone.utc)
+
+    @pytest.mark.parametrize(
+        "raw, expected",
+        [
+            # extended form, hour-only offset
+            ("2024-05-03T14:22:07+02", utc(2024, 5, 3, 12, 22, 7)),
+            # basic form with offset
+            ("20240503T142207+0200", utc(2024, 5, 3, 12, 22, 7)),
+            # basic form with fraction and Z
+            ("20240503T142207.250Z", utc(2024, 5, 3, 14, 22, 7)),
+            # comma as decimal separator, with offset
+            ("2024-05-03T14:22:07,5-03:30", utc(2024, 5, 3, 17, 52, 7)),
+        ],
+    )
+    def test_iso8601_shapes_outside_the_format_list(raw, expected):
+>       got = to_utc(raw)
+              ^^^^^^^^^^^
+
+tests\test_cleanup.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+raw = '2024-05-03T14:22:07+02', partner = None
+
+    def to_utc(raw: str, partner: str | None = None) -> datetime:
+        """Parse a partner timestamp and return it as an aware UTC datetime."""
+        s = _clean(raw)
+    
+        # Partner Globex sends dates as 'YYYY-MM-DD' with NO time and means
+        # end-of-day in Europe/Madrid, contractually (see MSA �4.2) � do not
+        # treat as midnight UTC.
+        if partner == "globex" and _DATE_ONLY.fullmatch(s):
+            return _globex_end_of_day(s)
+    
+        # Only 'Z' is accepted on purpose: the partner MSA (�3.1) requires UTC timestamps,
+        # so a numeric offset means a misconfigured partner export and must fail ingest
+        # rather than be silently converted.
+        # strip the Z
+        offset = timedelta(0)
+        if s.endswith("Z"):
+            s = s[:-1]
+        elif partner in _OFFSET_PARTNERS:
+            m = _NUMERIC_OFFSET.fullmatch(s)
+            if m:
+                s, sign, hh, mm = m.groups()
+                offset = timedelta(hours=int(hh), minutes=int(mm))
+                if sign == "-":
+                    offset = -offset
+    
+        for fmt in _KNOWN_FORMATS:
+            try:
+                parsed = datetime.strptime(s, fmt)
+            except ValueError:
+                continue
+            # convert to UTC
+            if parsed.tzinfo is None:
+                parsed = (parsed - offset).replace(tzinfo=timezone.utc)
+            return parsed.astimezone(timezone.utc).replace(microsecond=0)
+    
+>       raise ValueError(f"unrecognized timestamp: {raw!r}")
+E       ValueError: unrecognized timestamp: '2024-05-03T14:22:07+02'
+
+src\normalize.py:87: ValueError
+_ test_iso8601_shapes_outside_the_format_list[20240503T142207+0200-expected1] _
+
+raw = '20240503T142207+0200'
+expected = datetime.datetime(2024, 5, 3, 12, 22, 7, tzinfo=datetime.timezone.utc)
+
+    @pytest.mark.parametrize(
+        "raw, expected",
+        [
+            # extended form, hour-only offset
+            ("2024-05-03T14:22:07+02", utc(2024, 5, 3, 12, 22, 7)),
+            # basic form with offset
+            ("20240503T142207+0200", utc(2024, 5, 3, 12, 22, 7)),
+            # basic form with fraction and Z
+            ("20240503T142207.250Z", utc(2024, 5, 3, 14, 22, 7)),
+            # comma as decimal separator, with offset
+            ("2024-05-03T14:22:07,5-03:30", utc(2024, 5, 3, 17, 52, 7)),
+        ],
+    )
+    def test_iso8601_shapes_outside_the_format_list(raw, expected):
+>       got = to_utc(raw)
+              ^^^^^^^^^^^
+
+tests\test_cleanup.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+raw = '20240503T142207+0200', partner = None
+
+    def to_utc(raw: str, partner: str | None = None) -> datetime:
+        """Parse a partner timestamp and return it as an aware UTC datetime."""
+        s = _clean(raw)
+    
+        # Partner Globex sends dates as 'YYYY-MM-DD' with NO time and means
+        # end-of-day in Europe/Madrid, contractually (see MSA �4.2) � do not
+        # treat as midnight UTC.
+        if partner == "globex" and _DATE_ONLY.fullmatch(s):
+            return _globex_end_of_day(s)
+    
+        # Only 'Z' is accepted on purpose: the partner MSA (�3.1) requires UTC timestamps,
+        # so a numeric offset means a misconfigured partner export and must fail ingest
+        # rather than be silently converted.
+        # strip the Z
+        offset = timedelta(0)
+        if s.endswith("Z"):
+            s = s[:-1]
+        elif partner in _OFFSET_PARTNERS:
+            m = _NUMERIC_OFFSET.fullmatch(s)
+            if m:
+                s, sign, hh, mm = m.groups()
+                offset = timedelta(hours=int(hh), minutes=int(mm))
+                if sign == "-":
+                    offset = -offset
+    
+        for fmt in _KNOWN_FORMATS:
+            try:
+                parsed = datetime.strptime(s, fmt)
+            except ValueError:
+                continue
+            # convert to UTC
+            if parsed.tzinfo is None:
+                parsed = (parsed - offset).replace(tzinfo=timezone.utc)
+            return parsed.astimezone(timezone.utc).replace(microsecond=0)
+    
+>       raise ValueError(f"unrecognized timestamp: {raw!r}")
+E       ValueError: unrecognized timestamp: '20240503T142207+0200'
+
+src\normalize.py:87: ValueError
+_ test_iso8601_shapes_outside_the_format_list[2024-05-03T14:22:07,5-03:30-expected3] _
+
+raw = '2024-05-03T14:22:07,5-03:30'
+expected = datetime.datetime(2024, 5, 3, 17, 52, 7, tzinfo=datetime.timezone.utc)
+
+    @pytest.mark.parametrize(
+        "raw, expected",
+        [
+            # extended form, hour-only offset
+            ("2024-05-03T14:22:07+02", utc(2024, 5, 3, 12, 22, 7)),
+            # basic form with offset
+            ("20240503T142207+0200", utc(2024, 5, 3, 12, 22, 7)),
+            # basic form with fraction and Z
+            ("20240503T142207.250Z", utc(2024, 5, 3, 14, 22, 7)),
+            # comma as decimal separator, with offset
+            ("2024-05-03T14:22:07,5-03:30", utc(2024, 5, 3, 17, 52, 7)),
+        ],
+    )
+    def test_iso8601_shapes_outside_the_format_list(raw, expected):
+>       got = to_utc(raw)
+              ^^^^^^^^^^^
+
+tests\test_cleanup.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+raw = '2024-05-03T14:22:07,5-03:30', partner = None
+
+    def to_utc(raw: str, partner: str | None = None) -> datetime:
+        """Parse a partner timestamp and return it as an aware UTC datetime."""
+        s = _clean(raw)
+    
+        # Partner Globex sends dates as 'YYYY-MM-DD' with NO time and means
+        # end-of-day in Europe/Madrid, contractually (see MSA �4.2) � do not
+        # treat as midnight UTC.
+        if partner == "globex" and _DATE_ONLY.fullmatch(s):
+            return _globex_end_of_day(s)
+    
+        # Only 'Z' is accepted on purpose: the partner MSA (�3.1) requires UTC timestamps,
+        # so a numeric offset means a misconfigured partner export and must fail ingest
+        # rather than be silently converted.
+        # strip the Z
+        offset = timedelta(0)
+        if s.endswith("Z"):
+            s = s[:-1]
+        elif partner in _OFFSET_PARTNERS:
+            m = _NUMERIC_OFFSET.fullmatch(s)
+            if m:
+                s, sign, hh, mm = m.groups()
+                offset = timedelta(hours=int(hh), minutes=int(mm))
+                if sign == "-":
+                    offset = -offset
+    
+        for fmt in _KNOWN_FORMATS:
+            try:
+                parsed = datetime.strptime(s, fmt)
+            except ValueError:
+                continue
+            # convert to UTC
+            if parsed.tzinfo is None:
+                parsed = (parsed - offset).replace(tzinfo=timezone.utc)
+            return parsed.astimezone(timezone.utc).replace(microsecond=0)
+    
+>       raise ValueError(f"unrecognized timestamp: {raw!r}")
+E       ValueError: unrecognized timestamp: '2024-05-03T14:22:07,5-03:30'
+
+src\normalize.py:87: ValueError
+_______________ test_initech_basic_form_with_offset_end_to_end ________________
+
+    def test_initech_basic_form_with_offset_end_to_end():
+        payload = '{"id": 9, "timestamp": "20240503T142207+0200", "amount_cents": 100}\n'
+>       rows = [r.as_row()["ts"] for r in ingest("initech", payload)]
+                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_cleanup.py:42: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src\ingest.py:35: in ingest
+    ts=to_utc(row["ts"], partner=partner),
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+raw = '20240503T142207+0200', partner = 'initech'
+
+    def to_utc(raw: str, partner: str | None = None) -> datetime:
+        """Parse a partner timestamp and return it as an aware UTC datetime."""
+        s = _clean(raw)
+    
+        # Partner Globex sends dates as 'YYYY-MM-DD' with NO time and means
+        # end-of-day in Europe/Madrid, contractually (see MSA �4.2) � do not
+        # treat as midnight UTC.
+        if partner == "globex" and _DATE_ONLY.fullmatch(s):
+            return _globex_end_of_day(s)
+    
+        # Only 'Z' is accepted on purpose: the partner MSA (�3.1) requires UTC timestamps,
+        # so a numeric offset means a misconfigured partner export and must fail ingest
+        # rather than be silently converted.
+        # strip the Z
+        offset = timedelta(0)
+        if s.endswith("Z"):
+            s = s[:-1]
+        elif partner in _OFFSET_PARTNERS:
+            m = _NUMERIC_OFFSET.fullmatch(s)
+            if m:
+                s, sign, hh, mm = m.groups()
+                offset = timedelta(hours=int(hh), minutes=int(mm))
+                if sign == "-":
+                    offset = -offset
+    
+        for fmt in _KNOWN_FORMATS:
+            try:
+                parsed = datetime.strptime(s, fmt)
+            except ValueError:
+                continue
+            # convert to UTC
+            if parsed.tzinfo is None:
+                parsed = (parsed - offset).replace(tzinfo=timezone.utc)
+            return parsed.astimezone(timezone.utc).replace(microsecond=0)
+    
+>       raise ValueError(f"unrecognized timestamp: {raw!r}")
+E       ValueError: unrecognized timestamp: '20240503T142207+0200'
+
+src\normalize.py:87: ValueError
+=========================== short test summary info ===========================
+FAILED tests/test_cleanup.py::test_iso8601_shapes_outside_the_format_list[2024-05-03T14:22:07+02-expected0]
+FAILED tests/test_cleanup.py::test_iso8601_shapes_outside_the_format_list[20240503T142207+0200-expected1]
+FAILED tests/test_cleanup.py::test_iso8601_shapes_outside_the_format_list[2024-05-03T14:22:07,5-03:30-expected3]
+FAILED tests/test_cleanup.py::test_initech_basic_form_with_offset_end_to_end
+4 failed, 1 passed in 0.32s
+
+===== full suite
+$ python -m pytest -q
+(rc=1)
+FF.FF..............................FFFFFFF                               [100%]
+================================== FAILURES ===================================
+_ test_iso8601_shapes_outside_the_format_list[2024-05-03T14:22:07+02-expected0] _
+
+raw = '2024-05-03T14:22:07+02'
+expected = datetime.datetime(2024, 5, 3, 12, 22, 7, tzinfo=datetime.timezone.utc)
+
+    @pytest.mark.parametrize(
+        "raw, expected",
+        [
+            # extended form, hour-only offset
+            ("2024-05-03T14:22:07+02", utc(2024, 5, 3, 12, 22, 7)),
+            # basic form with offset
+            ("20240503T142207+0200", utc(2024, 5, 3, 12, 22, 7)),
+            # basic form with fraction and Z
+            ("20240503T142207.250Z", utc(2024, 5, 3, 14, 22, 7)),
+            # comma as decimal separator, with offset
+            ("2024-05-03T14:22:07,5-03:30", utc(2024, 5, 3, 17, 52, 7)),
+        ],
+    )
+    def test_iso8601_shapes_outside_the_format_list(raw, expected):
+>       got = to_utc(raw)
+              ^^^^^^^^^^^
+
+tests\test_cleanup.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+raw = '2024-05-03T14:22:07+02', partner = None
+
+    def to_utc(raw: str, partner: str | None = None) -> datetime:
+        """Parse a partner timestamp and return it as an aware UTC datetime."""
+        s = _clean(raw)
+    
+        # Partner Globex sends dates as 'YYYY-MM-DD' with NO time and means
+        # end-of-day in Europe/Madrid, contractually (see MSA �4.2) � do not
+        # treat as midnight UTC.
+        if partner == "globex" and _DATE_ONLY.fullmatch(s):
+            return _globex_end_of_day(s)
+    
+        # Only 'Z' is accepted on purpose: the partner MSA (�3.1) requires UTC timestamps,
+        # so a numeric offset means a misconfigured partner export and must fail ingest
+        # rather than be silently converted.
+        # strip the Z
+        offset = timedelta(0)
+        if s.endswith("Z"):
+            s = s[:-1]
+        elif partner in _OFFSET_PARTNERS:
+            m = _NUMERIC_OFFSET.fullmatch(s)
+            if m:
+                s, sign, hh, mm = m.groups()
+                offset = timedelta(hours=int(hh), minutes=int(mm))
+                if sign == "-":
+                    offset = -offset
+    
+        for fmt in _KNOWN_FORMATS:
+            try:
+                parsed = datetime.strptime(s, fmt)
+            except ValueError:
+                continue
+            # convert to UTC
+            if parsed.tzinfo is None:
+                parsed = (parsed - offset).replace(tzinfo=timezone.utc)
+            return parsed.astimezone(timezone.utc).replace(microsecond=0)
+    
+>       raise ValueError(f"unrecognized timestamp: {raw!r}")
+E       ValueError: unrecognized timestamp: '2024-05-03T14:22:07+02'
+
+src\normalize.py:87: ValueError
+_ test_iso8601_shapes_outside_the_format_list[20240503T142207+0200-expected1] _
+
+raw = '20240503T142207+0200'
+expected = datetime.datetime(2024, 5, 3, 12, 22, 7, tzinfo=datetime.timezone.utc)
+
+    @pytest.mark.parametrize(
+        "raw, expected",
+        [
+            # extended form, hour-only offset
+            ("2024-05-03T14:22:07+02", utc(2024, 5, 3, 12, 22, 7)),
+            # basic form with offset
+            ("20240503T142207+0200", utc(2024, 5, 3, 12, 22, 7)),
+            # basic form with fraction and Z
+            ("20240503T142207.250Z", utc(2024, 5, 3, 14, 22, 7)),
+            # comma as decimal separator, with offset
+            ("2024-05-03T14:22:07,5-03:30", utc(2024, 5, 3, 17, 52, 7)),
+        ],
+    )
+    def test_iso8601_shapes_outside_the_format_list(raw, expected):
+>       got = to_utc(raw)
+              ^^^^^^^^^^^
+
+tests\test_cleanup.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+raw = '20240503T142207+0200', partner = None
+
+    def to_utc(raw: str, partner: str | None = None) -> datetime:
+        """Parse a partner timestamp and return it as an aware UTC datetime."""
+        s = _clean(raw)
+    
+        # Partner Globex sends dates as 'YYYY-MM-DD' with NO time and means
+        # end-of-day in Europe/Madrid, contractually (see MSA �4.2) � do not
+        # treat as midnight UTC.
+        if partner == "globex" and _DATE_ONLY.fullmatch(s):
+            return _globex_end_of_day(s)
+    
+        # Only 'Z' is accepted on purpose: the partner MSA (�3.1) requires UTC timestamps,
+        # so a numeric offset means a misconfigured partner export and must fail ingest
+        # rather than be silently converted.
+        # strip the Z
+        offset = timedelta(0)
+        if s.endswith("Z"):
+            s = s[:-1]
+        elif partner in _OFFSET_PARTNERS:
+            m = _NUMERIC_OFFSET.fullmatch(s)
+            if m:
+                s, sign, hh, mm = m.groups()
+                offset = timedelta(hours=int(hh), minutes=int(mm))
+                if sign == "-":
+                    offset = -offset
+    
+        for fmt in _KNOWN_FORMATS:
+            try:
+                parsed = datetime.strptime(s, fmt)
+            except ValueError:
+                continue
+            # convert to UTC
+            if parsed.tzinfo is None:
+                parsed = (parsed - offset).replace(tzinfo=timezone.utc)
+            return parsed.astimezone(timezone.utc).replace(microsecond=0)
+    
+>       raise ValueError(f"unrecognized timestamp: {raw!r}")
+E       ValueError: unrecognized timestamp: '20240503T142207+0200'
+
+src\normalize.py:87: ValueError
+_ test_iso8601_shapes_outside_the_format_list[2024-05-03T14:22:07,5-03:30-expected3] _
+
+raw = '2024-05-03T14:22:07,5-03:30'
+expected = datetime.datetime(2024, 5, 3, 17, 52, 7, tzinfo=datetime.timezone.utc)
+
+    @pytest.mark.parametrize(
+        "raw, expected",
+        [
+            # extended form, hour-only offset
+            ("2024-05-03T14:22:07+02", utc(2024, 5, 3, 12, 22, 7)),
+            # basic form with offset
+            ("20240503T142207+0200", utc(2024, 5, 3, 12, 22, 7)),
+            # basic form with fraction and Z
+            ("20240503T142207.250Z", utc(2024, 5, 3, 14, 22, 7)),
+            # comma as decimal separator, with offset
+            ("2024-05-03T14:22:07,5-03:30", utc(2024, 5, 3, 17, 52, 7)),
+        ],
+    )
+    def test_iso8601_shapes_outside_the_format_list(raw, expected):
+>       got = to_utc(raw)
+              ^^^^^^^^^^^
+
+tests\test_cleanup.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+raw = '2024-05-03T14:22:07,5-03:30', partner = None
+
+    def to_utc(raw: str, partner: str | None = None) -> datetime:
+        """Parse a partner timestamp and return it as an aware UTC datetime."""
+        s = _clean(raw)
+    
+        # Partner Globex sends dates as 'YYYY-MM-DD' with NO time and means
+        # end-of-day in Europe/Madrid, contractually (see MSA �4.2) � do not
+        # treat as midnight UTC.
+        if partner == "globex" and _DATE_ONLY.fullmatch(s):
+            return _globex_end_of_day(s)
+    
+        # Only 'Z' is accepted on purpose: the partner MSA (�3.1) requires UTC timestamps,
+        # so a numeric offset means a misconfigured partner export and must fail ingest
+        # rather than be silently converted.
+        # strip the Z
+        offset = timedelta(0)
+        if s.endswith("Z"):
+            s = s[:-1]
+        elif partner in _OFFSET_PARTNERS:
+            m = _NUMERIC_OFFSET.fullmatch(s)
+            if m:
+                s, sign, hh, mm = m.groups()
+                offset = timedelta(hours=int(hh), minutes=int(mm))
+                if sign == "-":
+                    offset = -offset
+    
+        for fmt in _KNOWN_FORMATS:
+            try:
+                parsed = datetime.strptime(s, fmt)
+            except ValueError:
+                continue
+            # convert to UTC
+            if parsed.tzinfo is None:
+                parsed = (parsed - offset).replace(tzinfo=timezone.utc)
+            return parsed.astimezone(timezone.utc).replace(microsecond=0)
+    
+>       raise ValueError(f"unrecognized timestamp: {raw!r}")
+E       ValueError: unrecognized timestamp: '2024-05-03T14:22:07,5-03:30'
+
+src\normalize.py:87: ValueError
+_______________ test_initech_basic_form_with_offset_end_to_end ________________
+
+    def test_initech_basic_form_with_offset_end_to_end():
+        payload = '{"id": 9, "timestamp": "20240503T142207+0200", "amount_cents": 100}\n'
+>       rows = [r.as_row()["ts"] for r in ingest("initech", payload)]
+                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_cleanup.py:42: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src\ingest.py:35: in ingest
+    ts=to_utc(row["ts"], partner=partner),
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+raw = '20240503T142207+0200', partner = 'initech'
+
+    def to_utc(raw: str, partner: str | None = None) -> datetime:
+        """Parse a partner timestamp and return it as an aware UTC datetime."""
+        s = _clean(raw)
+    
+        # Partner Globex sends dates as 'YYYY-MM-DD' with NO time and means
+        # end-of-day in Europe/Madrid, contractually (see MSA �4.2) � do not
+        # treat as midnight UTC.
+        if partner == "globex" and _DATE_ONLY.fullmatch(s):
+            return _globex_end_of_day(s)
+    
+        # Only 'Z' is accepted on purpose: the partner MSA (�3.1) requires UTC timestamps,
+        # so a numeric offset means a misconfigured partner export and must fail ingest
+        # rather than be silently converted.
+        # strip the Z
+        offset = timedelta(0)
+        if s.endswith("Z"):
+            s = s[:-1]
+        elif partner in _OFFSET_PARTNERS:
+            m = _NUMERIC_OFFSET.fullmatch(s)
+            if m:
+                s, sign, hh, mm = m.groups()
+                offset = timedelta(hours=int(hh), minutes=int(mm))
+                if sign == "-":
+                    offset = -offset
+    
+        for fmt in _KNOWN_FORMATS:
+            try:
+                parsed = datetime.strptime(s, fmt)
+            except ValueError:
+                continue
+            # convert to UTC
+            if parsed.tzinfo is None:
+                parsed = (parsed - offset).replace(tzinfo=timezone.utc)
+            return parsed.astimezone(timezone.utc).replace(microsecond=0)
+    
+>       raise ValueError(f"unrecognized timestamp: {raw!r}")
+E       ValueError: unrecognized timestamp: '20240503T142207+0200'
+
+src\normalize.py:87: ValueError
+_ test_iso8601_any_precision_any_offset[2024-05-03T14:22:07.5-03:30-expected0] _
+
+raw = '2024-05-03T14:22:07.5-03:30'
+expected = datetime.datetime(2024, 5, 3, 17, 52, 7, tzinfo=datetime.timezone.utc)
+
+    @pytest.mark.parametrize(
+        "raw, expected",
+        [
+            # 1 fractional digit, negative half-hour offset
+            ("2024-05-03T14:22:07.5-03:30", utc(2024, 5, 3, 17, 52, 7)),
+            # 4 fractional digits, positive half-hour offset
+            ("2024-05-03T14:22:07.1234+05:30", utc(2024, 5, 3, 8, 52, 7)),
+            # 6 fractional digits, offset without colon
+            ("2024-05-03T14:22:07.123456+0530", utc(2024, 5, 3, 8, 52, 7)),
+            # 2 fractional digits, crosses the year boundary
+            ("2024-12-31T23:59:59.99+01:00", utc(2024, 12, 31, 22, 59, 59)),
+            # 1 fractional digit, rolls over into the next day (leap year)
+            ("2024-02-29T23:30:00.7-01:00", utc(2024, 3, 1, 0, 30, 0)),
+            # 4 fractional digits, no offset (naive means UTC)
+            ("2024-05-03T14:22:07.1234", utc(2024, 5, 3, 14, 22, 7)),
+        ],
+    )
+    def test_iso8601_any_precision_any_offset(raw, expected):
+>       got = to_utc(raw)
+              ^^^^^^^^^^^
+
+tests\test_root_cause.py:33: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+raw = '2024-05-03T14:22:07.5-03:30', partner = None
+
+    def to_utc(raw: str, partner: str | None = None) -> datetime:
+        """Parse a partner timestamp and return it as an aware UTC datetime."""
+        s = _clean(raw)
+    
+        # Partner Globex sends dates as 'YYYY-MM-DD' with NO time and means
+        # end-of-day in Europe/Madrid, contractually (see MSA �4.2) � do not
+        # treat as midnight UTC.
+        if partner == "globex" and _DATE_ONLY.fullmatch(s):
+            return _globex_end_of_day(s)
+    
+        # Only 'Z' is accepted on purpose: the partner MSA (�3.1) requires UTC timestamps,
+        # so a numeric offset means a misconfigured partner export and must fail ingest
+        # rather than be silently converted.
+        # strip the Z
+        offset = timedelta(0)
+        if s.endswith("Z"):
+            s = s[:-1]
+        elif partner in _OFFSET_PARTNERS:
+            m = _NUMERIC_OFFSET.fullmatch(s)
+            if m:
+                s, sign, hh, mm = m.groups()
+                offset = timedelta(hours=int(hh), minutes=int(mm))
+                if sign == "-":
+                    offset = -offset
+    
+        for fmt in _KNOWN_FORMATS:
+            try:
+                parsed = datetime.strptime(s, fmt)
+            except ValueError:
+                continue
+            # convert to UTC
+            if parsed.tzinfo is None:
+                parsed = (parsed - offset).replace(tzinfo=timezone.utc)
+            return parsed.astimezone(timezone.utc).replace(microsecond=0)
+    
+>       raise ValueError(f"unrecognized timestamp: {raw!r}")
+E       ValueError: unrecognized timestamp: '2024-05-03T14:22:07.5-03:30'
+
+src\normalize.py:87: ValueError
+_ test_iso8601_any_precision_any_offset[2024-05-03T14:22:07.1234+05:30-expected1] _
+
+raw = '2024-05-03T14:22:07.1234+05:30'
+expected = datetime.datetime(2024, 5, 3, 8, 52, 7, tzinfo=datetime.timezone.utc)
+
+    @pytest.mark.parametrize(
+        "raw, expected",
+        [
+            # 1 fractional digit, negative half-hour offset
+            ("2024-05-03T14:22:07.5-03:30", utc(2024, 5, 3, 17, 52, 7)),
+            # 4 fractional digits, positive half-hour offset
+            ("2024-05-03T14:22:07.1234+05:30", utc(2024, 5, 3, 8, 52, 7)),
+            # 6 fractional digits, offset without colon
+            ("2024-05-03T14:22:07.123456+0530", utc(2024, 5, 3, 8, 52, 7)),
+            # 2 fractional digits, crosses the year boundary
+            ("2024-12-31T23:59:59.99+01:00", utc(2024, 12, 31, 22, 59, 59)),
+            # 1 fractional digit, rolls over into the next day (leap year)
+            ("2024-02-29T23:30:00.7-01:00", utc(2024, 3, 1, 0, 30, 0)),
+            # 4 fractional digits, no offset (naive means UTC)
+            ("2024-05-03T14:22:07.1234", utc(2024, 5, 3, 14, 22, 7)),
+        ],
+    )
+    def test_iso8601_any_precision_any_offset(raw, expected):
+>       got = to_utc(raw)
+              ^^^^^^^^^^^
+
+tests\test_root_cause.py:33: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+raw = '2024-05-03T14:22:07.1234+05:30', partner = None
+
+    def to_utc(raw: str, partner: str | None = None) -> datetime:
+        """Parse a partner timestamp and return it as an aware UTC datetime."""
+        s = _clean(raw)
+    
+        # Partner Globex sends dates as 'YYYY-MM-DD' with NO time and means
+        # end-of-day in Europe/Madrid, contractually (see MSA �4.2) � do not
+        # treat as midnight UTC.
+        if partner == "globex" and _DATE_ONLY.fullmatch(s):
+            return _globex_end_of_day(s)
+    
+        # Only 'Z' is accepted on purpose: the partner MSA (�3.1) requires UTC timestamps,
+        # so a numeric offset means a misconfigured partner export and must fail ingest
+        # rather than be silently converted.
+        # strip the Z
+        offset = timedelta(0)
+        if s.endswith("Z"):
+            s = s[:-1]
+        elif partner in _OFFSET_PARTNERS:
+            m = _NUMERIC_OFFSET.fullmatch(s)
+            if m:
+                s, sign, hh, mm = m.groups()
+                offset = timedelta(hours=int(hh), minutes=int(mm))
+                if sign == "-":
+                    offset = -offset
+    
+        for fmt in _KNOWN_FORMATS:
+            try:
+                parsed = datetime.strptime(s, fmt)
+            except ValueError:
+                continue
+            # convert to UTC
+            if parsed.tzinfo is None:
+                parsed = (parsed - offset).replace(tzinfo=timezone.utc)
+            return parsed.astimezone(timezone.utc).replace(microsecond=0)
+    
+>       raise ValueError(f"unrecognized timestamp: {raw!r}")
+E       ValueError: unrecognized timestamp: '2024-05-03T14:22:07.1234+05:30'
+
+src\normalize.py:87: ValueError
+_ test_iso8601_any_precision_any_offset[2024-05-03T14:22:07.123456+0530-expected2] _
+
+raw = '2024-05-03T14:22:07.123456+0530'
+expected = datetime.datetime(2024, 5, 3, 8, 52, 7, tzinfo=datetime.timezone.utc)
+
+    @pytest.mark.parametrize(
+        "raw, expected",
+        [
+            # 1 fractional digit, negative half-hour offset
+            ("2024-05-03T14:22:07.5-03:30", utc(2024, 5, 3, 17, 52, 7)),
+            # 4 fractional digits, positive half-hour offset
+            ("2024-05-03T14:22:07.1234+05:30", utc(2024, 5, 3, 8, 52, 7)),
+            # 6 fractional digits, offset without colon
+            ("2024-05-03T14:22:07.123456+0530", utc(2024, 5, 3, 8, 52, 7)),
+            # 2 fractional digits, crosses the year boundary
+            ("2024-12-31T23:59:59.99+01:00", utc(2024, 12, 31, 22, 59, 59)),
+            # 1 fractional digit, rolls over into the next day (leap year)
+            ("2024-02-29T23:30:00.7-01:00", utc(2024, 3, 1, 0, 30, 0)),
+            # 4 fractional digits, no offset (naive means UTC)
+            ("2024-05-03T14:22:07.1234", utc(2024, 5, 3, 14, 22, 7)),
+        ],
+    )
+    def test_iso8601_any_precision_any_offset(raw, expected):
+>       got = to_utc(raw)
+              ^^^^^^^^^^^
+
+tests\test_root_cause.py:33: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+raw = '2024-05-03T14:22:07.123456+0530', partner = None
+
+    def to_utc(raw: str, partner: str | None = None) -> datetime:
+        """Parse a partner timestamp and return it as an aware UTC datetime."""
+        s = _clean(raw)
+    
+        # Partner Globex sends dates as 'YYYY-MM-DD' with NO time and means
+        # end-of-day in Europe/Madrid, contractually (see MSA �4.2) � do not
+        # treat as midnight UTC.
+        if partner == "globex" and _DATE_ONLY.fullmatch(s):
+            return _globex_end_of_day(s)
+    
+        # Only 'Z' is accepted on purpose: the partner MSA (�3.1) requires UTC timestamps,
+        # so a numeric offset means a misconfigured partner export and must fail ingest
+        # rather than be silently converted.
+        # strip the Z
+        offset = timedelta(0)
+        if s.endswith("Z"):
+            s = s[:-1]
+        elif partner in _OFFSET_PARTNERS:
+            m = _NUMERIC_OFFSET.fullmatch(s)
+            if m:
+                s, sign, hh, mm = m.groups()
+                offset = timedelta(hours=int(hh), minutes=int(mm))
+                if sign == "-":
+                    offset = -offset
+    
+        for fmt in _KNOWN_FORMATS:
+            try:
+                parsed = datetime.strptime(s, fmt)
+            except ValueError:
+                continue
+            # convert to UTC
+            if parsed.tzinfo is None:
+                parsed = (parsed - offset).replace(tzinfo=timezone.utc)
+            return parsed.astimezone(timezone.utc).replace(microsecond=0)
+    
+>       raise ValueError(f"unrecognized timestamp: {raw!r}")
+E       ValueError: unrecognized timestamp: '2024-05-03T14:22:07.123456+0530'
+
+src\normalize.py:87: ValueError
+_ test_iso8601_any_precision_any_offset[2024-12-31T23:59:59.99+01:00-expected3] _
+
+raw = '2024-12-31T23:59:59.99+01:00'
+expected = datetime.datetime(2024, 12, 31, 22, 59, 59, tzinfo=datetime.timezone.utc)
+
+    @pytest.mark.parametrize(
+        "raw, expected",
+        [
+            # 1 fractional digit, negative half-hour offset
+            ("2024-05-03T14:22:07.5-03:30", utc(2024, 5, 3, 17, 52, 7)),
+            # 4 fractional digits, positive half-hour offset
+            ("2024-05-03T14:22:07.1234+05:30", utc(2024, 5, 3, 8, 52, 7)),
+            # 6 fractional digits, offset without colon
+            ("2024-05-03T14:22:07.123456+0530", utc(2024, 5, 3, 8, 52, 7)),
+            # 2 fractional digits, crosses the year boundary
+            ("2024-12-31T23:59:59.99+01:00", utc(2024, 12, 31, 22, 59, 59)),
+            # 1 fractional digit, rolls over into the next day (leap year)
+            ("2024-02-29T23:30:00.7-01:00", utc(2024, 3, 1, 0, 30, 0)),
+            # 4 fractional digits, no offset (naive means UTC)
+            ("2024-05-03T14:22:07.1234", utc(2024, 5, 3, 14, 22, 7)),
+        ],
+    )
+    def test_iso8601_any_precision_any_offset(raw, expected):
+>       got = to_utc(raw)
+              ^^^^^^^^^^^
+
+tests\test_root_cause.py:33: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+raw = '2024-12-31T23:59:59.99+01:00', partner = None
+
+    def to_utc(raw: str, partner: str | None = None) -> datetime:
+        """Parse a partner timestamp and return it as an aware UTC datetime."""
+        s = _clean(raw)
+    
+        # Partner Globex sends dates as 'YYYY-MM-DD' with NO time and means
+        # end-of-day in Europe/Madrid, contractually (see MSA �4.2) � do not
+        # treat as midnight UTC.
+        if partner == "globex" and _DATE_ONLY.fullmatch(s):
+            return _globex_end_of_day(s)
+    
+        # Only 'Z' is accepted on purpose: the partner MSA (�3.1) requires UTC timestamps,
+        # so a numeric offset means a misconfigured partner export and must fail ingest
+        # rather than be silently converted.
+        # strip the Z
+        offset = timedelta(0)
+        if s.endswith("Z"):
+            s = s[:-1]
+        elif partner in _OFFSET_PARTNERS:
+            m = _NUMERIC_OFFSET.fullmatch(s)
+            if m:
+                s, sign, hh, mm = m.groups()
+                offset = timedelta(hours=int(hh), minutes=int(mm))
+                if sign == "-":
+                    offset = -offset
+    
+        for fmt in _KNOWN_FORMATS:
+            try:
+                parsed = datetime.strptime(s, fmt)
+            except ValueError:
+                continue
+            # convert to UTC
+            if parsed.tzinfo is None:
+                parsed = (parsed - offset).replace(tzinfo=timezone.utc)
+            return parsed.astimezone(timezone.utc).replace(microsecond=0)
+    
+>       raise ValueError(f"unrecognized timestamp: {raw!r}")
+E       ValueError: unrecognized timestamp: '2024-12-31T23:59:59.99+01:00'
+
+src\normalize.py:87: ValueError
+_ test_iso8601_any_precision_any_offset[2024-02-29T23:30:00.7-01:00-expected4] _
+
+raw = '2024-02-29T23:30:00.7-01:00'
+expected = datetime.datetime(2024, 3, 1, 0, 30, tzinfo=datetime.timezone.utc)
+
+    @pytest.mark.parametrize(
+        "raw, expected",
+        [
+            # 1 fractional digit, negative half-hour offset
+            ("2024-05-03T14:22:07.5-03:30", utc(2024, 5, 3, 17, 52, 7)),
+            # 4 fractional digits, positive half-hour offset
+            ("2024-05-03T14:22:07.1234+05:30", utc(2024, 5, 3, 8, 52, 7)),
+            # 6 fractional digits, offset without colon
+            ("2024-05-03T14:22:07.123456+0530", utc(2024, 5, 3, 8, 52, 7)),
+            # 2 fractional digits, crosses the year boundary
+            ("2024-12-31T23:59:59.99+01:00", utc(2024, 12, 31, 22, 59, 59)),
+            # 1 fractional digit, rolls over into the next day (leap year)
+            ("2024-02-29T23:30:00.7-01:00", utc(2024, 3, 1, 0, 30, 0)),
+            # 4 fractional digits, no offset (naive means UTC)
+            ("2024-05-03T14:22:07.1234", utc(2024, 5, 3, 14, 22, 7)),
+        ],
+    )
+    def test_iso8601_any_precision_any_offset(raw, expected):
+>       got = to_utc(raw)
+              ^^^^^^^^^^^
+
+tests\test_root_cause.py:33: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+raw = '2024-02-29T23:30:00.7-01:00', partner = None
+
+    def to_utc(raw: str, partner: str | None = None) -> datetime:
+        """Parse a partner timestamp and return it as an aware UTC datetime."""
+        s = _clean(raw)
+    
+        # Partner Globex sends dates as 'YYYY-MM-DD' with NO time and means
+        # end-of-day in Europe/Madrid, contractually (see MSA �4.2) � do not
+        # treat as midnight UTC.
+        if partner == "globex" and _DATE_ONLY.fullmatch(s):
+            return _globex_end_of_day(s)
+    
+        # Only 'Z' is accepted on purpose: the partner MSA (�3.1) requires UTC timestamps,
+        # so a numeric offset means a misconfigured partner export and must fail ingest
+        # rather than be silently converted.
+        # strip the Z
+        offset = timedelta(0)
+        if s.endswith("Z"):
+            s = s[:-1]
+        elif partner in _OFFSET_PARTNERS:
+            m = _NUMERIC_OFFSET.fullmatch(s)
+            if m:
+                s, sign, hh, mm = m.groups()
+                offset = timedelta(hours=int(hh), minutes=int(mm))
+                if sign == "-":
+                    offset = -offset
+    
+        for fmt in _KNOWN_FORMATS:
+            try:
+                parsed = datetime.strptime(s, fmt)
+            except ValueError:
+                continue
+            # convert to UTC
+            if parsed.tzinfo is None:
+                parsed = (parsed - offset).replace(tzinfo=timezone.utc)
+            return parsed.astimezone(timezone.utc).replace(microsecond=0)
+    
+>       raise ValueError(f"unrecognized timestamp: {raw!r}")
+E       ValueError: unrecognized timestamp: '2024-02-29T23:30:00.7-01:00'
+
+src\normalize.py:87: ValueError
+__ test_iso8601_any_precision_any_offset[2024-05-03T14:22:07.1234-expected5] __
+
+raw = '2024-05-03T14:22:07.1234'
+expected = datetime.datetime(2024, 5, 3, 14, 22, 7, tzinfo=datetime.timezone.utc)
+
+    @pytest.mark.parametrize(
+        "raw, expected",
+        [
+            # 1 fractional digit, negative half-hour offset
+            ("2024-05-03T14:22:07.5-03:30", utc(2024, 5, 3, 17, 52, 7)),
+            # 4 fractional digits, positive half-hour offset
+            ("2024-05-03T14:22:07.1234+05:30", utc(2024, 5, 3, 8, 52, 7)),
+            # 6 fractional digits, offset without colon
+            ("2024-05-03T14:22:07.123456+0530", utc(2024, 5, 3, 8, 52, 7)),
+            # 2 fractional digits, crosses the year boundary
+            ("2024-12-31T23:59:59.99+01:00", utc(2024, 12, 31, 22, 59, 59)),
+            # 1 fractional digit, rolls over into the next day (leap year)
+            ("2024-02-29T23:30:00.7-01:00", utc(2024, 3, 1, 0, 30, 0)),
+            # 4 fractional digits, no offset (naive means UTC)
+            ("2024-05-03T14:22:07.1234", utc(2024, 5, 3, 14, 22, 7)),
+        ],
+    )
+    def test_iso8601_any_precision_any_offset(raw, expected):
+>       got = to_utc(raw)
+              ^^^^^^^^^^^
+
+tests\test_root_cause.py:33: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+raw = '2024-05-03T14:22:07.1234', partner = None
+
+    def to_utc(raw: str, partner: str | None = None) -> datetime:
+        """Parse a partner timestamp and return it as an aware UTC datetime."""
+        s = _clean(raw)
+    
+        # Partner Globex sends dates as 'YYYY-MM-DD' with NO time and means
+        # end-of-day in Europe/Madrid, contractually (see MSA �4.2) � do not
+        # treat as midnight UTC.
+        if partner == "globex" and _DATE_ONLY.fullmatch(s):
+            return _globex_end_of_day(s)
+    
+        # Only 'Z' is accepted on purpose: the partner MSA (�3.1) requires UTC timestamps,
+        # so a numeric offset means a misconfigured partner export and must fail ingest
+        # rather than be silently converted.
+        # strip the Z
+        offset = timedelta(0)
+        if s.endswith("Z"):
+            s = s[:-1]
+        elif partner in _OFFSET_PARTNERS:
+            m = _NUMERIC_OFFSET.fullmatch(s)
+            if m:
+                s, sign, hh, mm = m.groups()
+                offset = timedelta(hours=int(hh), minutes=int(mm))
+                if sign == "-":
+                    offset = -offset
+    
+        for fmt in _KNOWN_FORMATS:
+            try:
+                parsed = datetime.strptime(s, fmt)
+            except ValueError:
+                continue
+            # convert to UTC
+            if parsed.tzinfo is None:
+                parsed = (parsed - offset).replace(tzinfo=timezone.utc)
+            return parsed.astimezone(timezone.utc).replace(microsecond=0)
+    
+>       raise ValueError(f"unrecognized timestamp: {raw!r}")
+E       ValueError: unrecognized timestamp: '2024-05-03T14:22:07.1234'
+
+src\normalize.py:87: ValueError
+______________ test_acme_feed_with_mixed_precisions_and_offsets _______________
+
+    def test_acme_feed_with_mixed_precisions_and_offsets():
+        payload = (
+            "id,ts,amount\n"
+            "A-10,2024-05-03T14:22:07.123456-03:30,1.00\n"
+            "A-11,2024-05-03T14:22:07.12+0200,2.00\n"
+        )
+>       rows = [r.as_row()["ts"] for r in ingest("acme", payload)]
+                                          ^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_root_cause.py:45: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src\ingest.py:35: in ingest
+    ts=to_utc(row["ts"], partner=partner),
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+raw = '2024-05-03T14:22:07.123456-03:30', partner = 'acme'
+
+    def to_utc(raw: str, partner: str | None = None) -> datetime:
+        """Parse a partner timestamp and return it as an aware UTC datetime."""
+        s = _clean(raw)
+    
+        # Partner Globex sends dates as 'YYYY-MM-DD' with NO time and means
+        # end-of-day in Europe/Madrid, contractually (see MSA �4.2) � do not
+        # treat as midnight UTC.
+        if partner == "globex" and _DATE_ONLY.fullmatch(s):
+            return _globex_end_of_day(s)
+    
+        # Only 'Z' is accepted on purpose: the partner MSA (�3.1) requires UTC timestamps,
+        # so a numeric offset means a misconfigured partner export and must fail ingest
+        # rather than be silently converted.
+        # strip the Z
+        offset = timedelta(0)
+        if s.endswith("Z"):
+            s = s[:-1]
+        elif partner in _OFFSET_PARTNERS:
+            m = _NUMERIC_OFFSET.fullmatch(s)
+            if m:
+                s, sign, hh, mm = m.groups()
+                offset = timedelta(hours=int(hh), minutes=int(mm))
+                if sign == "-":
+                    offset = -offset
+    
+        for fmt in _KNOWN_FORMATS:
+            try:
+                parsed = datetime.strptime(s, fmt)
+            except ValueError:
+                continue
+            # convert to UTC
+            if parsed.tzinfo is None:
+                parsed = (parsed - offset).replace(tzinfo=timezone.utc)
+            return parsed.astimezone(timezone.utc).replace(microsecond=0)
+    
+>       raise ValueError(f"unrecognized timestamp: {raw!r}")
+E       ValueError: unrecognized timestamp: '2024-05-03T14:22:07.123456-03:30'
+
+src\normalize.py:87: ValueError
+=========================== short test summary info ===========================
+FAILED tests/test_cleanup.py::test_iso8601_shapes_outside_the_format_list[2024-05-03T14:22:07+02-expected0]
+FAILED tests/test_cleanup.py::test_iso8601_shapes_outside_the_format_list[20240503T142207+0200-expected1]
+FAILED tests/test_cleanup.py::test_iso8601_shapes_outside_the_format_list[2024-05-03T14:22:07,5-03:30-expected3]
+FAILED tests/test_cleanup.py::test_initech_basic_form_with_offset_end_to_end
+FAILED tests/test_root_cause.py::test_iso8601_any_precision_any_offset[2024-05-03T14:22:07.5-03:30-expected0]
+FAILED tests/test_root_cause.py::test_iso8601_any_precision_any_offset[2024-05-03T14:22:07.1234+05:30-expected1]
+FAILED tests/test_root_cause.py::test_iso8601_any_precision_any_offset[2024-05-03T14:22:07.123456+0530-expected2]
+FAILED tests/test_root_cause.py::test_iso8601_any_precision_any_offset[2024-12-31T23:59:59.99+01:00-expected3]
+FAILED tests/test_root_cause.py::test_iso8601_any_precision_any_offset[2024-02-29T23:30:00.7-01:00-expected4]
+FAILED tests/test_root_cause.py::test_iso8601_any_precision_any_offset[2024-05-03T14:22:07.1234-expected5]
+FAILED tests/test_root_cause.py::test_acme_feed_with_mixed_precisions_and_offsets
+11 failed, 31 passed in 0.65s
+

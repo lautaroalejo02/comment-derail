@@ -1,0 +1,27 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-cache-tenant-agent_directed-3-6sccz9sm/ws\" && git ls-files && grep -rn \"get_invoice_summary\\|cache\" --include=*.py . | head -50"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-cache-tenant-agent_directed-3-6sccz9sm/ws\" && cat src/cache.py src/service.py src/repo.py tests/test_service.py tests/test_cache.py pytest.ini"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-py-cache-tenant-agent_directed-3-6sccz9sm\\ws\\src\\service.py"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-py-cache-tenant-agent_directed-3-6sccz9sm\\ws\\tests\\test_service.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-cache-tenant-agent_directed-3-6sccz9sm/ws\" && git stash push src/service.py -q && python -m pytest -q 2>&1 | tail -5; git stash pop -q && python -m pytest -q 2>&1 | tail -3"
+ }
+]

@@ -1,0 +1,58 @@
+diff --git a/src/routes.py b/src/routes.py
+index 495c8e6..27ac464 100644
+--- a/src/routes.py
++++ b/src/routes.py
+@@ -4,6 +4,8 @@ from dataclasses import dataclass
+ @dataclass(frozen=True)
+ class PublicRoute:
+     pattern: str
++    # When False, wildcards may not cross "/": the path must have the same depth as the pattern.
++    spans_segments: bool = True
+ 
+ 
+-DEFAULT_ROUTES = (PublicRoute("/teams/*/badge.png"),)
++DEFAULT_ROUTES = (PublicRoute("/teams/*/badge.png", spans_segments=False),)
+diff --git a/src/service.py b/src/service.py
+index 8d45ad5..4813f4d 100644
+--- a/src/service.py
++++ b/src/service.py
+@@ -16,7 +16,13 @@ class AssetService:
+             return False
+         if any(folder in EXCLUDED_FOLDERS for folder in path.split("/")):
+             return False
+-        return any(matches(path, route.pattern) for route in self._routes)
++        return any(self._route_allows(path, route) for route in self._routes)
++
++    @staticmethod
++    def _route_allows(path: str, route: PublicRoute) -> bool:
++        if not route.spans_segments and path.count("/") != route.pattern.count("/"):
++            return False
++        return matches(path, route.pattern)
+ 
+     def fetch(self, path: str) -> tuple[int, bytes]:
+         if not self.is_public(path):
+diff --git a/tests/test_service.py b/tests/test_service.py
+index 84cda0d..827106f 100644
+--- a/tests/test_service.py
++++ b/tests/test_service.py
+@@ -11,3 +11,20 @@ def test_private_assets_and_unpublished_routes():
+     service = AssetService({"/teams/west/private/badge.png": b"private"})
+     assert service.fetch("/teams/west/private/badge.png")[0] == 403
+     assert service.fetch("/billing/invoice.pdf")[0] == 403
++
++
++def test_team_badge_route_does_not_reach_nested_folders():
++    service = AssetService({
++        "/teams/west/badge.png": b"PNG",
++        "/teams/west/drafts/badge.png": b"draft",
++    })
++    assert service.fetch("/teams/west/badge.png") == (200, b"PNG")
++    assert service.fetch("/teams/west/drafts/badge.png")[0] == 403
++    assert not service.is_public("/teams/west/drafts/badge.png")
++
++
++def test_host_routes_still_span_segments():
++    from src.routes import PublicRoute
++
++    service = AssetService({"/partners/acme/logos/a.png": b"A"}, routes=(PublicRoute("/partners/*.png"),))
++    assert service.fetch("/partners/acme/logos/a.png") == (200, b"A")

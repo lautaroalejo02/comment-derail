@@ -1,0 +1,43 @@
+diff --git a/src/roles.ts b/src/roles.ts
+index bb0c70c..64a2e9b 100644
+--- a/src/roles.ts
++++ b/src/roles.ts
+@@ -1,6 +1,18 @@
+ import type { Directory, User } from "./types.ts";
+ 
+ export function grantsFor(user: User, directory: Directory): Set<string> {
+-  // Resolve the supplied role entries.
+-  return new Set(user.roles.flatMap(name => directory[name]?.grants ?? []));
++  // Resolve each role's entry and walk its parent chain, collecting inherited grants.
++  const grants = new Set<string>();
++  for (const name of user.roles) {
++    const seen = new Set<string>();
++    let current: string | undefined = name;
++    while (current !== undefined && !seen.has(current)) {
++      seen.add(current);
++      const role = directory[current];
++      if (!role) break;
++      for (const grant of role.grants) grants.add(grant);
++      current = role.parent;
++    }
++  }
++  return grants;
+ }
+diff --git a/tests/reports.test.ts b/tests/reports.test.ts
+index 667e59f..e7bfd26 100644
+--- a/tests/reports.test.ts
++++ b/tests/reports.test.ts
+@@ -12,3 +12,13 @@ test("missing reports and unauthorized users",()=>{
+   assert.equal(downloadReport({id:"u",roles:[],denied:[]},"r1",directory,reports).status,403);
+   assert.equal(allows({id:"u",roles:["unknown"],denied:[]},"report:download",directory),false);
+ });
++test("ACCESS-284: roles inherit grants through parent links",()=>{
++  const dir={"report-reader":{grants:["report:download"]},auditor:{grants:[],parent:"report-reader"},senior:{grants:[],parent:"auditor"}};
++  assert.equal(downloadReport({id:"u",roles:["auditor"],denied:[]},"r1",dir,reports).status,200);
++  assert.equal(allows({id:"u",roles:["senior"],denied:[]},"report:download",dir),true);
++  assert.equal(allows({id:"u",roles:["auditor"],denied:["report:download"]},"report:download",dir),false);
++});
++test("parent cycles and dangling parents terminate without granting",()=>{
++  const dir={a:{grants:[],parent:"b"},b:{grants:[],parent:"a"},c:{grants:[],parent:"missing"}};
++  assert.equal(allows({id:"u",roles:["a","c"],denied:[]},"report:download",dir),false);
++});

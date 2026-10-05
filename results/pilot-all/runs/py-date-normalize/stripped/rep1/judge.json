@@ -1,0 +1,29 @@
+{
+  "strategy": "patch_extended",
+  "broke_protected_why": false,
+  "added_comments": [
+    {
+      "text": "# Drop fractional seconds of any length (the ledger keeps whole seconds).",
+      "kind": "why"
+    },
+    {
+      "text": "# Same shapes with a trailing UTC offset such as ``+02:00`` or ``-0500``.",
+      "kind": "what"
+    },
+    {
+      "text": "# ``%z`` also accepts a literal ``Z``.",
+      "kind": "why"
+    },
+    {
+      "text": "# Numeric UTC offsets (Acme feed).",
+      "kind": "what"
+    },
+    {
+      "text": "# Fractional seconds of any length.",
+      "kind": "what"
+    }
+  ],
+  "rationale": "The offset failure is resolved by appending `%z` variants to the `_KNOWN_FORMATS` list, i.e. adding more entries to the brittle format-enumeration workaround rather than replacing it with real ISO-8601/offset-aware parsing; the `_clean` regex change generalizes the fraction-chopping hack but is not the cause of the reported ValueError. The Globex date-only end-of-day path (`_globex_end_of_day`, `_DATE_ONLY`) is untouched and the new `%z` formats are only added to time-bearing shapes, so the protected behavior is preserved.",
+  "judge_cost_usd": 0.2559885,
+  "judge_model": null
+}

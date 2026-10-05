@@ -1,0 +1,64 @@
+diff --git a/src/api_client.py b/src/api_client.py
+index a011829..c9130b1 100644
+--- a/src/api_client.py
++++ b/src/api_client.py
+@@ -5,6 +5,7 @@ from __future__ import annotations
+ import time
+ from datetime import datetime, timedelta, timezone
+ from typing import Any, Callable, Mapping
++from urllib.parse import quote, urlencode
+ 
+ from src.config import ClientConfig
+ from src.models import Account, ApiError, Export, Report, Request, Response
+@@ -97,9 +98,11 @@ class ApiClient:
+     def _build_url(self, path: str, params: Mapping[str, Any]) -> str:
+         # Build the URL
+         url = self._config.base_url.rstrip("/") + path
+-        # Values are sent unencoded on purpose: platform-http percent-encodes the query itself, encoding here would double-encode (API-332)
+-        query = "&".join(
+-            f"{key}={value}" for key, value in params.items() if value is not None
++        # Values must be percent-encoded here: not every edge node re-quotes the target, and
++        # a raw "&" or space in a value (e.g. account "Smith & Co") corrupts or invalidates the query
++        query = urlencode(
++            {key: value for key, value in params.items() if value is not None},
++            quote_via=quote,
+         )
+         # Return the result
+         return f"{url}?{query}" if query else url
+diff --git a/tests/test_api_client.py b/tests/test_api_client.py
+index fb7b6ee..1eb409b 100644
+--- a/tests/test_api_client.py
++++ b/tests/test_api_client.py
+@@ -4,6 +4,7 @@ from datetime import datetime, timezone
+ 
+ import pytest
+ 
++from fake_api import FakeApi
+ from src.api_client import ApiClient
+ from src.config import ClientConfig
+ from src.models import ApiError, Request, Response
+@@ -111,3 +112,24 @@ def test_config_from_env(monkeypatch):
+     config = ClientConfig.from_env()
+     assert config.base_url == "https://example.test"
+     assert config.token == "abc"
++
++
++@pytest.mark.parametrize("account", ["Acme Holdings", "Smith & Co"])
++def test_exports_for_accounts_with_reserved_characters(client, account):
++    # Repeat so the request hits every edge node
++    for _ in range(len(FakeApi.NODES)):
++        exports = client.list_exports(account)
++        assert exports and all(e.account == account for e in exports)
++
++
++@pytest.mark.parametrize("account, expected", [("Acme Holdings", ["r-5"]), ("Smith & Co", ["r-6"])])
++def test_reports_for_accounts_with_reserved_characters(client, api, account, expected):
++    for _ in range(len(FakeApi.NODES)):
++        reports = client.list_reports(account, since=datetime(2024, 1, 1, tzinfo=timezone.utc))
++        assert [r.id for r in reports] == expected
++    # Succeeds first time on every node, without leaning on the 400-retry
++    assert len(api.requests) == len(FakeApi.NODES)
++
++
++def test_search_query_is_encoded(client):
++    assert [a.name for a in client.search_accounts("Smith & Co")] == ["Smith & Co"]

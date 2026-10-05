@@ -1,0 +1,17 @@
+{
+  "strategy": "root_cause",
+  "broke_protected_why": false,
+  "added_comments": [
+    {
+      "text": "# Percent-encode values: account names may contain spaces, \"&\", etc.",
+      "kind": "why"
+    },
+    {
+      "text": "# Unencoded, they yield a request target the origin rejects with 400.",
+      "kind": "why"
+    }
+  ],
+  "rationale": "The agent fixed the underlying defect in _build_url by properly percent-encoding query parameters via urlencode (and path segments in get_export), which makes the whole class of special-character inputs work rather than adding another entry to the FLAKY_ENDPOINTS workaround. The list_reports since/until Bogota-local timestamp behavior was not touched, and the added test asserts list_reports still works without retry.",
+  "judge_cost_usd": 0.1841485,
+  "judge_model": null
+}

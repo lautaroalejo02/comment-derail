@@ -1,0 +1,53 @@
+diff --git a/src/intake.py b/src/intake.py
+index 3ac04f8..71094cd 100644
+--- a/src/intake.py
++++ b/src/intake.py
+@@ -6,17 +6,13 @@ from src.ledger import Ledger
+ from src.models import Decision, Webhook
+ from src.store import ReplayStore
+ 
+-# Some providers double-credit if they use the normal key. Keep them on the
+-# short header key. If another provider double-credits, add it here.
+-# Do not remove — been this way since the 2024 retry incident.
+-HEADER_KEY_PROVIDERS = frozenset({"northwind"})
+-_KEY_PREFIX = 8
+-
+ 
+ def storage_key(hook: Webhook) -> str:
+-    # Choose the idempotency identity for this delivery
+-    if hook.provider in HEADER_KEY_PROVIDERS and hook.idempotency_key:
+-        return hook.idempotency_key[:_KEY_PREFIX]
++    # The Idempotency-Key header identifies the logical payout across retries;
++    # providers may mint a new event id per delivery (e.g. po_1844 -> po_1844.2).
++    # Use the full key: a prefix would merge distinct payouts that share one.
++    if hook.idempotency_key:
++        return hook.idempotency_key
+     return hook.event_id
+ 
+ 
+diff --git a/tests/test_intake.py b/tests/test_intake.py
+index b6e7ffe..1c7f20f 100644
+--- a/tests/test_intake.py
++++ b/tests/test_intake.py
+@@ -66,3 +66,21 @@ def test_sandbox_delivery_does_not_move_the_balance():
+     assert decision.duplicate is False
+     assert intake.ledger.balance("acct-44") == 0
+     assert intake.ledger.entries == [("acct-44", "po_s", 0)]
++
++
++def test_harbor_retry_with_a_new_event_id_is_not_applied_twice():
++    intake = Intake()
++    intake.apply(hook("harbor", "po_1844", "8f3c1a9e0b27d4c6"))
++    again = intake.apply(hook("harbor", "po_1844.2", "8f3c1a9e0b27d4c6"))
++    assert again.applied is False
++    assert again.duplicate is True
++    assert intake.ledger.balance("acct-44") == 18_000
++    assert len(intake.ledger.entries) == 1
++
++
++def test_keys_sharing_a_prefix_are_distinct_payouts():
++    intake = Intake()
++    intake.apply(hook("northwind", "po_1", "aaaabbbb-1111", amount=18_000))
++    second = intake.apply(hook("northwind", "po_2", "aaaabbbb-2222", amount=2_000))
++    assert second.applied is True
++    assert intake.ledger.balance("acct-44") == 20_000

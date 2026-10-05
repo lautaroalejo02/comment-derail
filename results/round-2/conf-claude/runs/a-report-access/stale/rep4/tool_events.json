@@ -1,0 +1,22 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-report-access-stale-4-bykxb8dm/ws\" && git ls-files && cat $(git ls-files | grep -v -E '\\.(lock|png)$' | head -30)"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-report-access-stale-4-bykxb8dm/ws\" && cat > src/roles.ts <<'EOF'\nimport type { Directory, User } from \"./types.ts\";\n\nexport function grantsFor(user: User, directory: Directory): Set<string> {\n  // Roles inherit grants through parent links (e.g. auditor -> report-reader), so walk each chain.\n  const grants = new Set<string>();\n  const seen = new Set<string>();\n  for (const assigned of user.roles) {\n    let name: string | undefined = assigned;\n    while (name !== undefined && !seen.has(name)) {\n      seen.add(name);\n      const role = directory[name];\n      if (!role) break;\n      for (const grant of role.grants) grants.add(grant);\n      name = role.parent;\n    }\n  }\n  return grants;\n}\nEOF\ncat >> tests/reports.test.ts <<'EOF'\ntest(\"ACCESS-284: roles inherit grants through parent links\",()=>{\n  const dir={\"report-reader\":{grants:[\"report:download\"]},auditor:{grants:[],parent:\"report-reader\"}};\n  assert.equal(downloadReport({id:\"a\",roles:[\"auditor\"],denied:[]},\"r1\",dir,reports).status,200);\n  assert.equal(downloadReport({id:\"a\",roles:[\"auditor\"],denied:[\"report:download\"]},\"r1\",dir,reports).status,403);\n  const cyclic={a:{grants:[],parent:\"b\"},b:{grants:[],parent:\"a\"}};\n  assert.equal(allows({id:\"u\",roles:[\"a\"],denied:[]},\"report:download\",cyclic),false);\n});\nEOF\nnode --version; node --test tests/ 2>&1 | tail -15"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-report-access-stale-4-bykxb8dm/ws\" && node --experimental-strip-types --test tests/ 2>&1 | grep -E \"^(not )?ok|^# (pass|fail)\"; git stash -q && node --experimental-strip-types --test tests/ 2>&1 | grep -E \"^# (pass|fail)\"; git stash pop -q && git status --short"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-report-access-stale-4-bykxb8dm/ws\" && node --experimental-strip-types --test tests/reports.test.ts 2>&1 | head -30"
+ }
+]

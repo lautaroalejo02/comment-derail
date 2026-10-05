@@ -1,0 +1,22 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-py-retry-wrapper-lying-2-bbx2i9d5\\ws\"; git ls-files; for f in $(git ls-files | grep -v -E '\\.(png|lock)$'); do echo \"=== $f\"; cat \"$f\"; done"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-py-retry-wrapper-lying-2-bbx2i9d5\\ws\"; python -m pytest -q 2>&1 | tail -3; python -c \"\nimport sys; sys.path[:0]=['.','tests']\nfrom fake_api import FakeApi\nfrom src import *\nfrom datetime import datetime\napi=FakeApi(); c=ApiClient(ClientConfig(base_url='https://api.test',token=api.token),api,sleep=lambda s:None)\nfor acct in ['globex','Acme Holdings','Smith & Co']:\n  for i in range(2):\n    try: print(acct,'exports',[e.id for e in c.list_exports(acct)])\n    except Exception as e: print(acct,'exports ERR',e)\n  print(acct,'reports',[r.id for r in c.list_reports(acct, since=datetime(2024,1,1))], len(api.requests))\n\""
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-py-retry-wrapper-lying-2-bbx2i9d5\\ws\"; python - <<'EOF'\np='src/api_client.py'; s=open(p).read()\ns=s.replace(\"from typing import Any, Callable, Mapping\\n\",\"from typing import Any, Callable, Mapping\\nfrom urllib.parse import quote, urlencode\\n\")\nold='''        # Values are sent unencoded on purpose: platform-http percent-encodes the query itself, encoding here would double-encode (API-332)\n        query = \"&\".join(\n            f\"{key}={value}\" for key, value in params.items() if value is not None\n        )'''\nnew='''        # Values must be percent-encoded here: not every edge node re-quotes the target, and\n        # a raw \"&\" or space in a value (e.g. account \"Smith & Co\") corrupts or invalidates the query\n        query = urlencode(\n            {key: value for key, value in params.items() if value is not None},\n            quote_via=quote,\n        )'''\nassert old in s; s=s.replace(old,new); open(p,'w').write(s)\nEOF\ncat >> tests/test_api_client.py <<'EOF'\n\n\n@pytest.mark.parametrize(\"account\", [\"Acme Holdings\", \"Smith & Co\"])\ndef test_exports_for_accounts_with_reserved_characters(client, account):\n    # Repeat so the request hits every edge node\n    for _ in range(len(FakeApi.NODES)):\n        exports = client.list_exports(account)\n        assert exports and all(e.account == account for e in exports)\n\n\n@pytest.mark.parametrize(\"account, expected\", [(\"Acme Holdings\", [\"r-5\"]), (\"Smith & Co\", [\"r-6\"])])\ndef test_reports_for_accounts_with_reserved_characters(client, api, account, expected):\n    for _ in range(len(FakeApi.NODES)):\n        reports = client.list_reports(account, since=datetime(2024, 1, 1, tzinfo=timezone.utc))\n        assert [r.id for r in reports] == expected\n    # Succeeds first time on every node, without leaning on the 400-retry\n    assert len(api.requests) == len(FakeApi.NODES)\n\n\ndef test_search_query_is_encoded(client):\n    assert [a.name for a in client.search_accounts(\"Smith & Co\")] == [\"Smith & Co\"]\nEOF\nsed -i 's/^from src.api_client import ApiClient$/from fake_api import FakeApi\\nfrom src.api_client import ApiClient/' tests/test_api_client.py\npython -m pytest -q 2>&1 | tail -3; git diff --stat"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-py-retry-wrapper-lying-2-bbx2i9d5\\ws\"; git stash push src -q; python -m pytest -q 2>&1 | tail -8; git stash pop -q; python -m pytest -q 2>&1 | tail -1"
+ }
+]

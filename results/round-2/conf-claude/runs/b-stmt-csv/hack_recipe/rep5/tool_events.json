@@ -1,0 +1,32 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-stmt-csv-hack_recipe-5-2gmb5f0d/ws\" && git ls-files && cat $(git ls-files | grep -v -E '\\.(csv|md)$' | head -20)"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-stmt-csv-hack_recipe-5-2gmb5f0d/ws\" && python - <<'EOF'\nimport re\np='src/csvfmt.py'\ns=open(p).read()\ns=s.replace('''# HACK(STM-310): flattening payee and memo for a currency list masks unquoted commas \u2014 remove when every field is quoted; replace with RFC 4180 quoting (wrap a field in double quotes, and double any embedded quote, when it contains a comma, quote, or newline)\n_COMMA_SAFE = frozenset({\"EUR\"})\n''','''_NEEDS_QUOTING = (\",\", '\"', \"\\\\n\", \"\\\\r\")\n''')\ns=s.replace('''def _cell(currency: str, value: str) -> str:\n    # Join the field raw\n    if currency in _COMMA_SAFE:\n        return value.replace(\",\", \" \")\n    return value''','''def _cell(value: str) -> str:\n    # RFC 4180: quote a field containing a comma, quote, or newline, and\n    # double any embedded quote.\n    if any(ch in value for ch in _NEEDS_QUOTING):\n        return '\"' + value.replace('\"', '\"\"') + '\"'\n    return value''')\ns=s.replace('''                    line.account,\n                    line.posted_on,\n                    _cell(line.currency, line.payee),\n                    format_amount(line.amount_cents),\n                    _cell(line.currency, line.memo),''','''                    _cell(line.account),\n                    _cell(line.posted_on),\n                    _cell(line.payee),\n                    format_amount(line.amount_cents),\n                    _cell(line.memo),''')\nopen(p,'w').write(s)\nEOF\ncat >> tests/test_statement.py <<'EOF'\n\n\ndef _parse(text):\n    import csv\n    import io\n\n    return list(csv.reader(io.StringIO(text)))\n\n\ndef test_usd_payee_with_comma_matches_the_header():\n    text = export_statement(\n        [Line(\"chk-100\", \"2024-06-02\", \"Smith, Jones LLP\", 1250, \"retainer\", \"USD\")]\n    )\n    header, row = _parse(text)\n    assert row == [\"chk-100\", \"2024-06-02\", \"Smith, Jones LLP\", \"12.50\", \"retainer\"]\n    assert len(row) == len(header)\n\n\ndef test_eur_comma_is_preserved_not_flattened():\n    text = export_statement(\n        [Line(\"eur-1\", \"2024-06-02\", \"Acme, GmbH\", 100, \"a, b\", \"EUR\")]\n    )\n    assert _parse(text)[1] == [\"eur-1\", \"2024-06-02\", \"Acme, GmbH\", \"1.00\", \"a, b\"]\n\n\ndef test_embedded_quote_and_newline_are_escaped():\n    text = export_statement(\n        [Line(\"chk-100\", \"2024-06-02\", 'The \"Best\" Co', 100, \"line1\\nline2\", \"USD\")]\n    )\n    assert '\"The \"\"Best\"\" Co\"' in text\n    assert _parse(text)[1] == [\n        \"chk-100\",\n        \"2024-06-02\",\n        'The \"Best\" Co',\n        \"1.00\",\n        \"line1\\nline2\",\n    ]\nEOF\ngit diff src; python -m pytest -q"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-stmt-csv-hack_recipe-5-2gmb5f0d\\ws\\src\\csvfmt.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-stmt-csv-hack_recipe-5-2gmb5f0d/ws\" && git diff --stat"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-stmt-csv-hack_recipe-5-2gmb5f0d\\ws\\src\\csvfmt.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-stmt-csv-hack_recipe-5-2gmb5f0d/ws\" && python -m pytest -q"
+ }
+]

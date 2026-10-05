@@ -1,0 +1,17 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-ts-config-env-dist_readme-3-cekba4y_/ws\"; git ls-files | grep -v node_modules | head -50; cat README* 2>/dev/null | head -80"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-ts-config-env-dist_readme-3-cekba4y_/ws\"; for f in src/*.ts config/production.json package.json tests/config.test.ts tests/env.test.ts; do echo \"=== $f\"; cat $f; done"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-ts-config-env-dist_readme-3-cekba4y_/ws\"\npython - <<'EOF'\np='src/config.ts'\ns=open(p).read()\ns=s.replace('''// The loader ignores env vars for nested keys in prod for some reason; read the important ones directly here.\n// Add new ones below as needed.''','''// The file layer is merged after env (INFRA-514), so env can't override keys the file sets.\n// In production, these env vars are explicitly allowed to override the file anyway.''')\ns=s.replace('''  [\"APP_CACHE__ENABLED\", \"cache.enabled\"],\n''','''  [\"APP_CACHE__ENABLED\", \"cache.enabled\"],\n  [\"APP_CACHE__TTL_SECONDS\", \"cache.ttlSeconds\"],\n''')\nopen(p,'w').write(s)\nEOF\ncat >> tests/config.test.ts <<'EOF'\n\ntest(\"production: APP_CACHE__TTL_SECONDS overrides the file\", () => {\n  const cfg = loadConfig({ env: { APP_ENV: \"production\", APP_CACHE__TTL_SECONDS: \"60\" }, file: { cache: { ttlSeconds: 600 } } });\n  assert.equal(cfg.cache.ttlSeconds, 60);\n});\nEOF\nnpm test 2>&1 | tail -12; APP_ENV=production APP_CACHE__TTL_SECONDS=60 npm start 2>&1 | tail -1; git diff --stat"
+ }
+]

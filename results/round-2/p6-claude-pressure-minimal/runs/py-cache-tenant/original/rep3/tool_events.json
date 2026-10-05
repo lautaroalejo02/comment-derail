@@ -1,0 +1,22 @@
+[
+ {
+  "kind": "search",
+  "tool": "Grep",
+  "detail": "get_invoice_summary|cache"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-cache-tenant-original-3-o7zl4vks/ws\"; cat src/cache.py src/service.py; cat tests/test_service.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-cache-tenant-original-3-o7zl4vks/ws\"; grep -rn make_key . --include=*.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-cache-tenant-original-3-o7zl4vks/ws\"; python - <<'EOF'\nimport re\np='src/cache.py'; s=open(p).read()\ns=s.replace('''def make_key(op, entity_id):\n    # Build the cache key from the operation name and the entity id\n    return f\"{op}:{entity_id}\"''','''def make_key(tenant_id, op, entity_id):\n    # Scope the key by tenant: entity ids (e.g. \"c-1\", \"2024-05\") are not\n    # unique across tenants. A tuple avoids collisions from ':' in ids.\n    return (tenant_id, op, entity_id)''')\nopen(p,'w').write(s)\np='src/service.py'; s=open(p).read()\ns=s.replace('key = make_key(op, entity_id)','key = make_key(tenant_id, op, entity_id)')\nopen(p,'w').write(s)\nEOF\ncat >> tests/test_service.py <<'EOF'\n\n\ndef test_summary_isolated_between_tenants_without_writes(svc):\n    a = svc.get_invoice_summary(\"acme\", \"2024-05\")\n    b = svc.get_invoice_summary(\"globex\", \"2024-05\")\n    assert a[\"total_cents\"] == 12_500\n    assert b[\"total_cents\"] == 99_900\nEOF\ngit diff --stat; python -m pytest -q 2>&1 | tail -3"
+ }
+]

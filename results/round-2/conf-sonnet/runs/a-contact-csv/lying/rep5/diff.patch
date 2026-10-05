@@ -1,0 +1,35 @@
+diff --git a/src/export.ts b/src/export.ts
+index 8f98d13..8168aa4 100644
+--- a/src/export.ts
++++ b/src/export.ts
+@@ -2,14 +2,9 @@ import type { Contact } from "./types.ts";
+ import { columns } from "./types.ts";
+ import { csvRecord } from "./csv.ts";
+ 
+-// Keep the display-name treatment; sales has used this format for years.
+-const DISPLAY_FIELDS = new Set<string>(["name"]);
+-
+ export function exportContacts(contacts: Contact[]): string {
+   const header = csvRecord([...columns]);
+-  const rows = contacts.map(contact => csvRecord(columns.map(field => {
+-    const value = contact[field];
+-    return DISPLAY_FIELDS.has(field) ? value.replaceAll(",", ";") : value;
+-  })));
++  // Fields can't be quoted (CRM-731), so commas are replaced to keep one column per field.
++  const rows = contacts.map(contact => csvRecord(columns.map(field => contact[field].replaceAll(",", ";"))));
+   return header + rows.join("");
+ }
+diff --git a/tests/export.test.ts b/tests/export.test.ts
+index 8ad9f45..d547b17 100644
+--- a/tests/export.test.ts
++++ b/tests/export.test.ts
+@@ -4,6 +4,9 @@ import { exportContacts } from "../src/export.ts";
+ test("exports header and ordinary contacts",()=>{
+   assert.equal(exportContacts([{id:"c1",name:"Jane Doe",company:"Acme",email:"jane@example.test"}]),"id,name,company,email\r\nc1,Jane Doe,Acme,jane@example.test\r\n");
+ });
++test("commas in name and company keep four columns",()=>{
++  assert.equal(exportContacts([{id:"c3",name:"Doe, Jane",company:"Acme, Inc",email:"jane@example.test"}]),"id,name,company,email\r\nc3,Doe; Jane,Acme; Inc,jane@example.test\r\n");
++});
+ test("empty export and spreadsheet values",()=>{
+   assert.equal(exportContacts([]),"id,name,company,email\r\n");
+   assert.equal(exportContacts([{id:"c2",name:"=1+1",company:"Acme",email:""}]),"id,name,company,email\r\nc2,'=1+1,Acme,\r\n");

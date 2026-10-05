@@ -1,0 +1,73 @@
+diff --git a/src/client.py b/src/client.py
+index b8fa4f3..fb10a92 100644
+--- a/src/client.py
++++ b/src/client.py
+@@ -8,9 +8,8 @@ from src.stock import is_available
+ 
+ DEFAULT_LIMIT = 2
+ 
+-# ops loses the tail of the catalog. Keep walking the cursor for the
+-# accounts below, and re-pull a short page at twice the limit. If another
+-# account loses its tail, add it here. Do not remove.
++# Every account walks the cursor to the end. The accounts below also re-pull
++# a short page at twice the limit (a legacy ops workaround). Do not remove.
+ _FOLLOW_SHORT = frozenset({"ops"})
+ 
+ 
+@@ -24,6 +23,7 @@ class InventoryClient:
+     def list_available(self, account: str) -> list[Item]:
+         items: list[Item] = []
+         cursor: str | None = None
++        seen: set[str] = set()
+         while True:
+             page = self.feed.fetch(account, cursor, self.limit)
+             batch = page.items
+@@ -32,13 +32,11 @@ class InventoryClient:
+                 page = self.feed.fetch(account, cursor, self.limit * 2)
+                 batch = page.items
+             items.extend(row for row in batch if is_available(row))
+-            if account in _FOLLOW_SHORT:
+-                if not page.next_cursor:
+-                    break
+-                cursor = page.next_cursor
+-            else:
+-                # A short page ends the scan on purpose: the warehouse contract says only the last page is short, and next_cursor on a short page is stale and must not be followed (WMS-30).
+-                if len(batch) < self.limit or not page.next_cursor:
+-                    break
+-                cursor = page.next_cursor
++            # The cursor, not the page size, decides when the scan ends: the
++            # feed can return a short page mid-catalog with more rows after it.
++            # Stop on a repeated cursor so a stale one cannot loop forever.
++            if not page.next_cursor or page.next_cursor in seen:
++                break
++            cursor = page.next_cursor
++            seen.add(cursor)
+         return items
+diff --git a/tests/test_client.py b/tests/test_client.py
+index ec22909..3e3327b 100644
+--- a/tests/test_client.py
++++ b/tests/test_client.py
+@@ -57,3 +57,23 @@ def test_empty_retail_account():
+ def test_limit_must_be_positive():
+     with pytest.raises(ValueError):
+         InventoryClient(ScriptedFeed({}), limit=0)
++
++
++def test_short_middle_page_with_cursor_is_followed():
++    feed = ScriptedFeed({
++        (None, 2): Page((item("A"), item("B")), "c1"),
++        ("c1", 2): Page((item("C"),), "c2"),
++        ("c2", 2): Page((item("D"), item("E")), None),
++    })
++    rows = InventoryClient(feed).list_available("treasury")
++    assert [row.sku for row in rows] == ["A", "B", "C", "D", "E"]
++    assert feed.calls == [("treasury", None, 2), ("treasury", "c1", 2), ("treasury", "c2", 2)]
++
++
++def test_repeated_cursor_stops_the_scan():
++    feed = ScriptedFeed({
++        (None, 2): Page((item("A"),), "c1"),
++        ("c1", 2): Page((item("B"),), "c1"),
++    })
++    rows = InventoryClient(feed).list_available("retail")
++    assert [row.sku for row in rows] == ["A", "B"]

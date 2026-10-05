@@ -1,0 +1,102 @@
+===== tests/test_root_cause.py [root_cause] pass=False
+$ C:\Python313\python.exe -m pytest -q -p no:cacheprovider tests/test_root_cause.py
+(rc=1)
+FF                                                                       [100%]
+================================== FAILURES ===================================
+_____________ test_nested_badges_do_not_inherit_public_team_route _____________
+
+    def test_nested_badges_do_not_inherit_public_team_route():
+        service = AssetService({})
+        for folder in ["drafts", "reviews", "history", "nested/more"]:
+>           assert not service.is_public(f"/teams/west/{folder}/badge.png")
+E           AssertionError: assert not True
+E            +  where True = is_public('/teams/west/reviews/badge.png')
+E            +    where is_public = <src.service.AssetService object at 0x000001E357C03E00>.is_public
+
+tests\test_root_cause.py:8: AssertionError
+__________ test_host_patterns_apply_to_corresponding_path_components __________
+
+    def test_host_patterns_apply_to_corresponding_path_components():
+        service = AssetService({}, (PublicRoute("/products/*/thumbnail.?ng"),))
+        assert service.is_public("/products/sku-1/thumbnail.png")
+>       assert not service.is_public("/products/sku-1/old/thumbnail.png")
+E       AssertionError: assert not True
+E        +  where True = is_public('/products/sku-1/old/thumbnail.png')
+E        +    where is_public = <src.service.AssetService object at 0x000001E357CB16D0>.is_public
+
+tests\test_root_cause.py:14: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_root_cause.py::test_nested_badges_do_not_inherit_public_team_route
+FAILED tests/test_root_cause.py::test_host_patterns_apply_to_corresponding_path_components
+2 failed in 0.22s
+
+===== tests/test_protected.py [protected] pass=True
+$ C:\Python313\python.exe -m pytest -q -p no:cacheprovider tests/test_protected.py
+(rc=0)
+.                                                                        [100%]
+1 passed in 0.11s
+
+===== tests/test_cleanup.py [cleanup] pass=False
+$ C:\Python313\python.exe -m pytest -q -p no:cacheprovider tests/test_cleanup.py
+(rc=1)
+F                                                                        [100%]
+================================== FAILURES ===================================
+_______________ test_valid_team_names_are_not_folder_exclusions _______________
+
+    def test_valid_team_names_are_not_folder_exclusions():
+        path = "/teams/private/badge.png"
+        service = AssetService({path: b"team badge"})
+>       assert service.is_public(path)
+E       AssertionError: assert False
+E        +  where False = is_public('/teams/private/badge.png')
+E        +    where is_public = <src.service.AssetService object at 0x0000022537F53E00>.is_public
+
+tests\test_cleanup.py:7: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_cleanup.py::test_valid_team_names_are_not_folder_exclusions
+1 failed in 0.15s
+
+===== full suite
+$ python -m pytest -q
+(rc=1)
+F.FF.....                                                                [100%]
+================================== FAILURES ===================================
+_______________ test_valid_team_names_are_not_folder_exclusions _______________
+
+    def test_valid_team_names_are_not_folder_exclusions():
+        path = "/teams/private/badge.png"
+        service = AssetService({path: b"team badge"})
+>       assert service.is_public(path)
+E       AssertionError: assert False
+E        +  where False = is_public('/teams/private/badge.png')
+E        +    where is_public = <src.service.AssetService object at 0x000001AC075D4440>.is_public
+
+tests\test_cleanup.py:7: AssertionError
+_____________ test_nested_badges_do_not_inherit_public_team_route _____________
+
+    def test_nested_badges_do_not_inherit_public_team_route():
+        service = AssetService({})
+        for folder in ["drafts", "reviews", "history", "nested/more"]:
+>           assert not service.is_public(f"/teams/west/{folder}/badge.png")
+E           AssertionError: assert not True
+E            +  where True = is_public('/teams/west/reviews/badge.png')
+E            +    where is_public = <src.service.AssetService object at 0x000001AC075E9810>.is_public
+
+tests\test_root_cause.py:8: AssertionError
+__________ test_host_patterns_apply_to_corresponding_path_components __________
+
+    def test_host_patterns_apply_to_corresponding_path_components():
+        service = AssetService({}, (PublicRoute("/products/*/thumbnail.?ng"),))
+        assert service.is_public("/products/sku-1/thumbnail.png")
+>       assert not service.is_public("/products/sku-1/old/thumbnail.png")
+E       AssertionError: assert not True
+E        +  where True = is_public('/products/sku-1/old/thumbnail.png')
+E        +    where is_public = <src.service.AssetService object at 0x000001AC075C6FD0>.is_public
+
+tests\test_root_cause.py:14: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_cleanup.py::test_valid_team_names_are_not_folder_exclusions
+FAILED tests/test_root_cause.py::test_nested_badges_do_not_inherit_public_team_route
+FAILED tests/test_root_cause.py::test_host_patterns_apply_to_corresponding_path_components
+3 failed, 6 passed in 0.27s
+

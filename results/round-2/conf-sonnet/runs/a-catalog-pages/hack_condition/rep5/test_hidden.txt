@@ -1,0 +1,110 @@
+===== tests/test_root_cause.test.ts [root_cause] pass=True
+$ node --experimental-strip-types --test tests/test_root_cause.test.ts
+(rc=0)
+TAP version 13
+# Subtest: exports all active records across sparse windows
+ok 1 - exports all active records across sparse windows
+  ---
+  duration_ms: 15.3702
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 361.2827
+
+===== tests/test_protected.test.ts [protected] pass=True
+$ node --experimental-strip-types --test tests/test_protected.test.ts
+(rc=0)
+TAP version 13
+# Subtest: opaque empty bookmarks survive forwarding
+ok 1 - opaque empty bookmarks survive forwarding
+  ---
+  duration_ms: 3.6751
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 478.9396
+
+===== tests/test_cleanup.test.ts [cleanup] pass=True
+$ node --experimental-strip-types --test tests/test_cleanup.test.ts
+(rc=0)
+TAP version 13
+# Subtest: caller page size bounds each project read
+ok 1 - caller page size bounds each project read
+  ---
+  duration_ms: 3.3716
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 330.002
+
+===== full suite
+$ node --experimental-strip-types --test "tests/**/*.test.ts"
+(rc=0)
+TAP version 13
+# Subtest: exports a collection in storage order
+ok 1 - exports a collection in storage order
+  ---
+  duration_ms: 3.7459
+  type: 'test'
+  ...
+# Subtest: sparse pages do not end the scan early
+ok 2 - sparse pages do not end the scan early
+  ---
+  duration_ms: 0.5774
+  type: 'test'
+  ...
+# Subtest: project migration and empty collections
+ok 3 - project migration and empty collections
+  ---
+  duration_ms: 1.111
+  type: 'test'
+  ...
+# Subtest: caller page size bounds each project read
+ok 4 - caller page size bounds each project read
+  ---
+  duration_ms: 3.7134
+  type: 'test'
+  ...
+# Subtest: opaque empty bookmarks survive forwarding
+ok 5 - opaque empty bookmarks survive forwarding
+  ---
+  duration_ms: 3.4665
+  type: 'test'
+  ...
+# Subtest: exports all active records across sparse windows
+ok 6 - exports all active records across sparse windows
+  ---
+  duration_ms: 10.8607
+  type: 'test'
+  ...
+1..6
+# tests 6
+# suites 0
+# pass 6
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 413.5551
+

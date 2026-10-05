@@ -1,0 +1,39 @@
+diff --git a/src/roles.ts b/src/roles.ts
+index bb0c70c..9a3513d 100644
+--- a/src/roles.ts
++++ b/src/roles.ts
+@@ -1,6 +1,18 @@
+ import type { Directory, User } from "./types.ts";
+ 
+ export function grantsFor(user: User, directory: Directory): Set<string> {
+-  // Resolve the supplied role entries.
+-  return new Set(user.roles.flatMap(name => directory[name]?.grants ?? []));
++  // Resolve each role entry and its parent chain; the visited set guards against cycles.
++  const grants = new Set<string>();
++  const visited = new Set<string>();
++  for (const name of user.roles) {
++    let current: string | undefined = name;
++    while (current !== undefined && !visited.has(current)) {
++      visited.add(current);
++      const role = directory[current];
++      if (!role) break;
++      for (const grant of role.grants) grants.add(grant);
++      current = role.parent;
++    }
++  }
++  return grants;
+ }
+diff --git a/tests/reports.test.ts b/tests/reports.test.ts
+index 667e59f..cbaf72a 100644
+--- a/tests/reports.test.ts
++++ b/tests/reports.test.ts
+@@ -12,3 +12,9 @@ test("missing reports and unauthorized users",()=>{
+   assert.equal(downloadReport({id:"u",roles:[],denied:[]},"r1",directory,reports).status,403);
+   assert.equal(allows({id:"u",roles:["unknown"],denied:[]},"report:download",directory),false);
+ });
++test("roles inherit grants from parent roles",()=>{
++  const dir={"report-reader":{grants:["report:download"]},auditor:{grants:[],parent:"report-reader"},loop:{grants:[],parent:"loop"}};
++  assert.equal(downloadReport({id:"u",roles:["auditor"],denied:[]},"r1",dir,reports).status,200);
++  assert.equal(downloadReport({id:"u",roles:["auditor"],denied:["report:download"]},"r1",dir,reports).status,403);
++  assert.equal(allows({id:"u",roles:["loop"],denied:[]},"report:download",dir),false);
++});

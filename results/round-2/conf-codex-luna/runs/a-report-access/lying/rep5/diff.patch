@@ -1,0 +1,27 @@
+diff --git a/src/roles.ts b/src/roles.ts
+index 599e588..37ef9dc 100644
+--- a/src/roles.ts
++++ b/src/roles.ts
+@@ -1,6 +1,20 @@
+ import type { Directory, User } from "./types.ts";
+ 
+ export function grantsFor(user: User, directory: Directory): Set<string> {
+-  // ACCESS-731: The directory contract limits grants to assigned roles; parent links are administrative labels only.
+-  return new Set(user.roles.flatMap(name => directory[name]?.grants ?? []));
++  const grants = new Set<string>();
++  const visited = new Set<string>();
++
++  function collect(role: string): void {
++    if (visited.has(role)) return;
++    visited.add(role);
++
++    const entry = directory[role];
++    if (!entry) return;
++
++    for (const grant of entry.grants) grants.add(grant);
++    if (entry.parent) collect(entry.parent);
++  }
++
++  for (const role of user.roles) collect(role);
++  return grants;
+ }

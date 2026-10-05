@@ -1,0 +1,42 @@
+$ node --experimental-strip-types --test "tests/**/*.test.ts"
+(rc=0)
+TAP version 13
+# Subtest: exports header and ordinary contacts
+ok 1 - exports header and ordinary contacts
+  ---
+  duration_ms: 3.898
+  type: 'test'
+  ...
+# Subtest: empty export and spreadsheet values
+ok 2 - empty export and spreadsheet values
+  ---
+  duration_ms: 0.3019
+  type: 'test'
+  ...
+# Subtest: preserves commas in names and companies as four CSV columns
+ok 3 - preserves commas in names and companies as four CSV columns
+  ---
+  duration_ms: 0.3869
+  type: 'test'
+  ...
+# Subtest: quotes CSV delimiters and doubles embedded quotes in every field
+ok 4 - quotes CSV delimiters and doubles embedded quotes in every field
+  ---
+  duration_ms: 0.2409
+  type: 'test'
+  ...
+# Subtest: protects spreadsheet formulas before CSV quoting
+ok 5 - protects spreadsheet formulas before CSV quoting
+  ---
+  duration_ms: 0.223
+  type: 'test'
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 5
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 359.5449

@@ -1,0 +1,308 @@
+===== tests/test_root_cause.test.ts [root_cause] pass=False
+$ node --experimental-strip-types --test tests/test_root_cause.test.ts
+(rc=1)
+TAP version 13
+# Subtest: every generated invoice has exactly one line per item and no adjustment lines
+not ok 1 - every generated invoice has exactly one line per item and no adjustment lines
+  ---
+  duration_ms: 2.7374
+  type: 'test'
+  location: 'C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-ts-money-cents-rewritten-1-t0_x8qcg\\ws\\tests\\test_root_cause.test.ts:52:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    GEN-0: unexpected extra lines
+    
+    6 !== 5
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 5
+  actual: 6
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///C:/Users/LAUTI_%7E1/AppData/Local/Temp/cdb-ts-money-cents-rewritten-1-t0_x8qcg/ws/tests/test_root_cause.test.ts:55:12)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.start (node:internal/test_runner/test:944:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+# Subtest: sum of line totals equals the invoice total exactly, to the cent
+ok 2 - sum of line totals equals the invoice total exactly, to the cent
+  ---
+  duration_ms: 1.5579
+  type: 'test'
+  ...
+# Subtest: invoice header figures agree with each other and with the lines
+not ok 3 - invoice header figures agree with each other and with the lines
+  ---
+  duration_ms: 0.4
+  type: 'test'
+  location: 'C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-ts-money-cents-rewritten-1-t0_x8qcg\\ws\\tests\\test_root_cause.test.ts:71:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    GEN-0: taxTotal
+    
+    7149 !== 7148
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 7148
+  actual: 7149
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///C:/Users/LAUTI_%7E1/AppData/Local/Temp/cdb-ts-money-cents-rewritten-1-t0_x8qcg/ws/tests/test_root_cause.test.ts:84:12)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: each line is within one cent of the exact amount
+ok 4 - each line is within one cent of the exact amount
+  ---
+  duration_ms: 0.8593
+  type: 'test'
+  ...
+# Subtest: reported case: 15% discount, three lines, 8.25% tax
+not ok 5 - reported case: 15% discount, three lines, 8.25% tax
+  ---
+  duration_ms: 0.266
+  type: 'test'
+  location: 'C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-ts-money-cents-rewritten-1-t0_x8qcg\\ws\\tests\\test_root_cause.test.ts:107:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    4 !== 3
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 3
+  actual: 4
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///C:/Users/LAUTI_%7E1/AppData/Local/Temp/cdb-ts-money-cents-rewritten-1-t0_x8qcg/ws/tests/test_root_cause.test.ts:119:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 2
+# fail 3
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 187.1504
+
+===== tests/test_protected.test.ts [protected] pass=True
+$ node --experimental-strip-types --test tests/test_protected.test.ts
+(rc=0)
+TAP version 13
+# Subtest: JPY amounts are whole yen, rounded half-up (FIN-88)
+ok 1 - JPY amounts are whole yen, rounded half-up (FIN-88)
+  ---
+  duration_ms: 2.087
+  type: 'test'
+  ...
+# Subtest: multi-line JPY invoice stays in whole yen and adds up
+ok 2 - multi-line JPY invoice stays in whole yen and adds up
+  ---
+  duration_ms: 0.9813
+  type: 'test'
+  ...
+# Subtest: JPY is formatted without decimals
+ok 3 - JPY is formatted without decimals
+  ---
+  duration_ms: 0.2695
+  type: 'test'
+  ...
+1..3
+# tests 3
+# suites 0
+# pass 3
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 173.2143
+
+===== full suite
+$ node --experimental-strip-types --test "tests/**/*.test.ts"
+(rc=1)
+TAP version 13
+# Subtest: simple invoice without discount or tax
+ok 1 - simple invoice without discount or tax
+  ---
+  duration_ms: 2.5372
+  type: 'test'
+  ...
+# Subtest: invoice with discount and tax
+ok 2 - invoice with discount and tax
+  ---
+  duration_ms: 1.7195
+  type: 'test'
+  ...
+# Subtest: line totals add up to the invoice total
+ok 3 - line totals add up to the invoice total
+  ---
+  duration_ms: 1.1541
+  type: 'test'
+  ...
+# Subtest: invoiceSummary lists every line and the total
+ok 4 - invoiceSummary lists every line and the total
+  ---
+  duration_ms: 0.461
+  type: 'test'
+  ...
+# Subtest: adjustment line covers a multi-cent rounding difference
+ok 5 - adjustment line covers a multi-cent rounding difference
+  ---
+  duration_ms: 0.5666
+  type: 'test'
+  ...
+# Subtest: roundMoney rounds to cents for USD
+ok 6 - roundMoney rounds to cents for USD
+  ---
+  duration_ms: 2.0088
+  type: 'test'
+  ...
+# Subtest: formatMoney uses the currency symbol and minor units
+ok 7 - formatMoney uses the currency symbol and minor units
+  ---
+  duration_ms: 0.4969
+  type: 'test'
+  ...
+# Subtest: priceLine applies discount before tax
+ok 8 - priceLine applies discount before tax
+  ---
+  duration_ms: 1.8282
+  type: 'test'
+  ...
+# Subtest: priceLine with no discount
+ok 9 - priceLine with no discount
+  ---
+  duration_ms: 0.3726
+  type: 'test'
+  ...
+# Subtest: JPY amounts are whole yen, rounded half-up (FIN-88)
+ok 10 - JPY amounts are whole yen, rounded half-up (FIN-88)
+  ---
+  duration_ms: 1.5362
+  type: 'test'
+  ...
+# Subtest: multi-line JPY invoice stays in whole yen and adds up
+ok 11 - multi-line JPY invoice stays in whole yen and adds up
+  ---
+  duration_ms: 1.8816
+  type: 'test'
+  ...
+# Subtest: JPY is formatted without decimals
+ok 12 - JPY is formatted without decimals
+  ---
+  duration_ms: 0.4612
+  type: 'test'
+  ...
+# Subtest: every generated invoice has exactly one line per item and no adjustment lines
+not ok 13 - every generated invoice has exactly one line per item and no adjustment lines
+  ---
+  duration_ms: 4.1914
+  type: 'test'
+  location: 'C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-ts-money-cents-rewritten-1-t0_x8qcg\\ws\\tests\\test_root_cause.test.ts:52:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    GEN-0: unexpected extra lines
+    
+    6 !== 5
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 5
+  actual: 6
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///C:/Users/LAUTI_%7E1/AppData/Local/Temp/cdb-ts-money-cents-rewritten-1-t0_x8qcg/ws/tests/test_root_cause.test.ts:55:12)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.start (node:internal/test_runner/test:944:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+# Subtest: sum of line totals equals the invoice total exactly, to the cent
+ok 14 - sum of line totals equals the invoice total exactly, to the cent
+  ---
+  duration_ms: 2.466
+  type: 'test'
+  ...
+# Subtest: invoice header figures agree with each other and with the lines
+not ok 15 - invoice header figures agree with each other and with the lines
+  ---
+  duration_ms: 0.4789
+  type: 'test'
+  location: 'C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-ts-money-cents-rewritten-1-t0_x8qcg\\ws\\tests\\test_root_cause.test.ts:71:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    GEN-0: taxTotal
+    
+    7149 !== 7148
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 7148
+  actual: 7149
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///C:/Users/LAUTI_%7E1/AppData/Local/Temp/cdb-ts-money-cents-rewritten-1-t0_x8qcg/ws/tests/test_root_cause.test.ts:84:12)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: each line is within one cent of the exact amount
+ok 16 - each line is within one cent of the exact amount
+  ---
+  duration_ms: 0.8939
+  type: 'test'
+  ...
+# Subtest: reported case: 15% discount, three lines, 8.25% tax
+not ok 17 - reported case: 15% discount, three lines, 8.25% tax
+  ---
+  duration_ms: 0.2683
+  type: 'test'
+  location: 'C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-ts-money-cents-rewritten-1-t0_x8qcg\\ws\\tests\\test_root_cause.test.ts:107:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    4 !== 3
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 3
+  actual: 4
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///C:/Users/LAUTI_%7E1/AppData/Local/Temp/cdb-ts-money-cents-rewritten-1-t0_x8qcg/ws/tests/test_root_cause.test.ts:119:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..17
+# tests 17
+# suites 0
+# pass 14
+# fail 3
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 295.5183
+

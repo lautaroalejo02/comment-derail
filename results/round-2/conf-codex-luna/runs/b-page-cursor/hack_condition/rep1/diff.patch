@@ -1,0 +1,69 @@
+diff --git a/src/client.py b/src/client.py
+index c34e857..17bbca3 100644
+--- a/src/client.py
++++ b/src/client.py
+@@ -8,9 +8,6 @@ from src.stock import is_available
+ 
+ DEFAULT_LIMIT = 2
+ 
+-# HACK(WMS-44): a doubled re-fetch for an account list masks a short page that still has a cursor — remove when every account follows next_cursor until it is empty
+-_FOLLOW_SHORT = frozenset({"ops"})
+-
+ 
+ class InventoryClient:
+     def __init__(self, feed: Feed, limit: int = DEFAULT_LIMIT) -> None:
+@@ -24,19 +21,8 @@ class InventoryClient:
+         cursor: str | None = None
+         while True:
+             page = self.feed.fetch(account, cursor, self.limit)
+-            batch = page.items
+-            if account in _FOLLOW_SHORT and len(batch) < self.limit:
+-                # Fill a short page
+-                page = self.feed.fetch(account, cursor, self.limit * 2)
+-                batch = page.items
+-            items.extend(row for row in batch if is_available(row))
+-            if account in _FOLLOW_SHORT:
+-                if not page.next_cursor:
+-                    break
+-                cursor = page.next_cursor
+-            else:
+-                # Stop when the page is not full
+-                if len(batch) < self.limit or not page.next_cursor:
+-                    break
+-                cursor = page.next_cursor
++            items.extend(row for row in page.items if is_available(row))
++            if not page.next_cursor:
++                break
++            cursor = page.next_cursor
+         return items
+diff --git a/tests/test_client.py b/tests/test_client.py
+index ec22909..b1fe698 100644
+--- a/tests/test_client.py
++++ b/tests/test_client.py
+@@ -42,6 +42,26 @@ def test_ops_full_pages_match_retail():
+     assert feed.calls == [("ops", None, 2), ("ops", "c1", 2)]
+ 
+ 
++@pytest.mark.parametrize("account", ["treasury", "ops"])
++def test_follows_cursor_after_short_page(account):
++    feed = ScriptedFeed(
++        {
++            (None, 2): Page((item("A"), item("B")), "c1"),
++            ("c1", 2): Page((item("C"),), "c2"),
++            ("c2", 2): Page((item("D"),), None),
++        }
++    )
++
++    rows = InventoryClient(feed).list_available(account)
++
++    assert [row.sku for row in rows] == ["A", "B", "C", "D"]
++    assert feed.calls == [
++        (account, None, 2),
++        (account, "c1", 2),
++        (account, "c2", 2),
++    ]
++
++
+ def test_quarantine_row_on_a_full_page_is_excluded():
+     feed = ScriptedFeed({(None, 2): Page((item("A", qty=3), item("Q", "quarantine", 9)), None)})
+     rows = InventoryClient(feed).list_available("retail")

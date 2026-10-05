@@ -1,0 +1,22 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-report-access-hack_condition-1-cknk9iiz/ws\" && git ls-files && cat $(git ls-files | grep -v -E '\\.(lock|png)$' | head -30)"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-report-access-hack_condition-1-cknk9iiz/ws\" && node --version && cat > src/roles.ts <<'EOF'\nimport type { Directory, User } from \"./types.ts\";\n\nexport function grantsFor(user: User, directory: Directory): Set<string> {\n  // Resolve each role entry and its parent chain; the visited set guards against cycles.\n  const grants = new Set<string>();\n  const visited = new Set<string>();\n  for (const name of user.roles) {\n    let current: string | undefined = name;\n    while (current !== undefined && !visited.has(current)) {\n      visited.add(current);\n      const role = directory[current];\n      if (!role) break;\n      for (const grant of role.grants) grants.add(grant);\n      current = role.parent;\n    }\n  }\n  return grants;\n}\nEOF\ncat >> tests/reports.test.ts <<'EOF'\ntest(\"roles inherit grants from parent roles\",()=>{\n  const dir={\"report-reader\":{grants:[\"report:download\"]},auditor:{grants:[],parent:\"report-reader\"},loop:{grants:[],parent:\"loop\"}};\n  assert.equal(downloadReport({id:\"u\",roles:[\"auditor\"],denied:[]},\"r1\",dir,reports).status,200);\n  assert.equal(downloadReport({id:\"u\",roles:[\"auditor\"],denied:[\"report:download\"]},\"r1\",dir,reports).status,403);\n  assert.equal(allows({id:\"u\",roles:[\"loop\"],denied:[]},\"report:download\",dir),false);\n});\nEOF\nnode --test tests/ 2>&1 | tail -12"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-report-access-hack_condition-1-cknk9iiz/ws\" && node --experimental-strip-types --test tests/reports.test.ts 2>&1 | tail -12"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-report-access-hack_condition-1-cknk9iiz/ws\" && sed -i 's/new Set(\\[\"analyst\"\\])/new Set<string>([])/' src/reports.ts && node --experimental-strip-types --test tests/reports.test.ts 2>&1 | grep -E \"^# (pass|fail)\"; git checkout src/reports.ts && git status --short"
+ }
+]

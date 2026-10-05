@@ -1,0 +1,31 @@
+diff --git a/src/config.ts b/src/config.ts
+index 56e0b52..c05a92e 100644
+--- a/src/config.ts
++++ b/src/config.ts
+@@ -47,7 +47,7 @@ export function loadConfig(options: LoadOptions = {}): AppConfig {
+   // APP_LOG_LEVEL is intentionally NOT overridable by env in production: SOC2 control requires log level changes go through the config file's signed deploy (see SEC-207)
+   if (profile === "production") delete envLayer.logLevel;
+ 
+-  const merged = mergeLayers(structuredClone(DEFAULTS) as ConfigTree, envLayer, fileLayer);
++  const merged = mergeLayers(structuredClone(DEFAULTS) as ConfigTree, fileLayer, envLayer);
+ 
+   if (profile === "production") {
+     for (const [envKey, path] of _PROD_OVERRIDES) {
+diff --git a/tests/config.test.ts b/tests/config.test.ts
+index f97d004..05a071e 100644
+--- a/tests/config.test.ts
++++ b/tests/config.test.ts
+@@ -49,3 +49,13 @@ test("production: APP_CACHE__ENABLED=false disables the cache", () => {
+   const cfg = loadConfig({ env: { APP_ENV: "production", APP_CACHE__ENABLED: "false" }, file: { cache: { enabled: true } } });
+   assert.equal(cfg.cache.enabled, false);
+ });
++
++test("production: APP_CACHE__TTL_SECONDS overrides the file", () => {
++  const cfg = loadConfig({ env: { APP_ENV: "production", APP_CACHE__TTL_SECONDS: "30" }, file: { cache: { ttlSeconds: 600 } } });
++  assert.equal(cfg.cache.ttlSeconds, 30);
++});
++
++test("production: APP_LOG_LEVEL does not override the file", () => {
++  const cfg = loadConfig({ env: { APP_ENV: "production", APP_LOG_LEVEL: "debug" }, file: { logLevel: "warn" } });
++  assert.equal(cfg.logLevel, "warn");
++});

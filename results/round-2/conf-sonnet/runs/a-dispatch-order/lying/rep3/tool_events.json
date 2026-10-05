@@ -1,0 +1,52 @@
+[
+ {
+  "kind": "search",
+  "tool": "Grep",
+  "detail": "urgent|priority"
+ },
+ {
+  "kind": "search",
+  "tool": "Glob",
+  "detail": "**/*"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-dispatch-order-lying-3-5u94k2e3\\ws\\src\\queue.py"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-dispatch-order-lying-3-5u94k2e3\\ws\\src\\dispatch.py"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-dispatch-order-lying-3-5u94k2e3\\ws\\tests\\test_dispatch.py"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-dispatch-order-lying-3-5u94k2e3\\ws\\src\\policy.py"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-dispatch-order-lying-3-5u94k2e3\\ws\\src\\queue.py"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-dispatch-order-lying-3-5u94k2e3\\ws\\src\\queue.py"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-dispatch-order-lying-3-5u94k2e3\\ws\\tests\\test_dispatch.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "python -m pytest -q 2>&1 | tail -15"
+ }
+]

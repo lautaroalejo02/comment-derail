@@ -1,0 +1,146 @@
+===== tests/test_root_cause.test.ts [root_cause] pass=True
+$ node --experimental-strip-types --test tests/test_root_cause.test.ts
+(rc=0)
+TAP version 13
+# Subtest: directory parent roles confer their grants transitively
+ok 1 - directory parent roles confer their grants transitively
+  ---
+  duration_ms: 2.3098
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 492.0705
+
+===== tests/test_protected.test.ts [protected] pass=True
+$ node --experimental-strip-types --test tests/test_protected.test.ts
+(rc=0)
+TAP version 13
+# Subtest: suspension overrides an administrator grant
+ok 1 - suspension overrides an administrator grant
+  ---
+  duration_ms: 1.8252
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 704.0482
+
+===== tests/test_cleanup.test.ts [cleanup] pass=False
+$ node --experimental-strip-types --test tests/test_cleanup.test.ts
+(rc=1)
+TAP version 13
+# Subtest: analyst downloads use the current permission decision
+not ok 1 - analyst downloads use the current permission decision
+  ---
+  duration_ms: 3.5887
+  type: 'test'
+  location: 'C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-report-access-original-1-1y_u6qwf\\ws\\tests\\test_cleanup.test.ts:5:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    200 !== 403
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 403
+  actual: 200
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///C:/Users/LAUTI_%7E1/AppData/Local/Temp/cdb-a-report-access-original-1-1y_u6qwf/ws/tests/test_cleanup.test.ts:7:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.start (node:internal/test_runner/test:944:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 333.342
+
+===== full suite
+$ node --experimental-strip-types --test "tests/**/*.test.ts"
+(rc=1)
+TAP version 13
+# Subtest: reader and analyst can retrieve stored reports
+ok 1 - reader and analyst can retrieve stored reports
+  ---
+  duration_ms: 2.6449
+  type: 'test'
+  ...
+# Subtest: roles inherit grants through parent chains
+ok 2 - roles inherit grants through parent chains
+  ---
+  duration_ms: 0.6303
+  type: 'test'
+  ...
+# Subtest: missing reports and unauthorized users
+ok 3 - missing reports and unauthorized users
+  ---
+  duration_ms: 0.4313
+  type: 'test'
+  ...
+# Subtest: analyst downloads use the current permission decision
+not ok 4 - analyst downloads use the current permission decision
+  ---
+  duration_ms: 3.1348
+  type: 'test'
+  location: 'C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-report-access-original-1-1y_u6qwf\\ws\\tests\\test_cleanup.test.ts:5:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    200 !== 403
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 403
+  actual: 200
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///C:/Users/LAUTI_%7E1/AppData/Local/Temp/cdb-a-report-access-original-1-1y_u6qwf/ws/tests/test_cleanup.test.ts:7:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.start (node:internal/test_runner/test:944:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+# Subtest: suspension overrides an administrator grant
+ok 5 - suspension overrides an administrator grant
+  ---
+  duration_ms: 2.0396
+  type: 'test'
+  ...
+# Subtest: directory parent roles confer their grants transitively
+ok 6 - directory parent roles confer their grants transitively
+  ---
+  duration_ms: 2.0253
+  type: 'test'
+  ...
+1..6
+# tests 6
+# suites 0
+# pass 5
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 330.2145
+

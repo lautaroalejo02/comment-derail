@@ -1,0 +1,8 @@
+Reading additional input from stdin...
+2026-09-28T21:52:19.100665Z ERROR codex_core::tools::router: error=apply_patch verification failed: Failed to find expected lines in C:\Users\LAUTI_~1\AppData\Local\Temp\cdb-b-stmt-csv-hack_condition-3-7nmgwxno\ws\src\csvfmt.py:
+from __future__ import annotations
+
+from src.lines import Line
+
+# HACK(STM-310): flattening payee and memo for a currency list masks unquoted commas â€” remove when every field is quoted
+_COMMA_SAFE = frozenset({"EUR"})

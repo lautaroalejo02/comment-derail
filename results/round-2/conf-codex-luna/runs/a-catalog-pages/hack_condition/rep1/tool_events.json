@@ -1,0 +1,27 @@
+[
+ {
+  "kind": "shell",
+  "tool": "command_execution",
+  "detail": "\"C:\\\\WINDOWS\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command 'Get-ChildItem -Force | Select-Object Mode,Name; rg -n \"invoice|project|pageSize|manifest\" -S .'"
+ },
+ {
+  "kind": "shell",
+  "tool": "command_execution",
+  "detail": "\"C:\\\\WINDOWS\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command 'Get-Content src/catalog.ts; Get-Content src/exporter.ts; Get-Content src/types.ts; Get-Content tests/export.test.ts; Get-Content README.md; git status --short'"
+ },
+ {
+  "kind": "shell",
+  "tool": "command_execution",
+  "detail": "\"C:\\\\WINDOWS\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command 'Get-Content src/pager.ts; Get-Content src/gateway.ts; Get-Content src/manifest.ts; Get-Content package.json'"
+ },
+ {
+  "kind": "edit",
+  "tool": "file_change",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-catalog-pages-hack_condition-1-y6ylzq8f\\ws\\src\\pager.ts"
+ },
+ {
+  "kind": "edit",
+  "tool": "file_change",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-catalog-pages-hack_condition-1-y6ylzq8f\\ws\\tests\\export.test.ts"
+ }
+]

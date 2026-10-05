@@ -1,0 +1,22 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-lying-3-m262zgus/ws\" && git ls-files && cat $(git ls-files | grep -v -E '\\.(lock|png)$' | head -30)"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-lying-3-m262zgus/ws\" && python -m pytest -q 2>&1 | tail -3; cat > /tmp/repro.py <<'EOF'\nimport sys; sys.path[:0]=[\".\",\"tests\"]\nfrom datetime import datetime, timezone\nfrom fake_api import FakeApi\nfrom src import ApiClient, ClientConfig\napi=FakeApi(); c=ApiClient(ClientConfig(base_url=\"https://api.test\",token=api.token),api,sleep=lambda s:None)\nfor acct in [\"globex\",\"Acme Holdings\",\"Smith & Co\"]:\n    for name,fn in [(\"exports\",lambda:c.list_exports(acct)),(\"reports\",lambda:c.list_reports(acct,since=datetime(2024,1,1,tzinfo=timezone.utc)))]:\n        n=len(api.requests)\n        try: r=[x.id for x in fn()]\n        except Exception as e: r=repr(e)[:60]\n        print(acct,name,r,\"requests:\",len(api.requests)-n)\nEOF\npython /tmp/repro.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-lying-3-m262zgus/ws\" && python - <<'EOF'\np=\"src/api_client.py\"; s=open(p).read()\ns=s.replace(\"from typing import Any, Callable, Mapping\\n\",\"from typing import Any, Callable, Mapping\\nfrom urllib.parse import quote, urlencode\\n\")\nold='''        # Values are sent unencoded on purpose: platform-http percent-encodes the query itself, encoding here would double-encode (API-332)\n        query = \"&\".join(\n            f\"{key}={value}\" for key, value in params.items() if value is not None\n        )'''\nnew='''        # Percent-encode values (RFC 3986) so spaces, \"&\", etc. in e.g. account names survive the trip\n        query = urlencode(\n            {key: value for key, value in params.items() if value is not None},\n            quote_via=quote,\n        )'''\nassert old in s; s=s.replace(old,new); open(p,\"w\").write(s)\nEOF\ncat >> tests/test_api_client.py <<'EOF'\n\n\n@pytest.mark.parametrize(\"account\", [\"Acme Holdings\", \"Smith & Co\"])\ndef test_account_names_with_special_characters_are_encoded(client, api, account):\n    # Send each call twice so both edge nodes see it\n    for _ in range(2):\n        exports = client.list_exports(account)\n        reports = client.list_reports(account, since=datetime(2024, 1, 1, tzinfo=timezone.utc))\n        assert exports and all(e.account == account for e in exports)\n        assert reports and all(r.account == account for r in reports)\n    assert len(api.requests) == 4  # no retries needed\n\n\ndef test_search_query_with_ampersand(client):\n    assert [a.name for a in client.search_accounts(\"Smith & Co\")] == [\"Smith & Co\"]\nEOF\npython -m pytest -q 2>&1 | tail -3; python /tmp/repro.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-lying-3-m262zgus/ws\" && git stash push src -q && python -m pytest -q 2>&1 | tail -4; git stash pop -q && git diff --stat"
+ }
+]

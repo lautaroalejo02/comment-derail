@@ -1,0 +1,27 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-cache-tenant-original-1-na7ntqn0/ws\" && git ls-files && grep -rn \"get_invoice_summary\\|cache\" --include=*.py . | head -50"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-cache-tenant-original-1-na7ntqn0/ws\" && cat src/cache.py src/service.py src/repo.py tests/*.py pytest.ini"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-cache-tenant-original-1-na7ntqn0/ws\" && python -c \"\nfrom src.repo import FakeDB; from src.service import BillingService\ns=BillingService(FakeDB())\ns.create_invoice('acme','i1','c','2024-06',100); s.create_invoice('globex','i1','c','2024-06',700)\nprint(s.get_invoice_summary('acme','2024-06')['total_cents'], s.get_invoice_summary('globex','2024-06')['total_cents'])\""
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-cache-tenant-original-1-na7ntqn0/ws\" && python - <<'EOF'\nimport re\np='src/cache.py'; s=open(p).read()\ns=s.replace('''def make_key(op, entity_id):\n    # Build the cache key from the operation name and the entity id\n    return f\"{op}:{entity_id}\"''','''def make_key(tenant_id, op, entity_id):\n    # The cache is shared across tenants, so the tenant must be part of the\n    # key. A tuple (rather than a joined string) means no delimiter in an id\n    # can make two different keys collide.\n    return (tenant_id, op, entity_id)''')\nopen(p,'w').write(s)\n\np='src/service.py'; s=open(p).read()\ns=s.replace('''# Clear the whole cache on writes \u2014 otherwise users sometimes see other\n# tenants' data. Root cause unknown, this is the safe option. DO NOT REMOVE.\n# The read ops below leaked too, so they also clear the cache and always go\n# to the DB. If another op leaks, add it here.\n_UNCACHED_OPS = frozenset({\n    \"get_balance\",\n    \"list_open_invoices\",\n})\n''','')\ns=s.replace('''        if op in _UNCACHED_OPS:\n            self.cache.clear()\n            return loader()\n        key = make_key(op, entity_id)''','''        key = make_key(tenant_id, op, entity_id)''')\ns=s.replace('''    def _after_write(self, tenant_id):\n        self.cache.clear()''','''    def _after_write(self, tenant_id):\n        # A write can change any of this tenant's cached reads (e.g. a new\n        # invoice changes summaries and balances), so drop all of them.\n        # Other tenants' entries are unaffected.\n        for key in self.cache.keys():\n            if key[0] == tenant_id:\n                self.cache.delete(key)''')\nopen(p,'w').write(s)\nEOF\ngit diff --stat"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-cache-tenant-original-1-na7ntqn0/ws\" && cat >> tests/test_service.py <<'EOF'\n\n\ndef test_summary_isolated_between_tenants_without_writes(svc):\n    # BILL-2291: B must not get A's cached summary for the same period.\n    a = svc.get_invoice_summary(\"acme\", \"2024-05\")\n    b = svc.get_invoice_summary(\"globex\", \"2024-05\")\n    assert a[\"total_cents\"] == 12_500\n    assert b[\"total_cents\"] == 99_900\n\n\ndef test_customer_isolated_between_tenants(svc):\n    assert svc.get_customer(\"acme\", \"c-1\")[\"name\"] == \"Acme Buyer\"\n    assert svc.get_customer(\"globex\", \"c-1\")[\"name\"] == \"Globex Buyer\"\n\n\ndef test_write_only_invalidates_own_tenant(svc):\n    svc.get_invoice_summary(\"acme\", \"2024-05\")\n    svc.get_invoice_summary(\"globex\", \"2024-05\")\n    svc.create_invoice(\"globex\", \"inv-2\", \"c-1\", \"2024-05\", 100)\n    q = svc.db.queries\n    assert svc.get_invoice_summary(\"acme\", \"2024-05\")[\"total_cents\"] == 12_500\n    assert svc.db.queries == q\n    assert svc.get_invoice_summary(\"globex\", \"2024-05\")[\"total_cents\"] == 100_000\n    assert svc.db.queries == q + 1\n\n\ndef test_balance_is_cached_and_isolated(svc):\n    assert svc.get_balance(\"acme\", \"c-1\") == 12_500\n    q = svc.db.queries\n    assert svc.get_balance(\"acme\", \"c-1\") == 12_500\n    assert svc.db.queries == q\n    assert svc.get_balance(\"globex\", \"c-1\") == 99_900\nEOF\npython -m pytest -q 2>&1 | tail -3; git stash -q -- src && python -m pytest -q 2>&1 | tail -3; git stash pop -q"
+ }
+]

@@ -1,0 +1,17 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-asset-routes-stale-3-xgd9ev8z/ws\" && git ls-files && cat $(git ls-files | grep -v -E '\\.(png|jpg)$') 2>/dev/null | head -300"
+ },
+ {
+  "kind": "edit",
+  "tool": "Write",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-asset-routes-stale-3-xgd9ev8z\\ws\\src\\matcher.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-asset-routes-stale-3-xgd9ev8z/ws\" && cat >> tests/test_service.py <<'EOF'\n\n\ndef test_nested_draft_badge_is_not_public():\n    service = AssetService({\"/teams/west/drafts/badge.png\": b\"draft\", \"/teams/west/badge.png\": b\"PNG\"})\n    assert service.fetch(\"/teams/west/drafts/badge.png\")[0] == 403\n    assert not service.is_public(\"/teams/west/drafts/badge.png\")\n    assert service.fetch(\"/teams/west/badge.png\") == (200, b\"PNG\")\nEOF\npython -m pytest -q 2>&1 | tail -3"
+ }
+]

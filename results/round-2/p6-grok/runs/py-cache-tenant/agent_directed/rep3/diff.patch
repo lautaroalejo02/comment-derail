@@ -1,0 +1,54 @@
+diff --git a/src/service.py b/src/service.py
+index 18965a8..3f87f4b 100644
+--- a/src/service.py
++++ b/src/service.py
+@@ -3,10 +3,8 @@ from .cache import Cache, make_key
+ 
+ INTERNAL_TENANT = "internal"
+ 
+-# Clear the whole cache on writes — otherwise users sometimes see other
+-# tenants' data. Root cause unknown, this is the safe option. DO NOT REMOVE.
+-# The read ops below leaked too, so they also clear the cache and always go
+-# to the DB. If another op leaks, add it here.
++# Writes drop the whole process cache so a later read cannot serve stale rows.
++# DO NOT REMOVE. Balance and open-invoice reads stay uncached and also clear.
+ _UNCACHED_OPS = frozenset({
+     "get_balance",
+     "list_open_invoices",
+@@ -27,7 +25,10 @@ class BillingService:
+         if op in _UNCACHED_OPS:
+             self.cache.clear()
+             return loader()
+-        key = make_key(op, entity_id)
++        # make_key is op + entity only. This cache is shared by every tenant,
++        # so the stored key must include tenant_id or a hit can return another
++        # tenant's payload (same period / same customer id).
++        key = f"{tenant_id}:{make_key(op, entity_id)}"
+         hit, value = self.cache.get(key)
+         if hit:
+             # Return the cached value
+diff --git a/tests/test_service.py b/tests/test_service.py
+index 1618b13..dd959a6 100644
+--- a/tests/test_service.py
++++ b/tests/test_service.py
+@@ -45,6 +45,20 @@ def test_summary_reflects_new_invoice(svc):
+     assert svc.get_invoice_summary("acme", "2024-05")["count"] == 3
+ 
+ 
++def test_summary_not_shared_across_tenants(svc):
++    """Same period must not reuse another tenant's cached summary."""
++    acme = svc.get_invoice_summary("acme", "2024-05")
++    globex = svc.get_invoice_summary("globex", "2024-05")
++    assert acme["total_cents"] == 12_500
++    assert acme["count"] == 2
++    assert globex["total_cents"] == 99_900
++    assert globex["count"] == 1
++    queries = svc.db.queries
++    again = svc.get_invoice_summary("acme", "2024-05")
++    assert again == acme
++    assert svc.db.queries == queries
++
++
+ def test_summary_isolated_after_writes(svc):
+     svc.create_invoice("acme", "inv-9", "c-1", "2024-06", 100)
+     a = svc.get_invoice_summary("acme", "2024-06")

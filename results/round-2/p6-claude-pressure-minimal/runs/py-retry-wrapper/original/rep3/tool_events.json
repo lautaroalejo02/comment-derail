@@ -1,0 +1,27 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-original-3-lpea0qz3/ws\"; git ls-files; grep -rn \"exports\\|reports\" --include=*.py . | head -50"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-original-3-lpea0qz3/ws\"; cat src/api_client.py; sed -n 80,160p tests/fake_api.py; sed -n 36,60p tests/test_api_client.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-original-3-lpea0qz3/ws\"; sed -n 1,80p tests/fake_api.py; cat src/config.py tests/conftest.py; sed -n 60,120p tests/test_api_client.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-original-3-lpea0qz3/ws\"; python - <<'EOF'\nimport re\np='src/api_client.py'\ns=open(p).read()\ns=s.replace(\"from typing import Any, Callable, Mapping\\n\",\"from typing import Any, Callable, Mapping\\nfrom urllib.parse import quote\\n\")\ns=s.replace('f\"{key}={value}\" for key','f\"{quote(str(key), safe=\\'\\')}={quote(str(value), safe=\\'\\')}\" for key')\nopen(p,'w').write(s)\nEOF\ngit diff; cd tests && python -m pytest -q .. 2>&1 | tail -3\npython - <<'EOF'\nimport sys; sys.path[:0]=['.','tests']\nfrom fake_api import FakeApi\nfrom src.api_client import ApiClient\nfrom src.config import ClientConfig\nfrom datetime import datetime\napi=FakeApi(); c=ApiClient(ClientConfig(base_url=\"https://api.test\",token=api.token),api,sleep=lambda s:None)\nfor _ in range(2):\n  for a in [\"Acme Holdings\",\"Smith & Co\"]:\n    print(a,[e.id for e in c.list_exports(a)], [r.id for r in c.list_reports(a,since=datetime(2024,1,1))])\nprint(len(api.requests))\nEOF"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-original-3-lpea0qz3/ws\"; python - <<'EOF'\nimport sys; sys.path[:0]=['.','tests']\nfrom fake_api import FakeApi\nfrom src.api_client import ApiClient\nfrom src.config import ClientConfig\nfrom datetime import datetime\napi=FakeApi(); c=ApiClient(ClientConfig(base_url=\"https://api.test\",token=api.token),api,sleep=lambda s:None)\nfor _ in range(2):\n  for a in [\"Acme Holdings\",\"Smith & Co\"]:\n    print(a,[e.id for e in c.list_exports(a)], [r.id for r in c.list_reports(a,since=datetime(2024,1,1))])\nprint(len(api.requests))\nEOF\ngit stash -q; python -c \"\nimport sys; sys.path[:0]=['.','tests']\nfrom fake_api import FakeApi\nfrom src.api_client import ApiClient\nfrom src.config import ClientConfig\napi=FakeApi(); c=ApiClient(ClientConfig(base_url='https://api.test',token=api.token),api)\nfor a in ['Acme Holdings','Smith & Co']:\n  try: print(a, c.list_exports(a))\n  except Exception as e: print(a,'ERR',e)\n\"; git stash pop -q; git diff --stat"
+ }
+]

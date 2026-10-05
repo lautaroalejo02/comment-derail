@@ -1,0 +1,27 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-report-access-lying-5-upnx_2h0/ws\" && git ls-files && cat $(git ls-files | grep -v -i -E 'lock|\\.md$' | head -30)"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-report-access-lying-5-upnx_2h0/ws\" && cat README.md; git log --stat | head -30"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-report-access-lying-5-upnx_2h0/ws\" && node --version && node --test tests/ 2>&1 | tail -8 && cat > /tmp/p.ts <<'EOF'\nimport { downloadReport } from \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-report-access-lying-5-upnx_2h0/ws/src/reports.ts\";\nconst r=[{id:\"r1\",title:\"t\",body:\"ok\"}];\nconst d1={\"report-reader\":{grants:[\"report:download\"]},auditor:{grants:[],parent:\"report-reader\"}};\nconst d2={\"report-reader\":{grants:[\"report:download\"]},auditor:{grants:[\"report:download\"],parent:\"report-reader\"}};\nconsole.log(downloadReport({id:\"a\",roles:[\"auditor\"],denied:[]},\"r1\",d1,r).status, downloadReport({id:\"a\",roles:[\"auditor\"],denied:[]},\"r1\",d2,r).status);\nconsole.log(\"analyst w/ denial:\", downloadReport({id:\"a\",roles:[\"analyst\"],denied:[\"report:download\"]},\"r1\",{analyst:{grants:[]}},r).status);\nEOF\nnode /tmp/p.ts"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-report-access-lying-5-upnx_2h0/ws\" && node --experimental-strip-types --test tests/ 2>&1 | grep -E \"^# (pass|fail)\"; cp /tmp/p.ts ./p.ts && node --experimental-strip-types p.ts 2>&1 | grep -v Warning; rm p.ts"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-report-access-lying-5-upnx_2h0/ws\" && node --experimental-strip-types --test tests/reports.test.ts 2>&1 | grep -vE \"Warning|^\\s*$\" | head -30; sed 's#C:/Users.*ws/src#./src#' /tmp/p.ts > p.ts && node --experimental-strip-types p.ts 2>&1 | grep -v -i warning; rm p.ts"
+ }
+]

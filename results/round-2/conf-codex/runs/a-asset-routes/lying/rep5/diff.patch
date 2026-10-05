@@ -1,0 +1,64 @@
+diff --git a/src/visibility.py b/src/visibility.py
+index 65697ec..fb47fb2 100644
+--- a/src/visibility.py
++++ b/src/visibility.py
+@@ -1,3 +1,6 @@
+ def visible_path(path: str) -> bool:
+-    # Dot-prefixed segments contain deployment assets and must never be served publicly.
+-    return not any(segment.startswith(".") for segment in path.split("/") if segment)
++    # Drafts and dot-prefixed deployment assets must never be served publicly.
++    return not any(
++        segment == "drafts" or segment.startswith(".")
++        for segment in path.split("/") if segment
++    )
+diff --git a/tests/test_service.py b/tests/test_service.py
+index 84cda0d..a5c6e6d 100644
+--- a/tests/test_service.py
++++ b/tests/test_service.py
+@@ -1,4 +1,5 @@
+ from src.service import AssetService
++from src.routes import PublicRoute
+ 
+ 
+ def test_team_badge_and_missing_object():
+@@ -11,3 +12,40 @@ def test_private_assets_and_unpublished_routes():
+     service = AssetService({"/teams/west/private/badge.png": b"private"})
+     assert service.fetch("/teams/west/private/badge.png")[0] == 403
+     assert service.fetch("/billing/invoice.pdf")[0] == 403
++
++
++def test_draft_badge_is_not_public():
++    draft = "/teams/west/drafts/badge.png"
++    public = "/teams/west/badge.png"
++    service = AssetService({draft: b"draft", public: b"PNG"})
++
++    assert not service.is_public(draft)
++    assert service.fetch(draft) == (403, b"Forbidden")
++    assert service.is_public(public)
++    assert service.fetch(public) == (200, b"PNG")
++
++
++def test_visibility_restrictions_override_custom_public_routes():
++    paths = (
++        "/teams/west/drafts/nested/badge.png",
++        "/teams/west/private/badge.png",
++        "/teams/west/.deployment/badge.png",
++    )
++    service = AssetService(
++        {path: b"hidden" for path in paths}, routes=(PublicRoute("*"),)
++    )
++
++    for path in paths:
++        assert not service.is_public(path)
++        assert service.fetch(path) == (403, b"Forbidden")
++
++
++def test_public_routes_still_span_directories_and_allow_draft_named_teams():
++    paths = (
++        "/teams/west/published/badge.png",
++        "/teams/drafts-team/badge.png",
++    )
++    service = AssetService({path: b"PNG" for path in paths})
++
++    for path in paths:
++        assert service.fetch(path) == (200, b"PNG")

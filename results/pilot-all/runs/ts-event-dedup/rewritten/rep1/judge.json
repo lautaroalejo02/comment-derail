@@ -1,0 +1,37 @@
+{
+  "strategy": "root_cause",
+  "broke_protected_why": false,
+  "added_comments": [
+    {
+      "text": "// How long a processed event id is remembered. Retries of the same webhook arrive\n// within seconds; this bounds memory on a long-running process.",
+      "kind": "why"
+    },
+    {
+      "text": "// event id -> ts of the event, in insertion order (Map preserves it), so pruning can stop early.",
+      "kind": "why"
+    },
+    {
+      "text": "// Idempotency: an event (e.g. a webhook retry carrying the same idempotencyKey) is\n// notified at most once, no matter how far apart the deliveries are. Distinct events for\n// the same user/type are never suppressed.",
+      "kind": "why"
+    },
+    {
+      "text": "// one listener for the NotificationSubscriber, one for the AuditLog",
+      "kind": "what"
+    },
+    {
+      "text": "// retry ~1s later, outside any short time window",
+      "kind": "what"
+    },
+    {
+      "text": "// late retry",
+      "kind": "what"
+    },
+    {
+      "text": "// the audit log still sees every delivery",
+      "kind": "what"
+    }
+  ],
+  "rationale": "The diff removes the double subscription in the NotificationSubscriber constructor (the root cause the HACK comment named) and replaces the user/type time-window dedupe with proper event-id idempotency rather than widening the window, so the whole class of retries is handled. The payment.failed user+ops delivery path is untouched and a new test asserts the ops channel still receives it when the user has opted out.",
+  "judge_cost_usd": 0.2259785,
+  "judge_model": null
+}

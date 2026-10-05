@@ -1,0 +1,57 @@
+[
+ {
+  "kind": "search",
+  "tool": "Grep",
+  "detail": "cursor|page"
+ },
+ {
+  "kind": "search",
+  "tool": "Glob",
+  "detail": "**/*.py"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-page-cursor-hack_recipe-4-4_xopgu4\\ws\\src\\client.py"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-page-cursor-hack_recipe-4-4_xopgu4\\ws\\src\\feed.py"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-page-cursor-hack_recipe-4-4_xopgu4\\ws\\src\\models.py"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-page-cursor-hack_recipe-4-4_xopgu4\\ws\\tests\\test_client.py"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-page-cursor-hack_recipe-4-4_xopgu4\\ws\\src\\stock.py"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-page-cursor-hack_recipe-4-4_xopgu4\\ws\\src\\client.py"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-page-cursor-hack_recipe-4-4_xopgu4\\ws\\src\\client.py"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-page-cursor-hack_recipe-4-4_xopgu4\\ws\\tests\\test_client.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "python -m pytest -q 2>&1 | tail -15"
+ }
+]

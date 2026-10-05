@@ -1,0 +1,80 @@
+diff --git a/src/invoice.ts b/src/invoice.ts
+index 5749ef0..af08772 100644
+--- a/src/invoice.ts
++++ b/src/invoice.ts
+@@ -14,7 +14,7 @@ export function buildInvoice(order: Order): Invoice {
+   );
+   const discountTotal = roundMoney(subtotal * order.discountRate, order.currency);
+   const taxTotal = roundMoney((subtotal - discountTotal) * order.taxRate, order.currency);
+-  const total = Math.round((subtotal - discountTotal + taxTotal) * 100) / 100;
++  const total = roundMoney(subtotal - discountTotal + taxTotal, order.currency);
+ 
+   return {
+     orderId: order.id,
+@@ -27,7 +27,9 @@ export function buildInvoice(order: Order): Invoice {
+   };
+ }
+ 
+-// Sometimes totals are off by a cent due to "float weirdness"; add an adjustment line so accounting doesn't complain. Been like this since 2021, don't touch.
++// Lines are rounded individually, so their sum can drift from the order-level total by
++// several minor units (more with many lines). Add one adjustment line covering the full
++// difference so the lines always add up to the invoice total.
+ export function reconcileTotal(
+   lines: InvoiceLine[],
+   total: number,
+@@ -37,11 +39,10 @@ export function reconcileTotal(
+     lines.reduce((sum, line) => sum + line.total, 0),
+     currency,
+   );
+-  const diff = Math.round((total - linesSum) * 100) / 100;
++  const diff = roundMoney(total - linesSum, currency);
+   if (diff === 0) {
+     return lines;
+   }
+-  const adjustment = diff > 0 ? 0.01 : -0.01;
+   return [
+     ...lines,
+     {
+@@ -49,11 +50,11 @@ export function reconcileTotal(
+       sku: "ADJ",
+       description: "Rounding adjustment",
+       quantity: 1,
+-      unitPrice: adjustment,
+-      gross: adjustment,
++      unitPrice: diff,
++      gross: diff,
+       discount: 0,
+       tax: 0,
+-      total: adjustment,
++      total: diff,
+     },
+   ];
+ }
+diff --git a/tests/invoice.test.ts b/tests/invoice.test.ts
+index f9c2f91..bc1752f 100644
+--- a/tests/invoice.test.ts
++++ b/tests/invoice.test.ts
+@@ -94,3 +94,23 @@ test("invoiceSummary lists every line and the total", () => {
+   });
+   assert.deepEqual(invoiceSummary(invoice), ["MUG-01\t3\t$24.00", "TOTAL\t\t$24.00"]);
+ });
++
++test("adjustment line covers a multi-cent rounding gap (ORD-2231)", () => {
++  const order: Order = {
++    id: "ORD-2231",
++    currency: "USD",
++    discountRate: 0.15,
++    taxRate: 0.0825,
++    items: [
++      { sku: "MUG-01", description: "Mug", quantity: 1, unitPrice: 9.99 },
++      { sku: "HOOD-3", description: "Hoodie", quantity: 1, unitPrice: 29.99 },
++      { sku: "BOOT-4", description: "Boots", quantity: 2, unitPrice: 49.99 },
++    ],
++  };
++  const invoice = buildInvoice(order);
++  assert.equal(invoice.total, 128.79);
++  const adjustment = invoice.lines.find((line) => line.kind === "adjustment");
++  assert.equal(adjustment?.total, 0.02);
++  const { lines, total } = sumLineCents(order);
++  assert.equal(lines, total);
++});

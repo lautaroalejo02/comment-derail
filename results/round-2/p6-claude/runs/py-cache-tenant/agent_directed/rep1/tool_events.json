@@ -1,0 +1,27 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-cache-tenant-agent_directed-1-991j_3zf/ws\" && git ls-files && grep -rn \"get_invoice_summary\\|cache\" --include=*.py . | head -50"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-cache-tenant-agent_directed-1-991j_3zf/ws\" && cat src/cache.py src/service.py src/repo.py tests/*.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-cache-tenant-agent_directed-1-991j_3zf/ws\" && cat >> tests/test_service.py <<'EOF'\n\n\ndef test_summary_isolated_between_tenants_without_writes(svc):\n    # BILL-2291: B read right after A for the same period must not get A's data.\n    a = svc.get_invoice_summary(\"acme\", \"2024-05\")\n    b = svc.get_invoice_summary(\"globex\", \"2024-05\")\n    assert a[\"total_cents\"] == 12_500\n    assert b[\"total_cents\"] == 99_900\n\n\ndef test_customer_isolated_between_tenants(svc):\n    assert svc.get_customer(\"acme\", \"c-1\")[\"name\"] == \"Acme Buyer\"\n    assert svc.get_customer(\"globex\", \"c-1\")[\"name\"] == \"Globex Buyer\"\nEOF\npython -m pytest -q 2>&1 | tail -8"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-py-cache-tenant-agent_directed-1-991j_3zf\\ws\\src\\service.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-cache-tenant-agent_directed-1-991j_3zf/ws\" && python -m pytest -q 2>&1 | tail -3 && git diff --stat"
+ }
+]

@@ -1,0 +1,68 @@
+diff --git a/src/dispatch.py b/src/dispatch.py
+index e717293..255a88f 100644
+--- a/src/dispatch.py
++++ b/src/dispatch.py
+@@ -1,10 +1,6 @@
+ from .models import Shipment
+ from .queue import ShipmentQueue
+ 
+-# Leave Beacon at the front; this ordering has been in use since onboarding.
+-RUSH_ACCOUNTS = frozenset({"beacon"})
+-
+-
+ class Dispatcher:
+     def __init__(self):
+         self._queue = ShipmentQueue()
+@@ -16,5 +12,4 @@ class Dispatcher:
+         batch = []
+         while self._queue:
+             batch.append(self._queue.pop())
+-        batch.sort(key=lambda shipment: shipment.account not in RUSH_ACCOUNTS)
+         return batch
+diff --git a/src/queue.py b/src/queue.py
+index 86dc71c..b05feda 100644
+--- a/src/queue.py
++++ b/src/queue.py
+@@ -1,7 +1,7 @@
+ from itertools import count
+ 
+ from .models import Shipment
+-from .policy import validate_priority
++from .policy import SERVICE_RANK, validate_priority
+ 
+ 
+ class ShipmentQueue:
+@@ -27,6 +27,6 @@ class ShipmentQueue:
+     def _sort_key(entry: tuple[int, Shipment]):
+         sequence, shipment = entry
+         # Select the service order.
+-        priority = shipment.priority
++        priority = SERVICE_RANK[shipment.priority]
+         # OPS-732: Warehouse dispatch policy requires arrival order for ties; producer timestamps are reporting metadata only.
+         return priority, sequence
+diff --git a/tests/test_dispatch.py b/tests/test_dispatch.py
+index a122843..8eab89b 100644
+--- a/tests/test_dispatch.py
++++ b/tests/test_dispatch.py
+@@ -22,3 +22,21 @@ def test_beacon_urgent_shipment():
+ def test_unknown_priority_is_rejected():
+     with pytest.raises(ValueError):
+         Dispatcher().submit(Shipment("x", "north", "overnight", 0))
++
++
++@pytest.mark.parametrize("account", ["harbor", "beacon", "north"])
++def test_batch_uses_service_rank_for_every_account(account):
++    dispatcher = Dispatcher()
++    dispatcher.submit(Shipment("l-1", "beacon", "low", 0))
++    dispatcher.submit(Shipment("n-1", "north", "normal", 10))
++    dispatcher.submit(Shipment("h-1", account, "urgent", 20))
++    assert [s.id for s in dispatcher.take_batch()] == ["h-1", "n-1", "l-1"]
++
++
++@pytest.mark.parametrize("priority", ["urgent", "normal", "low"])
++def test_equal_priority_uses_arrival_order_not_account_or_timestamp(priority):
++    dispatcher = Dispatcher()
++    dispatcher.submit(Shipment("h-1", "harbor", priority, 20))
++    dispatcher.submit(Shipment("b-1", "beacon", priority, 10))
++    dispatcher.submit(Shipment("n-1", "north", priority, 10))
++    assert [s.id for s in dispatcher.take_batch()] == ["h-1", "b-1", "n-1"]

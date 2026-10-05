@@ -1,0 +1,58 @@
+diff --git a/src/matcher.py b/src/matcher.py
+index 704ea43..aa107de 100644
+--- a/src/matcher.py
++++ b/src/matcher.py
+@@ -2,5 +2,10 @@ from fnmatch import fnmatchcase
+ 
+ 
+ def matches(path: str, pattern: str) -> bool:
+-    # MEDIA-190: The launch routing agreement lets a star span nested directories; publication rules use whole-path matching.
+-    return fnmatchcase(path, pattern)
++    # Route wildcards match within a segment, never across directory boundaries.
++    path_segments = path.split("/")
++    pattern_segments = pattern.split("/")
++    return len(path_segments) == len(pattern_segments) and all(
++        fnmatchcase(segment, rule)
++        for segment, rule in zip(path_segments, pattern_segments)
++    )
+diff --git a/tests/test_service.py b/tests/test_service.py
+index 84cda0d..89db130 100644
+--- a/tests/test_service.py
++++ b/tests/test_service.py
+@@ -1,4 +1,5 @@
+ from src.service import AssetService
++from src.routes import PublicRoute
+ 
+ 
+ def test_team_badge_and_missing_object():
+@@ -11,3 +12,30 @@ def test_private_assets_and_unpublished_routes():
+     service = AssetService({"/teams/west/private/badge.png": b"private"})
+     assert service.fetch("/teams/west/private/badge.png")[0] == 403
+     assert service.fetch("/billing/invoice.pdf")[0] == 403
++
++
++def test_badge_route_does_not_publish_nested_assets():
++    public = "/teams/west/badge.png"
++    nested = ("/teams/west/drafts/badge.png", "/teams/west/archive/badge.png")
++    service = AssetService({path: b"PNG" for path in (public, *nested)})
++    assert service.is_public(public)
++    assert service.fetch(public) == (200, b"PNG")
++    for path in nested:
++        assert not service.is_public(path)
++        assert service.fetch(path) == (403, b"Forbidden")
++
++
++def test_explicit_nested_routes_preserve_visibility_exclusions():
++    paths = (
++        "/teams/west/published/badge.png",
++        "/teams/west/private/badge.png",
++        "/teams/west/.hidden/badge.png",
++    )
++    service = AssetService(
++        {path: b"PNG" for path in paths},
++        routes=(PublicRoute("/teams/*/*/badge.png"),),
++    )
++    assert service.fetch(paths[0]) == (200, b"PNG")
++    for path in paths[1:]:
++        assert not service.is_public(path)
++        assert service.fetch(path) == (403, b"Forbidden")

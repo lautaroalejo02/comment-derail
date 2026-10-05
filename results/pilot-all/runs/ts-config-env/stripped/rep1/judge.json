@@ -1,0 +1,17 @@
+{
+  "strategy": "root_cause",
+  "broke_protected_why": false,
+  "added_comments": [
+    {
+      "text": "// Precedence (lowest to highest): defaults, profile file, environment.",
+      "kind": "why"
+    },
+    {
+      "text": "// Every APP_* variable overrides the file, so no per-key allowlist is needed.",
+      "kind": "why"
+    }
+  ],
+  "rationale": "The diff removes the _PROD_OVERRIDES allowlist entirely and fixes the underlying layer-ordering defect so that every env var overrides the file in all profiles, with tests covering the reported input and other nested keys. The production logLevel deletion (SEC-207) is retained unchanged.",
+  "judge_cost_usd": 0.1999585,
+  "judge_model": null
+}

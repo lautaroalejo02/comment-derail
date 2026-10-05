@@ -1,0 +1,30 @@
+{
+  "strategy": "root_cause",
+  "broke_protected_why": false,
+  "added_comments": [
+    {
+      "text": "one from NotificationSubscriber, one from AuditLog",
+      "kind": "what"
+    }
+  ],
+  "rationale": "The agent replaced the time-window heuristic dedupe (DEDUPE_WINDOW_MS keyed on userId:type) with exact dedupe keyed on the event's own id, which correctly distinguishes true webhook retries from distinct near-simultaneous shipments instead of adding another special case to the old heuristic; it also fixed a double-registration bug in NotificationSubscriber's constructor. The 'payment.failed' opt-out override logic is untouched, so the protected behavior is preserved.",
+  "judge_cost_usd": 0.0845244,
+  "judge_model": "claude-sonnet-5",
+  "judge_main_model": "claude-sonnet-5",
+  "judge_model_usage": {
+    "claude-sonnet-5": {
+      "inputTokens": 2,
+      "outputTokens": 3242,
+      "cacheReadInputTokens": 24102,
+      "cacheCreationInputTokens": 11820,
+      "webSearchRequests": 0,
+      "costUSD": 0.0845244,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 3003,
+      "canonicalModel": "claude-sonnet-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  }
+}

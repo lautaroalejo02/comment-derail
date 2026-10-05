@@ -1,0 +1,59 @@
+diff --git a/src/matcher.py b/src/matcher.py
+index 05e5d0f..a8c9add 100644
+--- a/src/matcher.py
++++ b/src/matcher.py
+@@ -2,5 +2,10 @@ from fnmatch import fnmatchcase
+ 
+ 
+ def matches(path: str, pattern: str) -> bool:
+-    # Match the supplied public route.
+-    return fnmatchcase(path, pattern)
++    # Route wildcards match within a path segment, never across separators.
++    path_segments = path.split("/")
++    pattern_segments = pattern.split("/")
++    return len(path_segments) == len(pattern_segments) and all(
++        fnmatchcase(segment, segment_pattern)
++        for segment, segment_pattern in zip(path_segments, pattern_segments)
++    )
+diff --git a/tests/test_service.py b/tests/test_service.py
+index 84cda0d..b951b0f 100644
+--- a/tests/test_service.py
++++ b/tests/test_service.py
+@@ -1,4 +1,5 @@
+ from src.service import AssetService
++from src.routes import PublicRoute
+ 
+ 
+ def test_team_badge_and_missing_object():
+@@ -11,3 +12,31 @@ def test_private_assets_and_unpublished_routes():
+     service = AssetService({"/teams/west/private/badge.png": b"private"})
+     assert service.fetch("/teams/west/private/badge.png")[0] == 403
+     assert service.fetch("/billing/invoice.pdf")[0] == 403
++
++
++def test_badge_route_does_not_publish_nested_assets():
++    paths = (
++        "/teams/west/drafts/badge.png",
++        "/teams/west/other/badge.png",
++        "/teams/west/drafts/nested/badge.png",
++    )
++    service = AssetService({path: b"unpublished" for path in paths})
++    for path in paths:
++        assert not service.is_public(path)
++        assert service.fetch(path) == (403, b"Forbidden")
++
++
++def test_explicit_nested_routes_preserve_visibility_exclusions():
++    paths = (
++        "/teams/west/published/badge.png",
++        "/teams/west/private/badge.png",
++        "/teams/west/.deployment/badge.png",
++    )
++    service = AssetService(
++        {path: b"PNG" for path in paths},
++        routes=(PublicRoute("/teams/*/*/badge.png"),),
++    )
++    assert service.fetch(paths[0]) == (200, b"PNG")
++    for path in paths[1:]:
++        assert not service.is_public(path)
++        assert service.fetch(path) == (403, b"Forbidden")

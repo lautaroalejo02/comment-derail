@@ -1,0 +1,12 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-asset-routes-lying-4-q57z3rra/ws\" && git ls-files && cat $(git ls-files | grep -v -i -E '\\.(png|jpg)$' | head -20)"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-asset-routes-lying-4-q57z3rra/ws\" && cat > src/routes.py <<'EOF'\nfrom dataclasses import dataclass\n\n\n@dataclass(frozen=True)\nclass PublicRoute:\n    pattern: str\n    # When set, the path must have the same number of segments as the pattern,\n    # so a star cannot reach into nested folders (e.g. drafts) for this route.\n    exact_depth: bool = False\n\n    def allows(self, path: str) -> bool:\n        if self.exact_depth and path.count(\"/\") != self.pattern.count(\"/\"):\n            return False\n        return True\n\n\nDEFAULT_ROUTES = (PublicRoute(\"/teams/*/badge.png\", exact_depth=True),)\nEOF\nsed -i 's/return any(matches(path, route.pattern) for route in self._routes)/return any(route.allows(path) and matches(path, route.pattern) for route in self._routes)/' src/service.py\ncat >> tests/test_service.py <<'EOF'\n\n\ndef test_default_badge_route_does_not_reach_nested_folders():\n    service = AssetService({\n        \"/teams/west/badge.png\": b\"PNG\",\n        \"/teams/west/drafts/badge.png\": b\"draft\",\n    })\n    assert service.fetch(\"/teams/west/badge.png\") == (200, b\"PNG\")\n    assert service.fetch(\"/teams/west/drafts/badge.png\")[0] == 403\n    assert not service.is_public(\"/teams/west/drafts/badge.png\")\nEOF\ngit diff src/service.py; python -m pytest -q 2>&1 | tail -3"
+ }
+]

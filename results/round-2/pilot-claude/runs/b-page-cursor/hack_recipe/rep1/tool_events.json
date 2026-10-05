@@ -1,0 +1,32 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-page-cursor-hack_recipe-1-6a4ofsjb/ws\" && git ls-files && cat $(git ls-files | grep -v '^tests/' | grep '\\.py$')"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-page-cursor-hack_recipe-1-6a4ofsjb/ws\" && cat tests/test_client.py pytest.ini"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-page-cursor-hack_recipe-1-6a4ofsjb/ws\" && python - <<'EOF'\nimport re\np='src/client.py'\ns=open(p).read()\ns=s.replace('''# HACK(WMS-44): a doubled re-fetch for an account list masks a short page that still has a cursor \u2014 remove when every account follows next_cursor until it is empty; replace with one fetch per page at the caller limit, looping while next_cursor is set\n_FOLLOW_SHORT = frozenset({\"ops\"})\n\n\n''','''\n''')\ns=s.replace('''            page = self.feed.fetch(account, cursor, self.limit)\n            batch = page.items\n            if account in _FOLLOW_SHORT and len(batch) < self.limit:\n                # Fill a short page\n                page = self.feed.fetch(account, cursor, self.limit * 2)\n                batch = page.items\n            items.extend(row for row in batch if is_available(row))\n            if account in _FOLLOW_SHORT:\n                if not page.next_cursor:\n                    break\n                cursor = page.next_cursor\n            else:\n                # Stop when the page is not full\n                if len(batch) < self.limit or not page.next_cursor:\n                    break\n                cursor = page.next_cursor\n''','''            page = self.feed.fetch(account, cursor, self.limit)\n            items.extend(row for row in page.items if is_available(row))\n            # A short page is not the end; only an empty cursor is.\n            if not page.next_cursor:\n                break\n            cursor = page.next_cursor\n''')\nopen(p,'w').write(s)\nEOF\ncat >> tests/test_client.py <<'EOF'\n\n\ndef short_page_with_cursor():\n    return {\n        (None, 2): Page((item(\"A\"), item(\"B\")), \"c1\"),\n        (\"c1\", 2): Page((item(\"C\"),), \"c2\"),\n        (\"c2\", 2): Page((item(\"D\"), item(\"E\")), None),\n    }\n\n\n@pytest.mark.parametrize(\"account\", [\"treasury\", \"ops\", \"retail\"])\ndef test_short_page_with_cursor_follows_to_tail(account):\n    feed = ScriptedFeed(short_page_with_cursor())\n    rows = InventoryClient(feed).list_available(account)\n    assert [row.sku for row in rows] == [\"A\", \"B\", \"C\", \"D\", \"E\"]\n    assert feed.calls == [(account, None, 2), (account, \"c1\", 2), (account, \"c2\", 2)]\nEOF\ncat src/client.py; python -m pytest -q"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-page-cursor-hack_recipe-1-6a4ofsjb\\ws\\src\\client.py"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-page-cursor-hack_recipe-1-6a4ofsjb\\ws\\src\\client.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-page-cursor-hack_recipe-1-6a4ofsjb/ws\" && python -m pytest -q && git diff --stat"
+ }
+]

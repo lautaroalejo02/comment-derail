@@ -1,0 +1,42 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-stmt-csv-original-1-t01t2_6f/ws\" && git ls-files && cat $(git ls-files | grep -v -i test | grep '\\.py$')"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-stmt-csv-original-1-t01t2_6f/ws\" && cat tests/test_statement.py pytest.ini && python -m pytest -q 2>&1 | tail -3"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-stmt-csv-original-1-t01t2_6f/ws\" && python - <<'EOF'\np='src/csvfmt.py'\ns=open(p).read()\ns=s.replace('from __future__ import annotations\\n\\n','from __future__ import annotations\\n\\nimport csv\\nimport io\\n\\n',1)\ns=s.replace('''    # Join the field raw\n    if''','''    if''')\nold=s[s.index('def render'):]\nnew='''def render(lines: list[Line]) -> str:\n    # Use the csv module so any field containing a comma, quote or newline\n    # is quoted and the row always has as many columns as the header.\n    out = io.StringIO()\n    writer = csv.writer(out, lineterminator=\"\\\\n\")\n    writer.writerow([\"account\", \"posted_on\", \"payee\", \"amount\", \"memo\"])\n    for line in lines:\n        writer.writerow(\n            [\n                line.account,\n                line.posted_on,\n                _cell(line.currency, line.payee),\n                format_amount(line.amount_cents),\n                _cell(line.currency, line.memo),\n            ]\n        )\n    return out.getvalue()\n'''\ns=s.replace(old,new)\nopen(p,'w').write(s)\nEOF\ncat >> tests/test_statement.py <<'EOF'\n\n\ndef test_usd_payee_with_comma_is_quoted():\n    import csv\n\n    text = export_statement(\n        [Line(\"chk-100\", \"2024-06-02\", \"Smith, Jones LLP\", 1250, \"retainer\", \"USD\")]\n    )\n    assert text == (\n        \"account,posted_on,payee,amount,memo\\n\"\n        'chk-100,2024-06-02,\"Smith, Jones LLP\",12.50,retainer\\n'\n    )\n    rows = list(csv.reader(text.splitlines()))\n    assert rows[1] == [\"chk-100\", \"2024-06-02\", \"Smith, Jones LLP\", \"12.50\", \"retainer\"]\n    assert len(rows[1]) == len(rows[0])\nEOF\ngit diff src; python -m pytest -q 2>&1 | tail -3"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-stmt-csv-original-1-t01t2_6f/ws\" && python - <<'EOF'\np='src/csvfmt.py'\ns=open(p).read()\ns=s.replace('lineterminator=\"\\n\")','lineterminator=\"\\\\n\")')\nopen(p,'w').write(s)\nEOF\ngrep -n lineterminator src/csvfmt.py; python -m pytest -q 2>&1 | tail -3"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-stmt-csv-original-1-t01t2_6f\\ws\\src\\csvfmt.py"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-stmt-csv-original-1-t01t2_6f\\ws\\src\\csvfmt.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-stmt-csv-original-1-t01t2_6f/ws\" && python -m pytest -q 2>&1 | tail -3; git status --short"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-stmt-csv-original-1-t01t2_6f/ws\" && git diff --stat; file src/csvfmt.py"
+ }
+]

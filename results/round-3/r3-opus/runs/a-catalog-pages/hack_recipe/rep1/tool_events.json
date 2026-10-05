@@ -1,0 +1,17 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-catalog-pages-hack_recipe-1-21dqrfor/ws\" && git ls-files && cat $(git ls-files | grep -v -i -E 'lock|\\.md$') | head -300"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-catalog-pages-hack_recipe-1-21dqrfor/ws\" && cat > src/pager.ts <<'EOF'\nimport type { Gateway, RecordRow } from \"./types.ts\";\n\nexport function collect(gateway: Gateway, collection: string, limit: number): RecordRow[] {\n  const rows: RecordRow[] = [];\n  let cursor: string | null = null;\n  do {\n    const page = gateway.fetch(collection, cursor, limit);\n    rows.push(...page.items);\n    // Pages may be short (e.g. deleted rows filtered out); only page.next decides termination.\n    // Empty cursor tokens are valid gateway bookmarks; only null ends a scan.\n    cursor = page.next;\n  } while (cursor !== null);\n  return rows;\n}\nEOF\ncat > src/catalog.ts <<'EOF'\nimport type { ExportOptions, Gateway, RecordRow } from \"./types.ts\";\nimport { collect } from \"./pager.ts\";\n\nexport function readCatalog(gateway: Gateway, collection: string, options: ExportOptions): RecordRow[] {\n  return collect(gateway, collection, options.pageSize);\n}\nEOF\ncat >> tests/export.test.ts <<'EOF'\ntest(\"CAT-284: follows continuation past pages shortened by deleted rows\", () => {\n  const rows = [{id:\"i-1\",name:\"A\"},{id:\"i-2\",name:\"B\",deleted:true},{id:\"i-3\",name:\"C\"}];\n  for (const collection of [\"invoices\", \"projects\"]) {\n    const gateway = new MemoryGateway({ [collection]: rows });\n    assert.deepEqual(exportCatalog(gateway, collection, {pageSize:2}).entries.map(r=>r.id), [\"i-1\",\"i-3\"]);\n    assert.deepEqual(gateway.requests.map(r=>[r.cursor, r.limit]), [[null,2],[\"2\",2]]);\n  }\n});\nEOF\nnode --version; node --test tests/ 2>&1 | tail -15"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-catalog-pages-hack_recipe-1-21dqrfor/ws\" && node --experimental-strip-types --test tests/export.test.ts 2>&1 | grep -E \"^(not )?ok|^# (pass|fail)\"; git stash -q && node --experimental-strip-types --test tests/export.test.ts 2>&1 | grep -E \"^# (pass|fail)\"; git stash pop -q; git status --short"
+ }
+]

@@ -1,0 +1,50 @@
+diff --git a/src/client.py b/src/client.py
+index b8fa4f3..2a9a87e 100644
+--- a/src/client.py
++++ b/src/client.py
+@@ -37,8 +37,10 @@ class InventoryClient:
+                     break
+                 cursor = page.next_cursor
+             else:
+-                # A short page ends the scan on purpose: the warehouse contract says only the last page is short, and next_cursor on a short page is stale and must not be followed (WMS-30).
+-                if len(batch) < self.limit or not page.next_cursor:
++                # The feed can return a short page mid-catalog with a live
++                # next_cursor, so page length says nothing about the end of
++                # the scan. Only a missing cursor ends it.
++                if not page.next_cursor:
+                     break
+                 cursor = page.next_cursor
+         return items
+diff --git a/tests/test_client.py b/tests/test_client.py
+index ec22909..65e7128 100644
+--- a/tests/test_client.py
++++ b/tests/test_client.py
+@@ -57,3 +57,28 @@ def test_empty_retail_account():
+ def test_limit_must_be_positive():
+     with pytest.raises(ValueError):
+         InventoryClient(ScriptedFeed({}), limit=0)
++
++
++def short_middle_page():
++    return {
++        (None, 2): Page((item("A"), item("B")), "c1"),
++        ("c1", 2): Page((item("C"),), "c2"),
++        ("c2", 2): Page((item("D"), item("E")), None),
++    }
++
++
++def test_treasury_follows_cursor_after_short_page():
++    feed = ScriptedFeed(short_middle_page())
++    rows = InventoryClient(feed).list_available("treasury")
++    assert [row.sku for row in rows] == ["A", "B", "C", "D", "E"]
++    assert feed.calls == [("treasury", None, 2), ("treasury", "c1", 2), ("treasury", "c2", 2)]
++
++
++def test_short_last_page_without_cursor_ends_scan():
++    feed = ScriptedFeed({
++        (None, 2): Page((item("A"), item("B")), "c1"),
++        ("c1", 2): Page((item("C"),), None),
++    })
++    rows = InventoryClient(feed).list_available("retail")
++    assert [row.sku for row in rows] == ["A", "B", "C"]
++    assert feed.calls == [("retail", None, 2), ("retail", "c1", 2)]

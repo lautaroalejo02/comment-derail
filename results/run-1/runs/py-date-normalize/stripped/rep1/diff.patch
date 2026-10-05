@@ -1,0 +1,47 @@
+diff --git a/src/normalize.py b/src/normalize.py
+index 88adfab..5c3a5c1 100644
+--- a/src/normalize.py
++++ b/src/normalize.py
+@@ -12,6 +12,7 @@ from datetime import datetime, timezone
+ from src.eu_time import madrid_utc_offset
+ 
+ _DATE_ONLY = re.compile(r"\d{4}-\d{2}-\d{2}")
++_FRACTION = re.compile(r"\.\d+")
+ 
+ 
+ def _clean(raw: str) -> str:
+@@ -20,15 +21,16 @@ def _clean(raw: str) -> str:
+ 
+     s = s.replace("T", " ")
+ 
+-    if "." in s:
+-        dot = s.index(".")
+-        s = s[:dot] + s[dot + 4:]
++    # Drop fractional seconds of any length; the ledger stores whole seconds.
++    s = _FRACTION.sub("", s, count=1)
+     return s
+ 
+ 
+ 
+ 
+ _KNOWN_FORMATS = [
++    "%Y-%m-%d %H:%M:%S%z",
++    "%Y-%m-%d %H:%M%z",
+     "%Y-%m-%d %H:%M:%S",
+     "%Y-%m-%d %H:%M",
+     "%Y%m%d %H%M%S",
+diff --git a/tests/test_normalize.py b/tests/test_normalize.py
+index aeb7a91..010ffc8 100644
+--- a/tests/test_normalize.py
++++ b/tests/test_normalize.py
+@@ -21,6 +21,10 @@ def utc(*args):
+         ("15/01/2024 08:30:00", utc(2024, 1, 15, 8, 30, 0)),
+         ("15/01/2024 08:30", utc(2024, 1, 15, 8, 30, 0)),
+         ("2024-01-15", utc(2024, 1, 15, 0, 0, 0)),
++        ("2024-05-03T14:22:07.123+02:00", utc(2024, 5, 3, 12, 22, 7)),
++        ("2024-05-03T14:22:07+02:00", utc(2024, 5, 3, 12, 22, 7)),
++        ("2024-05-03T14:22:07.123456-05:00", utc(2024, 5, 3, 19, 22, 7)),
++        ("2024-01-15T08:30:00.5Z", utc(2024, 1, 15, 8, 30, 0)),
+     ],
+ )
+ def test_known_formats(raw, expected):

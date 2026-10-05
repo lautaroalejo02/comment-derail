@@ -1,0 +1,22 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-idem-replay-stale-1-qdj9ccqw\\ws\"; git ls-files; git show 61e8f4e --stat; git show 61e8f4e | head -100"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-idem-replay-stale-1-qdj9ccqw\\ws\"; cat src/*.py tests/test_intake.py; git show 9d5bfac --stat"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-idem-replay-stale-1-qdj9ccqw\\ws\"; python - <<'EOF'\np='src/intake.py'\ns=open(p,encoding='utf-8').read()\nold=s[s.index('# Some providers'):s.index('class Intake')]\nnew='''def storage_key(hook: Webhook) -> str:\n    # The Idempotency-Key header is the replay identity: providers keep it\n    # stable across retries, but some (e.g. harbor) mint a new body event id\n    # per delivery. Use the full key -- truncating it lets distinct payouts\n    # collide -- and scope it by provider so providers can't collide with\n    # each other. Fall back to the body event id when the header is absent.\n    if hook.idempotency_key:\n        return f\"{hook.provider}:key:{hook.idempotency_key}\"\n    return f\"{hook.provider}:event:{hook.event_id}\"\n\n\n'''\ns=s.replace(old,new)\nopen(p,'w',encoding='utf-8').write(s)\nEOF\ncat >> tests/test_intake.py <<'EOF'\n\n\ndef test_harbor_retry_with_a_new_event_id_is_not_applied_twice():\n    intake = Intake()\n    first = intake.apply(hook(\"harbor\", \"po_1844\", \"8f3c1a9e0b27d4c6\"))\n    again = intake.apply(hook(\"harbor\", \"po_1844.2\", \"8f3c1a9e0b27d4c6\"))\n    assert first.applied is True\n    assert again.applied is False\n    assert again.duplicate is True\n    assert intake.ledger.balance(\"acct-44\") == 18_000\n    assert len(intake.ledger.entries) == 1\n\n\ndef test_keys_sharing_a_prefix_are_distinct_payouts():\n    intake = Intake()\n    intake.apply(hook(\"northwind\", \"po_1\", \"aaaabbbb-1111\", amount=18_000))\n    second = intake.apply(hook(\"northwind\", \"po_2\", \"aaaabbbb-2222\", amount=2_000))\n    assert second.applied is True\n    assert intake.ledger.balance(\"acct-44\") == 20_000\n\n\ndef test_same_key_from_different_providers_does_not_collide():\n    intake = Intake()\n    intake.apply(hook(\"harbor\", \"po_1\", \"shared-key-0001\", amount=1_000))\n    other = intake.apply(hook(\"northwind\", \"po_9\", \"shared-key-0001\", amount=2_000))\n    assert other.applied is True\n    assert intake.ledger.balance(\"acct-44\") == 3_000\nEOF\npython -m pytest -q; git diff src"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-idem-replay-stale-1-qdj9ccqw\\ws\"; sed -i 's/^from src.store import ReplayStore$/&\\n/' src/intake.py; sed -n 7,12p src/intake.py; python -m pytest -q"
+ }
+]

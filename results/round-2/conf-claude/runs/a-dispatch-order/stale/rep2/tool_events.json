@@ -1,0 +1,17 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-dispatch-order-stale-2-j5ijnp6f/ws\" && git ls-files && git show --stat HEAD~1 HEAD~2 | head -40"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-dispatch-order-stale-2-j5ijnp6f/ws\" && for f in README.md src/*.py tests/*.py; do echo \"=== $f\"; cat \"$f\"; done; git show HEAD~1"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-dispatch-order-stale-2-j5ijnp6f/ws\" && python - <<'EOF'\nimport re\np='src/queue.py'; s=open(p).read()\ns=s.replace(\"from .policy import validate_priority\",\"from .policy import SERVICE_RANK, validate_priority\")\ns=s.replace(\"\"\"        # OPS-190: Priority tokens carry numeric prefixes in service order; lexical ordering is the dispatch protocol.\n        priority = shipment.priority\n\"\"\",\"\"\"        # OPS-190: priorities are bare labels; SERVICE_RANK defines dispatch order.\n        priority = SERVICE_RANK[shipment.priority]\n\"\"\")\nopen(p,'w').write(s)\np='tests/test_dispatch.py'; s=open(p).read()\ns=s.replace(\"\"\"\n\ndef test_unknown_priority\"\"\",\"\"\"\n\ndef test_urgent_shipment_precedes_normal_for_any_account():\n    dispatcher = Dispatcher()\n    dispatcher.submit(Shipment(\"n-1\", \"north\", \"normal\", 10))\n    dispatcher.submit(Shipment(\"h-1\", \"harbor\", \"urgent\", 20))\n    dispatcher.submit(Shipment(\"l-1\", \"north\", \"low\", 5))\n    assert [s.id for s in dispatcher.take_batch()] == [\"h-1\", \"n-1\", \"l-1\"]\n\n\ndef test_unknown_priority\"\"\")\nopen(p,'w').write(s)\nEOF\ngit diff && python -m pytest -q"
+ }
+]

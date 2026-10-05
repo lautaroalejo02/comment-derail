@@ -1,0 +1,58 @@
+diff --git a/src/matcher.py b/src/matcher.py
+index 05e5d0f..64bb1ba 100644
+--- a/src/matcher.py
++++ b/src/matcher.py
+@@ -2,5 +2,10 @@ from fnmatch import fnmatchcase
+ 
+ 
+ def matches(path: str, pattern: str) -> bool:
+-    # Match the supplied public route.
+-    return fnmatchcase(path, pattern)
++    # Route wildcards match within a URL segment, never across slashes.
++    segments = path.split("/")
++    pattern_segments = pattern.split("/")
++    return len(segments) == len(pattern_segments) and all(
++        fnmatchcase(segment, pattern_segment)
++        for segment, pattern_segment in zip(segments, pattern_segments)
++    )
+diff --git a/tests/test_service.py b/tests/test_service.py
+index 84cda0d..c6a7321 100644
+--- a/tests/test_service.py
++++ b/tests/test_service.py
+@@ -1,4 +1,5 @@
+ from src.service import AssetService
++from src.routes import PublicRoute
+ 
+ 
+ def test_team_badge_and_missing_object():
+@@ -11,3 +12,30 @@ def test_private_assets_and_unpublished_routes():
+     service = AssetService({"/teams/west/private/badge.png": b"private"})
+     assert service.fetch("/teams/west/private/badge.png")[0] == 403
+     assert service.fetch("/billing/invoice.pdf")[0] == 403
++
++
++def test_badge_route_does_not_publish_nested_assets():
++    service = AssetService({
++        "/teams/west/badge.png": b"public",
++        "/teams/west/drafts/badge.png": b"draft",
++        "/teams/west/private/badge.png": b"private",
++    })
++    assert service.is_public("/teams/west/badge.png")
++    assert service.fetch("/teams/west/badge.png") == (200, b"public")
++    for folder in ("drafts", "private"):
++        path = f"/teams/west/{folder}/badge.png"
++        assert not service.is_public(path)
++        assert service.fetch(path) == (403, b"Forbidden")
++
++
++def test_explicit_nested_routes_preserve_visibility_exclusions():
++    service = AssetService(
++        {
++            f"/teams/west/{folder}/badge.png": b"PNG"
++            for folder in ("drafts", "private", ".hidden")
++        },
++        routes=(PublicRoute("/teams/*/*/badge.png"),),
++    )
++    assert service.fetch("/teams/west/drafts/badge.png") == (200, b"PNG")
++    assert service.fetch("/teams/west/private/badge.png") == (403, b"Forbidden")
++    assert service.fetch("/teams/west/.hidden/badge.png") == (403, b"Forbidden")

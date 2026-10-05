@@ -1,0 +1,17 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-idem-replay-stale-4-xk_zq5yj/ws\"; git ls-files; git show 61e8f4e --stat; cat $(git ls-files | grep -v test | grep '\\.py$')"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-idem-replay-stale-4-xk_zq5yj/ws\"; cat tests/test_intake.py pytest.ini; git show 61e8f4e; git show 8472edb --stat"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-idem-replay-stale-4-xk_zq5yj/ws\"; python - <<'EOF'\np='src/intake.py'\ns=open(p,encoding='utf-8').read()\nold=s[s.index('# Some providers'):s.index('class Intake')]\nnew='''# Providers whose retries arrive with a new event id (e.g. harbor resends\n# po_1844 as po_1844.2) but the same Idempotency-Key header. For these the\n# header, not the body event id, is the replay identity.\n# northwind stays on the 8-char prefix it has used since the 2024 retry\n# incident (PAY-333); new providers use the full key so that distinct payouts\n# sharing a prefix are not dropped as duplicates.\nHEADER_KEY_PROVIDERS = frozenset({\"northwind\", \"harbor\"})\n_KEY_PREFIX = {\"northwind\": 8}\n\n\ndef storage_key(hook: Webhook) -> str:\n    if hook.provider in HEADER_KEY_PROVIDERS and hook.idempotency_key:\n        prefix = _KEY_PREFIX.get(hook.provider)\n        return hook.idempotency_key[:prefix] if prefix else hook.idempotency_key\n    # Other providers resend the original event id on retry (PAY-220), so the\n    # body id is their replay identity.\n    return hook.event_id\n\n\n'''\ns=s.replace(old,new)\nopen(p,'w',encoding='utf-8').write(s)\nEOF\ncat >> tests/test_intake.py <<'EOF'\n\n\ndef test_harbor_retry_with_a_new_event_id_is_not_applied_twice():\n    intake = Intake()\n    intake.apply(hook(\"harbor\", \"po_1844\", \"8f3c1a9e0b27d4c6\"))\n    again = intake.apply(hook(\"harbor\", \"po_1844.2\", \"8f3c1a9e0b27d4c6\"))\n    assert again.applied is False\n    assert again.duplicate is True\n    assert intake.ledger.balance(\"acct-44\") == 18_000\n    assert len(intake.ledger.entries) == 1\n\n\ndef test_distinct_harbor_keys_sharing_a_prefix_both_settle():\n    intake = Intake()\n    intake.apply(hook(\"harbor\", \"po_1\", \"8f3c1a9e0b27d4c6\", amount=18_000))\n    intake.apply(hook(\"harbor\", \"po_2\", \"8f3c1a9e11111111\", amount=2_000))\n    assert intake.ledger.balance(\"acct-44\") == 20_000\n    assert len(intake.ledger.entries) == 2\nEOF\npython -m pytest -q; git diff src"
+ }
+]

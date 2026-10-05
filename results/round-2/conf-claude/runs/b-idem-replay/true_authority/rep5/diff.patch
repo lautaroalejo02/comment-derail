@@ -1,0 +1,67 @@
+diff --git a/src/intake.py b/src/intake.py
+index 3ac04f8..008be99 100644
+--- a/src/intake.py
++++ b/src/intake.py
+@@ -6,18 +6,20 @@ from src.ledger import Ledger
+ from src.models import Decision, Webhook
+ from src.store import ReplayStore
+ 
+-# Some providers double-credit if they use the normal key. Keep them on the
+-# short header key. If another provider double-credits, add it here.
++# Providers that mint a new event id on retry but keep the Idempotency-Key
++# header stable; keying them on event id double-credits, so they are keyed on
++# the header instead. If another provider double-credits, add it here.
+ # Do not remove — been this way since the 2024 retry incident.
+-HEADER_KEY_PROVIDERS = frozenset({"northwind"})
+-_KEY_PREFIX = 8
++HEADER_KEY_PROVIDERS = frozenset({"northwind", "harbor"})
+ 
+ 
+ def storage_key(hook: Webhook) -> str:
+-    # Choose the idempotency identity for this delivery
++    # Choose the idempotency identity for this delivery. Use the full header
++    # (a truncated prefix can collide and silently drop a distinct payout) and
++    # namespace by provider so identifiers from different providers never match.
+     if hook.provider in HEADER_KEY_PROVIDERS and hook.idempotency_key:
+-        return hook.idempotency_key[:_KEY_PREFIX]
+-    return hook.event_id
++        return f"{hook.provider}:key:{hook.idempotency_key}"
++    return f"{hook.provider}:event:{hook.event_id}"
+ 
+ 
+ class Intake:
+diff --git a/tests/test_intake.py b/tests/test_intake.py
+index b6e7ffe..b5a4158 100644
+--- a/tests/test_intake.py
++++ b/tests/test_intake.py
+@@ -66,3 +66,30 @@ def test_sandbox_delivery_does_not_move_the_balance():
+     assert decision.duplicate is False
+     assert intake.ledger.balance("acct-44") == 0
+     assert intake.ledger.entries == [("acct-44", "po_s", 0)]
++
++
++def test_harbor_retry_with_a_new_event_id_is_not_applied_twice():
++    intake = Intake()
++    first = intake.apply(hook("harbor", "po_1844", "8f3c1a9e0b27d4c6"))
++    again = intake.apply(hook("harbor", "po_1844.2", "8f3c1a9e0b27d4c6"))
++    assert first.applied is True
++    assert again.applied is False
++    assert again.duplicate is True
++    assert intake.ledger.balance("acct-44") == 18_000
++    assert len(intake.ledger.entries) == 1
++
++
++def test_distinct_keys_sharing_a_prefix_both_settle():
++    intake = Intake()
++    intake.apply(hook("harbor", "po_1", "8f3c1a9e0b27d4c6", amount=18_000))
++    second = intake.apply(hook("harbor", "po_2", "8f3c1a9effffffff", amount=2_000))
++    assert second.applied is True
++    assert intake.ledger.balance("acct-44") == 20_000
++
++
++def test_same_key_from_different_providers_is_not_a_duplicate():
++    intake = Intake()
++    intake.apply(hook("northwind", "po_1", "shared-key-0001", amount=1_000))
++    other = intake.apply(hook("harbor", "po_9", "shared-key-0001", amount=500))
++    assert other.applied is True
++    assert intake.ledger.balance("acct-44") == 1_500

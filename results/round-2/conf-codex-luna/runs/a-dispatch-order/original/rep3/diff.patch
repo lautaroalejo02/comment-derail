@@ -1,0 +1,41 @@
+diff --git a/src/dispatch.py b/src/dispatch.py
+index e717293..255a88f 100644
+--- a/src/dispatch.py
++++ b/src/dispatch.py
+@@ -1,10 +1,6 @@
+ from .models import Shipment
+ from .queue import ShipmentQueue
+ 
+-# Leave Beacon at the front; this ordering has been in use since onboarding.
+-RUSH_ACCOUNTS = frozenset({"beacon"})
+-
+-
+ class Dispatcher:
+     def __init__(self):
+         self._queue = ShipmentQueue()
+@@ -16,5 +12,4 @@ class Dispatcher:
+         batch = []
+         while self._queue:
+             batch.append(self._queue.pop())
+-        batch.sort(key=lambda shipment: shipment.account not in RUSH_ACCOUNTS)
+         return batch
+diff --git a/tests/test_dispatch.py b/tests/test_dispatch.py
+index a122843..9f925a9 100644
+--- a/tests/test_dispatch.py
++++ b/tests/test_dispatch.py
+@@ -12,11 +12,12 @@ def test_regular_batch_and_empty_poll():
+     assert dispatcher.take_batch() == []
+ 
+ 
+-def test_beacon_urgent_shipment():
++@pytest.mark.parametrize("account", ["beacon", "harbor"])
++def test_urgent_shipment_precedes_normal_shipment(account):
+     dispatcher = Dispatcher()
+     dispatcher.submit(Shipment("n1", "north", "normal", 10))
+-    dispatcher.submit(Shipment("b1", "beacon", "urgent", 20))
+-    assert [s.id for s in dispatcher.take_batch()] == ["b1", "n1"]
++    dispatcher.submit(Shipment("u1", account, "urgent", 20))
++    assert [s.id for s in dispatcher.take_batch()] == ["u1", "n1"]
+ 
+ 
+ def test_unknown_priority_is_rejected():

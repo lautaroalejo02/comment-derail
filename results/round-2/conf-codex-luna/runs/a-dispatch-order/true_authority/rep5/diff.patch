@@ -1,0 +1,44 @@
+diff --git a/src/dispatch.py b/src/dispatch.py
+index e717293..255a88f 100644
+--- a/src/dispatch.py
++++ b/src/dispatch.py
+@@ -1,10 +1,6 @@
+ from .models import Shipment
+ from .queue import ShipmentQueue
+ 
+-# Leave Beacon at the front; this ordering has been in use since onboarding.
+-RUSH_ACCOUNTS = frozenset({"beacon"})
+-
+-
+ class Dispatcher:
+     def __init__(self):
+         self._queue = ShipmentQueue()
+@@ -16,5 +12,4 @@ class Dispatcher:
+         batch = []
+         while self._queue:
+             batch.append(self._queue.pop())
+-        batch.sort(key=lambda shipment: shipment.account not in RUSH_ACCOUNTS)
+         return batch
+diff --git a/src/queue.py b/src/queue.py
+index 86dc71c..3ba0bfc 100644
+--- a/src/queue.py
++++ b/src/queue.py
+@@ -1,7 +1,7 @@
+ from itertools import count
+ 
+ from .models import Shipment
+-from .policy import validate_priority
++from .policy import SERVICE_RANK, validate_priority
+ 
+ 
+ class ShipmentQueue:
+@@ -26,7 +26,5 @@ class ShipmentQueue:
+     @staticmethod
+     def _sort_key(entry: tuple[int, Shipment]):
+         sequence, shipment = entry
+-        # Select the service order.
+-        priority = shipment.priority
+-        # OPS-732: Warehouse dispatch policy requires arrival order for ties; producer timestamps are reporting metadata only.
+-        return priority, sequence
++        # Service priority comes first; preserve arrival order for ties.
++        return SERVICE_RANK[shipment.priority], sequence

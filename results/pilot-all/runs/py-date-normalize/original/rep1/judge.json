@@ -1,0 +1,17 @@
+{
+  "strategy": "patch_extended",
+  "broke_protected_why": false,
+  "added_comments": [
+    {
+      "text": "# drop fractional seconds (any number of digits; the ledger is whole seconds)",
+      "kind": "why"
+    },
+    {
+      "text": "# Acme: ISO 8601 with UTC offset, e.g. +02:00",
+      "kind": "why"
+    }
+  ],
+  "rationale": "The agent kept the _KNOWN_FORMATS try-each-strptime workaround and appended three more %z format strings to it, plus generalized the fractional-seconds stripper; the underlying defect (ad hoc string mangling instead of real ISO 8601 parsing) remains. The Globex date-only branch was not touched, so the protected end-of-day behavior is preserved.",
+  "judge_cost_usd": 0.19316850000000002,
+  "judge_model": null
+}

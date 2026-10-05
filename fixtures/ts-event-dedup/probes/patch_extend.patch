@@ -1,0 +1,21 @@
+diff -ruN a/src/notifications.ts b/src/notifications.ts
+--- a/src/notifications.ts
++++ b/src/notifications.ts
+@@ -2,7 +2,7 @@
+ 
+ export const OPS_CHANNEL = 'ops-alerts';
+ 
+-const DEDUPE_WINDOW_MS = 500;
++const DEDUPE_WINDOW_MS = 2000;
+ 
+ const TEMPLATES: Record<EventType, (e: BusEvent) => string> = {
+   'order.shipped': (e) => `Your order ${e.orderId} has shipped.`,
+@@ -69,7 +69,7 @@
+     this.outbox.send({ channel: 'user', to: event.userId, eventId: event.id, type: event.type, text });
+   }
+ 
+-  // The bus sometimes delivers the same event twice (probably a race in the queue) — dedupe by user+type within 500ms. Increase the window if duplicates come back.
++  // The bus sometimes delivers the same event twice (probably a race in the queue) — dedupe by user+type within 2000ms (raised from 500ms: shipping webhook retries arrive ~1s apart). Increase the window if duplicates come back.
+   private isDuplicate(event: BusEvent): boolean {
+     const key = `${event.userId}:${event.type}`;
+     const last = this.lastSeen.get(key);

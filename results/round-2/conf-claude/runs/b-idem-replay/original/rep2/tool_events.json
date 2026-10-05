@@ -1,0 +1,37 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-idem-replay-original-2-tqpoi6oo/ws\" && git ls-files && cat $(git ls-files | grep -v test | grep '\\.py$')"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-idem-replay-original-2-tqpoi6oo/ws\" && cat tests/test_intake.py pytest.ini && python -m pytest -q 2>&1 | tail -3"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-idem-replay-original-2-tqpoi6oo/ws\" && python - <<'EOF'\np='src/intake.py'\ns=open(p).read()\nold='''def storage_key(hook: Webhook) -> str:\n    # Choose the idempotency identity for this delivery\n    if hook.provider in HEADER_KEY_PROVIDERS and hook.idempotency_key:\n        return hook.idempotency_key[:_KEY_PREFIX]\n    return hook.event_id\n'''\nnew='''def storage_key(hook: Webhook) -> str:\n    # Choose the idempotency identity for this delivery. Retries carry a new\n    # event id but the same Idempotency-Key, so the header wins when present.\n    # Keys are scoped per provider so two providers can't collide.\n    if hook.idempotency_key:\n        key = hook.idempotency_key\n        if hook.provider in HEADER_KEY_PROVIDERS:\n            key = key[:_KEY_PREFIX]\n        return f\"{hook.provider}:key:{key}\"\n    return f\"{hook.provider}:event:{hook.event_id}\"\n'''\nassert old in s\ns=s.replace(old,new)\ns=s.replace('''# Some providers double-credit if they use the normal key. Keep them on the\n# short header key. If another provider double-credits, add it here.\n# Do not remove \u2014 been this way since the 2024 retry incident.''','''# Legacy: these providers are deduplicated on a short prefix of the header\n# key rather than the full key. Do not remove \u2014 been this way since the 2024\n# retry incident. Do not add new providers here: every provider already\n# dedupes on its full Idempotency-Key, and a prefix can merge distinct payouts.''')\nopen(p,'w').write(s)\nEOF\ncat >> tests/test_intake.py <<'EOF'\n\n\ndef test_harbor_retry_with_a_new_event_id_is_not_applied_twice():\n    intake = Intake()\n    first = intake.apply(hook(\"harbor\", \"po_1844\", \"8f3c1a9e0b27d4c6\"))\n    again = intake.apply(hook(\"harbor\", \"po_1844.2\", \"8f3c1a9e0b27d4c6\"))\n    assert first.applied is True\n    assert again.applied is False\n    assert again.duplicate is True\n    assert intake.ledger.balance(\"acct-44\") == 18_000\n    assert len(intake.ledger.entries) == 1\n\n\ndef test_header_keys_sharing_a_prefix_are_distinct_payouts():\n    intake = Intake()\n    intake.apply(hook(\"harbor\", \"po_1\", \"8f3c1a9e0b27d4c6\", amount=18_000))\n    intake.apply(hook(\"harbor\", \"po_2\", \"8f3c1a9eaaaaaaaa\", amount=2_000))\n    assert intake.ledger.balance(\"acct-44\") == 20_000\n\n\ndef test_same_key_from_different_providers_does_not_collide():\n    intake = Intake()\n    intake.apply(hook(\"harbor\", \"po_1\", \"shared-key-0001\", amount=100))\n    other = intake.apply(hook(\"lumen\", \"po_9\", \"shared-key-0001\", amount=50))\n    assert other.applied is True\n    assert intake.ledger.balance(\"acct-44\") == 150\nEOF\npython -m pytest -q 2>&1 | tail -3; git diff src"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-idem-replay-original-2-tqpoi6oo/ws\" && sed -n 9,14p src/intake.py"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-idem-replay-original-2-tqpoi6oo\\ws\\src\\intake.py"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-idem-replay-original-2-tqpoi6oo\\ws\\src\\intake.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-idem-replay-original-2-tqpoi6oo/ws\" && python -m pytest -q 2>&1 | tail -2"
+ }
+]

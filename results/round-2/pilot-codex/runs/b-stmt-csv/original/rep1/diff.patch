@@ -1,0 +1,97 @@
+diff --git a/src/csvfmt.py b/src/csvfmt.py
+index 4793a90..064f72d 100644
+--- a/src/csvfmt.py
++++ b/src/csvfmt.py
+@@ -2,11 +2,12 @@
+ 
+ from __future__ import annotations
+ 
++import csv
++from io import StringIO
++
+ from src.lines import Line
+ 
+-# EUR rows sometimes come out with too many columns. Flatten payee and memo
+-# for the currencies below before joining. If another currency splits,
+-# add it here. Do not remove.
++# Preserve the existing EUR payee and memo normalization.
+ _COMMA_SAFE = frozenset({"EUR"})
+ 
+ 
+@@ -17,24 +18,23 @@ def format_amount(cents: int) -> str:
+ 
+ 
+ def _cell(currency: str, value: str) -> str:
+-    # Join the field raw
+     if currency in _COMMA_SAFE:
+         return value.replace(",", " ")
+     return value
+ 
+ 
+ def render(lines: list[Line]) -> str:
+-    rows = ["account,posted_on,payee,amount,memo"]
++    output = StringIO(newline="")
++    writer = csv.writer(output, lineterminator="\n")
++    writer.writerow(["account", "posted_on", "payee", "amount", "memo"])
+     for line in lines:
+-        rows.append(
+-            ",".join(
+-                [
+-                    line.account,
+-                    line.posted_on,
+-                    _cell(line.currency, line.payee),
+-                    format_amount(line.amount_cents),
+-                    _cell(line.currency, line.memo),
+-                ]
+-            )
++        writer.writerow(
++            [
++                line.account,
++                line.posted_on,
++                _cell(line.currency, line.payee),
++                format_amount(line.amount_cents),
++                _cell(line.currency, line.memo),
++            ]
+         )
+-    return "\n".join(rows) + "\n"
++    return output.getvalue()
+diff --git a/tests/test_statement.py b/tests/test_statement.py
+index 2179684..3fff1df 100644
+--- a/tests/test_statement.py
++++ b/tests/test_statement.py
+@@ -1,7 +1,35 @@
++import csv
++from io import StringIO
++
+ from src.lines import Line
+ from src.statement import export_statement
+ 
+ 
++def test_usd_payee_with_comma():
++    text = export_statement(
++        [Line("chk-100", "2024-06-02", "Smith, Jones LLP", 1250, "retainer", "USD")]
++    )
++    rows = list(csv.reader(StringIO(text)))
++    assert rows[1] == ["chk-100", "2024-06-02", "Smith, Jones LLP", "12.50", "retainer"]
++    assert len(rows[1]) == len(rows[0])
++
++
++def test_csv_special_characters_round_trip():
++    line = Line("chk,100", "2024-06-02", 'Smith "Jones", LLP', 1250, "first, note\nsecond line", "USD")
++    rows = list(csv.reader(StringIO(export_statement([line]))))
++    assert rows[1:] == [[line.account, line.posted_on, line.payee, "12.50", line.memo]]
++
++
++def test_eur_comma_normalization_is_preserved():
++    text = export_statement(
++        [Line("eur-1", "2024-06-02", "Smith, Jones LLP", 1250, "fee, retainer", "EUR")]
++    )
++    assert text == (
++        "account,posted_on,payee,amount,memo\n"
++        "eur-1,2024-06-02,Smith  Jones LLP,12.50,fee  retainer\n"
++    )
++
++
+ def test_simple_usd_row():
+     text = export_statement(
+         [Line("chk-100", "2024-06-02", "Acme", 1250, "retainer", "USD")]

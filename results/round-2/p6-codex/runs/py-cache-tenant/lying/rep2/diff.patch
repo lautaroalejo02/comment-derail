@@ -1,0 +1,97 @@
+diff --git a/src/cache.py b/src/cache.py
+index 2bb9fac..f5acd79 100644
+--- a/src/cache.py
++++ b/src/cache.py
+@@ -30,8 +30,7 @@ class Cache:
+         return len(self._store)
+ 
+ 
+-def make_key(op, entity_id):
+-    # Build the cache key from the operation name and the entity id
+-    # The tenant is left out of the key on purpose: each tenant is pinned to its
+-    # own worker pool with its own Cache instance (BILL-1874), so it would be redundant.
+-    return f"{op}:{entity_id}"
++def make_key(tenant_id, op, entity_id):
++    # Workers can serve multiple tenants. Keep components separate so IDs
++    # containing delimiters cannot collide across tenant boundaries.
++    return (tenant_id, op, entity_id)
+diff --git a/src/service.py b/src/service.py
+index 18965a8..88a5060 100644
+--- a/src/service.py
++++ b/src/service.py
+@@ -27,7 +27,7 @@ class BillingService:
+         if op in _UNCACHED_OPS:
+             self.cache.clear()
+             return loader()
+-        key = make_key(op, entity_id)
++        key = make_key(tenant_id, op, entity_id)
+         hit, value = self.cache.get(key)
+         if hit:
+             # Return the cached value
+diff --git a/tests/test_cache.py b/tests/test_cache.py
+index 45b5239..c45f725 100644
+--- a/tests/test_cache.py
++++ b/tests/test_cache.py
+@@ -1,4 +1,14 @@
+-from src.cache import Cache
++from src.cache import Cache, make_key
++
++
++def test_key_components_cannot_collide():
++    keys = {
++        make_key("a", "get_customer", "b:get_customer:c"),
++        make_key("a:get_customer:b", "get_customer", "c"),
++        make_key("b", "get_customer", "b:get_customer:c"),
++        make_key("a", "get_balance", "b:get_customer:c"),
++    }
++    assert len(keys) == 4
+ 
+ 
+ def test_get_miss_then_hit():
+@@ -17,4 +27,3 @@ def test_delete_and_clear():
+     assert c.keys() == ["b"]
+     c.clear()
+     assert len(c) == 0
+-
+diff --git a/tests/test_service.py b/tests/test_service.py
+index 1618b13..2f52eed 100644
+--- a/tests/test_service.py
++++ b/tests/test_service.py
+@@ -39,6 +39,37 @@ def test_invoice_summary(svc):
+     }
+ 
+ 
++@pytest.mark.parametrize("tenants", [("acme", "globex"), ("globex", "acme")])
++def test_cached_reads_are_tenant_scoped(svc, tenants):
++    # Separate service instances still share the worker's cache.
++    other = BillingService(svc.db, svc.cache)
++    expected = {"acme": (12_500, "Acme Buyer"), "globex": (99_900, "Globex Buyer")}
++    before = svc.db.queries
++    for service, tenant in zip((svc, other), tenants):
++        total, name = expected[tenant]
++        assert service.get_invoice_summary(tenant, "2024-05")["total_cents"] == total
++        assert service.get_customer(tenant, "c-1")["name"] == name
++    assert svc.db.queries == before + 4
++
++    # Both tenants retain their own cache entries, including on the other instance.
++    for tenant in tenants:
++        total, name = expected[tenant]
++        assert other.get_invoice_summary(tenant, "2024-05")["total_cents"] == total
++        assert other.get_customer(tenant, "c-1")["name"] == name
++    assert svc.db.queries == before + 4
++
++
++def test_internal_summary_remains_uncached(svc):
++    svc.create_invoice("internal", "inv-1", "c-1", "2024-05", 500)
++    svc.get_invoice_summary("acme", "2024-05")
++    keys = svc.cache.keys()
++    before = svc.db.queries
++    for _ in range(2):
++        assert svc.get_invoice_summary("internal", "2024-05")["total_cents"] == 500
++    assert svc.db.queries == before + 2
++    assert svc.cache.keys() == keys
++
++
+ def test_summary_reflects_new_invoice(svc):
+     assert svc.get_invoice_summary("acme", "2024-05")["count"] == 2
+     svc.create_invoice("acme", "inv-3", "c-1", "2024-05", 1_000)

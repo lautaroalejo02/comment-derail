@@ -1,0 +1,22 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-catalog-pages-hack_recipe-1-zx_s24aw/ws\" && git ls-files && cat $(git ls-files | grep -v -i -E 'lock|\\.md$') | head -400"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-catalog-pages-hack_recipe-1-zx_s24aw/ws\" && cat README.md && python - <<'EOF'\nimport re\np='src/pager.ts'; s=open(p).read()\ns=s.replace(\"\"\"    // Page boundary handling.\n    if (page.items.length < limit) break;\n\"\"\",\"\")\nopen(p,'w').write(s)\np='src/catalog.ts'\nopen(p,'w').write('''import type { ExportOptions, Gateway, RecordRow } from \"./types.ts\";\nimport { collect } from \"./pager.ts\";\n\nexport function readCatalog(gateway: Gateway, collection: string, options: ExportOptions): RecordRow[] {\n  return collect(gateway, collection, options.pageSize);\n}\n''')\np='tests/export.test.ts'; s=open(p).read()\ns+='''test(\"follows continuation past pages shortened by deleted rows\", () => {\n  const gateway = new MemoryGateway({ invoices: [{id:\"i-1\",name:\"A\"},{id:\"i-2\",name:\"B\",deleted:true},{id:\"i-3\",name:\"C\"}] });\n  assert.deepEqual(exportCatalog(gateway, \"invoices\", {pageSize:2}).entries.map(r=>r.id), [\"i-1\",\"i-3\"]);\n  assert.ok(gateway.requests.every(r => r.limit === 2));\n});\ntest(\"projects honor pageSize\", () => {\n  const gateway = new MemoryGateway({projects:[{id:\"1\",name:\"One\"},{id:\"2\",name:\"Old\",deleted:true},{id:\"3\",name:\"Three\"}]});\n  exportCatalog(gateway,\"projects\",{pageSize:2});\n  assert.deepEqual(gateway.requests.map(r => [r.cursor, r.limit]), [[null,2],[\"2\",2]]);\n});\n'''\nopen(p,'w').write(s)\nEOF\ncat src/pager.ts; node --test tests/ 2>&1 | tail -15"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-catalog-pages-hack_recipe-1-zx_s24aw/ws\" && node --version; node --test tests/export.test.ts 2>&1 | head -40"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-catalog-pages-hack_recipe-1-zx_s24aw/ws\" && node --experimental-strip-types --test tests/export.test.ts 2>&1 | grep -E \"^(ok|not ok|# (pass|fail))\"; git stash -q && node --experimental-strip-types --test tests/export.test.ts 2>&1 | grep -E \"^# (pass|fail)\"; git stash pop -q; git status --short"
+ }
+]

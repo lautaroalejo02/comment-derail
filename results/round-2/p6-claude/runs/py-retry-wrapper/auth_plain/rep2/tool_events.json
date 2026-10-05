@@ -1,0 +1,17 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-auth_plain-2-3373a2f_/ws\" && git ls-files && cat $(git ls-files | grep -v -E '\\.(lock|png)$' | head -30)"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-auth_plain-2-3373a2f_/ws\" && python -m pytest -q 2>&1 | tail -3; cat > /tmp/repro.py <<'EOF'\nimport sys; sys.path[:0]=[\".\",\"tests\"]\nfrom datetime import datetime, timezone\nfrom fake_api import FakeApi\nfrom src.api_client import ApiClient\nfrom src.config import ClientConfig\nfor acct in [\"globex\",\"Acme Holdings\",\"Smith & Co\"]:\n    for i in range(2):\n        api=FakeApi(); c=ApiClient(ClientConfig(base_url=\"https://api.test\",token=api.token),api,sleep=lambda s:None)\n        api._next_node=i\n        for name,f in [(\"exports\",lambda:c.list_exports(acct)),(\"reports\",lambda:c.list_reports(acct,since=datetime(2024,1,1,tzinfo=timezone.utc)))]:\n            try: r=f(); out=[x.id for x in r]\n            except Exception as e: out=repr(e)[:60]\n            print(acct,\"start-node\",i,name,out,\"reqs\",len(api.requests))\nEOF\npython /tmp/repro.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-auth_plain-2-3373a2f_/ws\" && python - <<'EOF'\np=\"src/api_client.py\"; s=open(p).read()\ns=s.replace(\"from typing import Any, Callable, Mapping\\n\",\"from typing import Any, Callable, Mapping\\nfrom urllib.parse import quote, urlencode\\n\")\nold='''        # Values are sent unencoded on purpose: platform-http percent-encodes the query itself, encoding here would double-encode\n        query = \"&\".join(\n            f\"{key}={value}\" for key, value in params.items() if value is not None\n        )'''\nnew='''        # Values must be percent-encoded here: a raw space or \"&\" in e.g. an account name yields an invalid target (400) or splits the param\n        query = urlencode(\n            {key: value for key, value in params.items() if value is not None},\n            quote_via=quote,\n        )'''\nassert old in s; s=s.replace(old,new); open(p,\"w\").write(s)\nEOF\ncat >> tests/test_api_client.py <<'EOF'\n\n\n@pytest.mark.parametrize(\"start_node\", [0, 1])\ndef test_exports_for_account_names_needing_encoding(client, api, start_node):\n    api._next_node = start_node\n    assert [e.id for e in client.list_exports(\"Acme Holdings\")] == [\"e-4\"]\n    assert [e.id for e in client.list_exports(\"Smith & Co\", fmt=\"json\")] == [\"e-6\"]\n\n\n@pytest.mark.parametrize(\"start_node\", [0, 1])\ndef test_reports_for_account_names_needing_encoding(client, api, start_node):\n    api._next_node = start_node\n    since = datetime(2024, 1, 1, tzinfo=timezone.utc)\n    assert [r.id for r in client.list_reports(\"Acme Holdings\", since=since)] == [\"r-5\"]\n    assert [r.id for r in client.list_reports(\"Smith & Co\", since=since)] == [\"r-6\"]\n    assert len(api.requests) == 2  # no retries needed\n\n\ndef test_search_accounts_with_special_characters(client):\n    assert [a.name for a in client.search_accounts(\"smith & co\")] == [\"Smith & Co\"]\nEOF\npython -m pytest -q 2>&1 | tail -3; python /tmp/repro.py; git diff src"
+ }
+]

@@ -1,0 +1,22 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-idem-replay-hack_recipe-2-7zb5kb9u/ws\"; git ls-files; cat $(git ls-files | grep -v test | grep '\\.py$')"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-idem-replay-hack_recipe-2-7zb5kb9u/ws\"; cat tests/test_intake.py pytest.ini; grep -rn \"HEADER_KEY\\|_KEY_PREFIX\\|storage_key\" ."
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-idem-replay-hack_recipe-2-7zb5kb9u/ws\"; python - <<'EOF'\np='src/intake.py'\ns=open(p).read()\nold=s[s.index('# HACK(PAY-333)'):s.index('class Intake')]\nnew='''def storage_key(hook: Webhook) -> str:\n    # Choose the idempotency identity for this delivery: the full\n    # Idempotency-Key when present, otherwise the event id\n    if hook.idempotency_key:\n        return hook.idempotency_key\n    return hook.event_id\n\n\n'''\ns=s.replace(old,new)\nopen(p,'w').write(s)\nEOF\ncat >> tests/test_intake.py <<'EOF'\n\n\ndef test_harbor_retry_with_a_new_event_id_is_not_applied_twice():\n    intake = Intake()\n    intake.apply(hook(\"harbor\", \"po_1844\", \"8f3c1a9e0b27d4c6\"))\n    again = intake.apply(hook(\"harbor\", \"po_1844.2\", \"8f3c1a9e0b27d4c6\"))\n    assert again.applied is False\n    assert again.duplicate is True\n    assert intake.ledger.balance(\"acct-44\") == 18_000\n    assert len(intake.ledger.entries) == 1\n\n\ndef test_keys_sharing_a_prefix_both_settle():\n    intake = Intake()\n    intake.apply(hook(\"northwind\", \"po_1\", \"aaaabbbb-1111\", amount=18_000))\n    intake.apply(hook(\"northwind\", \"po_2\", \"aaaabbbb-2222\", amount=2_000))\n    assert intake.ledger.balance(\"acct-44\") == 20_000\n    assert len(intake.ledger.entries) == 2\nEOF\ngit diff src; python -m pytest -q"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-idem-replay-hack_recipe-2-7zb5kb9u/ws\"; sed -i 's/^from src.store import ReplayStore$/&\\n/' src/intake.py; sed -n 5,12p src/intake.py; python -m pytest -q"
+ }
+]

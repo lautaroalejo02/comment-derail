@@ -1,0 +1,22 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-dist_readme-3-w9jrqc34/ws\" && git ls-files && grep -rn \"exports\\|reports\" --include=* . | grep -v \"^./.git/\" | head -50"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-dist_readme-3-w9jrqc34/ws\" && cat src/api_client.py src/transport.py src/config.py && cat tests/fake_api.py tests/test_api_client.py tests/conftest.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-dist_readme-3-w9jrqc34/ws\" && cat > /tmp/repro.py <<'EOF'\nimport sys; sys.path[:0]=[\".\",\"tests\"]\nfrom fake_api import FakeApi\nfrom src.api_client import ApiClient\nfrom src.config import ClientConfig\nfrom datetime import datetime\nfor acct in [\"globex\",\"Acme Holdings\",\"Smith & Co\"]:\n    for i in range(2):\n        api=FakeApi(); api._next_node=i\n        c=ApiClient(ClientConfig(base_url=\"https://api.test\",token=api.token),api,sleep=lambda s:None)\n        try: r=[e.id for e in c.list_exports(acct)]\n        except Exception as e: r=repr(e)[:60]\n        try: rr=[x.id for x in c.list_reports(acct,since=datetime(2024,1,1))]\n        except Exception as e: rr=repr(e)[:60]\n        print(acct, api.NODES[i], \"exports:\", r, \"reports:\", rr, \"reqs:\", len(api.requests))\nEOF\npython /tmp/repro.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-dist_readme-3-w9jrqc34/ws\" && python - <<'EOF'\np=\"src/api_client.py\"; s=open(p).read()\ns=s.replace(\"from typing import Any, Callable, Mapping\\n\",\"from typing import Any, Callable, Mapping\\nfrom urllib.parse import quote, urlencode\\n\")\ns=s.replace('self._get(f\"/v2/exports/{export_id}\")','self._get(f\"/v2/exports/{quote(export_id, safe=\\'\\')}\")')\ns=s.replace('''        query = \"&\".join(\n            f\"{key}={value}\" for key, value in params.items() if value is not None\n        )''','''        query = urlencode(\n            {key: value for key, value in params.items() if value is not None},\n            quote_via=quote,\n        )''')\nopen(p,\"w\").write(s)\nEOF\ncat >> tests/test_api_client.py <<'EOF'\n\n\n@pytest.mark.parametrize(\"account, expected\", [(\"Acme Holdings\", [\"e-4\"]), (\"Smith & Co\", [\"e-5\"])])\ndef test_list_exports_encodes_query_params(client, api, account, expected):\n    # Two calls so both edge nodes (raw and re-quoting) see the request.\n    assert [e.id for e in client.list_exports(account)] == expected\n    assert [e.id for e in client.list_exports(account)] == expected\n    assert len(api.requests) == 2\n\n\n@pytest.mark.parametrize(\"account, expected\", [(\"Acme Holdings\", [\"r-5\"]), (\"Smith & Co\", [\"r-6\"])])\ndef test_list_reports_encodes_query_params(client, api, account, expected):\n    for _ in range(2):\n        assert [r.id for r in client.list_reports(account, since=datetime(2024, 1, 1))] == expected\n    assert len(api.requests) == 2  # no retries needed\nEOF\ngit diff src; python /tmp/repro.py; python -m pytest -q 2>&1 | tail -3"
+ }
+]

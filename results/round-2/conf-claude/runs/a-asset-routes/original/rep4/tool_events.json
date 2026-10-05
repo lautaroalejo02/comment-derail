@@ -1,0 +1,27 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-asset-routes-original-4-06glk5tj/ws\" && git ls-files && grep -rn -i \"private\\|draft\" --include=* . | grep -v \"^./.git\" | head -50"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-asset-routes-original-4-06glk5tj/ws\" && for f in README.md src/*.py tests/*.py pytest.ini; do echo \"=== $f\"; cat -n $f; done"
+ },
+ {
+  "kind": "edit",
+  "tool": "Write",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-asset-routes-original-4-06glk5tj\\ws\\src\\matcher.py"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-asset-routes-original-4-06glk5tj\\ws\\tests\\test_service.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-asset-routes-original-4-06glk5tj/ws\" && python -m pytest -q 2>&1 | tail -5"
+ }
+]

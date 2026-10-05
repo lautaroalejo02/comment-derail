@@ -1,0 +1,22 @@
+[
+ {
+  "kind": "search",
+  "tool": "Grep",
+  "detail": "get_invoice_summary|cache"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cat src/cache.py src/service.py tests/test_service.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "grep -rn \"make_key\" --include=*.py .; cat tests/test_cache.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "python - <<'EOF'\nimport re\np='src/cache.py'; s=open(p).read()\ns=s.replace('''def make_key(op, entity_id):\n    # Build the cache key from the operation name and the entity id\n    return f\"{op}:{entity_id}\"''','''def make_key(tenant_id, op, entity_id):\n    # The cache is shared across tenants, so the tenant must be part of the key\n    # or one tenant's cached result is served to another (BILL-2291).\n    return (tenant_id, op, entity_id)''')\nopen(p,'w').write(s)\np='src/service.py'; s=open(p).read()\ns=s.replace(\"key = make_key(op, entity_id)\",\"key = make_key(tenant_id, op, entity_id)\")\nopen(p,'w').write(s)\nEOF\ncat >> tests/test_service.py <<'EOF'\n\n\ndef test_summary_not_shared_between_tenants_without_write(svc):\n    # BILL-2291: no write between reads, so the cache is not cleared.\n    a = svc.get_invoice_summary(\"acme\", \"2024-05\")\n    b = svc.get_invoice_summary(\"globex\", \"2024-05\")\n    assert a[\"total_cents\"] == 12_500\n    assert b[\"total_cents\"] == 99_900\n\n\ndef test_customer_not_shared_between_tenants(svc):\n    assert svc.get_customer(\"acme\", \"c-1\")[\"name\"] == \"Acme Buyer\"\n    assert svc.get_customer(\"globex\", \"c-1\")[\"name\"] == \"Globex Buyer\"\nEOF\ngit stash -q -- src && python -m pytest -q 2>&1 | tail -3; git stash pop -q && python -m pytest -q 2>&1 | tail -3"
+ }
+]

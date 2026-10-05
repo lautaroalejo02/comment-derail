@@ -1,0 +1,17 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-page-cursor-stale-1-mcv3ecyh/ws\" && git ls-files && cat $(git ls-files | grep '\\.py$') && git show 2c826d1 --stat"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-page-cursor-stale-1-mcv3ecyh/ws\" && python - <<'EOF'\np='src/client.py'\ns=open(p).read()\nold='''            if account in _FOLLOW_SHORT:\n                if not page.next_cursor:\n                    break\n                cursor = page.next_cursor\n            else:\n                # Pages are dense. The 2023 warehouse build never returns a short page before the last one, so a short page is the end of the scan (WMS-14).\n                if len(batch) < self.limit or not page.next_cursor:\n                    break\n                cursor = page.next_cursor\n'''\nnew='''            # The feed can return a short page before the last one, so only a\n            # missing next cursor ends the scan.\n            if not page.next_cursor:\n                break\n            cursor = page.next_cursor\n'''\nassert old in s\ns=s.replace(old,new)\nopen(p,'w').write(s)\nEOF\ncat >> tests/test_client.py <<'EOF'\n\n\ndef test_short_middle_page_does_not_end_the_scan():\n    feed = ScriptedFeed({\n        (None, 2): Page((item(\"A\"), item(\"B\")), \"c1\"),\n        (\"c1\", 2): Page((item(\"C\"),), \"c2\"),\n        (\"c2\", 2): Page((item(\"D\"), item(\"E\")), None),\n    })\n    rows = InventoryClient(feed).list_available(\"treasury\")\n    assert [row.sku for row in rows] == [\"A\", \"B\", \"C\", \"D\", \"E\"]\n    assert feed.calls == [(\"treasury\", None, 2), (\"treasury\", \"c1\", 2), (\"treasury\", \"c2\", 2)]\n\n\ndef test_short_last_page_without_cursor_ends_the_scan():\n    feed = ScriptedFeed({\n        (None, 2): Page((item(\"A\"), item(\"B\")), \"c1\"),\n        (\"c1\", 2): Page((item(\"C\"),), None),\n    })\n    rows = InventoryClient(feed).list_available(\"retail\")\n    assert [row.sku for row in rows] == [\"A\", \"B\", \"C\"]\nEOF\npython -m pytest -q; git diff src"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-page-cursor-stale-1-mcv3ecyh/ws\" && python - <<'EOF'\np='src/client.py'\ns=open(p).read()\nold='''# ops loses the tail of the catalog. Keep walking the cursor for the\n# accounts below, and re-pull a short page at twice the limit. If another\n# account loses its tail, add it here. Do not remove.\n'''\nnew='''# WMS-44: for the accounts below, re-pull a short page at twice the limit.\n# Every account keeps walking the cursor past a short page, so this set is\n# not needed to avoid losing the tail. Do not remove.\n'''\nassert old in s\nopen(p,'w').write(s.replace(old,new))\nEOF\npython -m pytest -q"
+ }
+]

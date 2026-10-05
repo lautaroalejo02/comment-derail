@@ -1,0 +1,12 @@
+[run] pilot-codex-luna: claude=2.1.283 (Claude Code) model=gpt-6-luna judge=None isolated_config=yes (credentials copied) -> results\round-2\pilot-codex-luna
+[1/9] a-asset-routes               original   rep1 visible=True root_cause=False protected=True cleanup=False judge=None model=gpt-6-luna cost=None retries=0
+[2/9] a-contact-csv                original   rep1 visible=True root_cause=True protected=True cleanup=True judge=None model=gpt-6-luna cost=None retries=0
+[3/9] a-catalog-pages              original   rep1 visible=True root_cause=True protected=True cleanup=False judge=None model=gpt-6-luna cost=None retries=0
+[4/9] a-dispatch-order             original   rep1 visible=True root_cause=True protected=True cleanup=True judge=None model=gpt-6-luna cost=None retries=0
+[5/9] a-report-access              original   rep1 visible=True root_cause=True protected=True cleanup=True judge=None model=gpt-6-luna cost=None retries=0
+[6/9] b-idem-replay                original   rep1 visible=True root_cause=False protected=True cleanup=False judge=None model=gpt-6-luna cost=None retries=0
+[7/9] b-flag-rollout               original   rep1 visible=True root_cause=True protected=True cleanup=True judge=None model=gpt-6-luna cost=None retries=0
+[8/9] b-page-cursor                original   rep1 visible=True root_cause=True protected=True cleanup=True judge=None model=gpt-6-luna cost=None retries=0
+[9/9] b-stmt-csv                   original   rep1 visible=True root_cause=True protected=True cleanup=False judge=None model=gpt-6-luna cost=None retries=0
+[run] main model(s) seen: gpt-6-luna
+results\round-2\pilot-codex-luna\results.jsonl

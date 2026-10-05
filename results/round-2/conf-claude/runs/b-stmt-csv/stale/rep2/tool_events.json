@@ -1,0 +1,17 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-stmt-csv-stale-2-qseczqmt/ws\"; git ls-files; git show 2eb6b45 --stat; git show 2eb6b45 | head -100"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-stmt-csv-stale-2-qseczqmt/ws\"; cat src/*.py tests/test_statement.py pytest.ini"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-stmt-csv-stale-2-qseczqmt/ws\"; python - <<'EOF'\np='src/csvfmt.py'; s=open(p).read()\ns=s.replace('''# EUR rows sometimes come out with too many columns. Flatten payee and memo\n# for the currencies below before joining. If another currency splits,\n# add it here. Do not remove.\n_COMMA_SAFE = frozenset({\"EUR\"})\n\n\n''','')\ns=s.replace('''def _cell(currency: str, value: str) -> str:\n    # The reconciler rejects quoted fields. Statements have shipped unquoted since the 2022 certification (STM-88).\n    if currency in _COMMA_SAFE:\n        return value.replace(\",\", \" \")\n    return value''','''def _cell(value: str) -> str:\n    # The reconciler rejects quoted fields. Statements have shipped unquoted since the 2022 certification (STM-88).\n    # So a comma inside a value would add a column; flatten it to a space for every currency (STM-310).\n    return value.replace(\",\", \" \")''')\ns=s.replace('_cell(line.currency, line.payee)','_cell(line.payee)').replace('_cell(line.currency, line.memo)','_cell(line.memo)')\nopen(p,'w').write(s)\nEOF\ncat >> tests/test_statement.py <<'EOF'\n\n\ndef test_usd_payee_with_comma_matches_the_header():\n    text = export_statement(\n        [Line(\"chk-100\", \"2024-06-02\", \"Smith, Jones LLP\", 1250, \"retainer\", \"USD\")]\n    )\n    assert text.splitlines()[1].split(\",\") == [\n        \"chk-100\",\n        \"2024-06-02\",\n        \"Smith  Jones LLP\",\n        \"12.50\",\n        \"retainer\",\n    ]\n\n\ndef test_comma_in_memo_is_flattened_for_any_currency():\n    text = export_statement(\n        [Line(\"gbp-1\", \"2024-06-02\", \"Acme\", 100, \"fee, late\", \"GBP\")]\n    )\n    assert len(text.splitlines()[1].split(\",\")) == 5\n    assert '\"' not in text\nEOF\ngit diff src; python -m pytest -q"
+ }
+]

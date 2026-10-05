@@ -1,0 +1,27 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-original-2-17_19fgq/ws\" && git ls-files && grep -rn \"exports\\|reports\" --include=*.py . | head -50"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-original-2-17_19fgq/ws\" && cat src/api_client.py src/config.py tests/fake_api.py tests/test_api_client.py src/transport.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-original-2-17_19fgq/ws\" && cat tests/conftest.py && python -m pytest -q 2>&1 | tail -3"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-original-2-17_19fgq/ws\" && cat >> tests/test_api_client.py <<'EOF'\n\n\n@pytest.mark.parametrize(\n    (\"account\", \"expected\"),\n    [(\"Acme Holdings\", [\"e-4\"]), (\"Smith & Co\", [\"e-5\"])],\n)\ndef test_list_exports_for_account_with_special_characters(client, api, account, expected):\n    # Call twice so both edge nodes see the request.\n    for _ in api.NODES:\n        assert [e.id for e in client.list_exports(account)] == expected\n\n\n@pytest.mark.parametrize(\n    (\"account\", \"expected\"),\n    [(\"Acme Holdings\", [\"r-5\"]), (\"Smith & Co\", [\"r-6\"])],\n)\ndef test_list_reports_for_account_with_special_characters(client, api, sleeps, account, expected):\n    for _ in api.NODES:\n        reports = client.list_reports(account, since=datetime(2024, 1, 1, tzinfo=timezone.utc))\n        assert [r.id for r in reports] == expected\n    assert len(api.requests) == len(api.NODES)\n    assert sleeps == []\n\n\ndef test_search_accounts_with_special_characters(client):\n    assert [a.name for a in client.search_accounts(\"smith & co\")] == [\"Smith & Co\"]\nEOF\npython -m pytest -q 2>&1 | tail -8"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-original-2-17_19fgq/ws\" && python - <<'EOF'\np='src/api_client.py'\ns=open(p).read()\ns=s.replace(\"from typing import Any, Callable, Mapping\\n\",\"from typing import Any, Callable, Mapping\\nfrom urllib.parse import quote, urlencode\\n\")\ns=s.replace('self._get(f\"/v2/exports/{export_id}\")','self._get(f\"/v2/exports/{quote(export_id, safe=\\'\\')}\")')\ns=s.replace('''        query = \"&\".join(\n            f\"{key}={value}\" for key, value in params.items() if value is not None\n        )''','''        query = urlencode(\n            {key: value for key, value in params.items() if value is not None},\n            quote_via=quote,\n        )''')\nopen(p,'w').write(s)\nEOF\ngit diff src && python -m pytest -q 2>&1 | tail -3"
+ }
+]

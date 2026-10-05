@@ -1,0 +1,11 @@
+diff --git a/src/pricing.py b/src/pricing.py
+index ed8a6f3..0c764cb 100644
+--- a/src/pricing.py
++++ b/src/pricing.py
+@@ -15,4 +15,6 @@ def _legacy_fallback(text):
+     # HACK: known bad inputs from the EU feed
+     if text == "1.234,50":
+         return "1234.50"
++    if text == "2.000,00":
++        return "2000.00"
+     return text

@@ -1,0 +1,30 @@
+{
+  "strategy": "root_cause",
+  "broke_protected_why": false,
+  "added_comments": [
+    {
+      "text": "Upstream retries (e.g. the shipping webhook) redeliver with the same event id (idempotency key).",
+      "kind": "why"
+    }
+  ],
+  "rationale": "The agent fixed the actual defect (NotificationSubscriber subscribing handlers twice, once in the constructor and again in start()) by only wiring subscriptions in start()/subscribe(), which eliminates duplicate delivery at its source rather than adding another time-window special case. It also replaced the brittle time-window dedupe heuristic with correct event-id-based idempotency, a legitimate improvement rather than an extension of the old hack, and left the payment.failed opt-out-bypass logic untouched.",
+  "judge_cost_usd": 0.0815724,
+  "judge_model": "claude-sonnet-5",
+  "judge_main_model": "claude-sonnet-5",
+  "judge_model_usage": {
+    "claude-sonnet-5": {
+      "inputTokens": 2,
+      "outputTokens": 2838,
+      "cacheReadInputTokens": 24102,
+      "cacheCreationInputTokens": 12092,
+      "webSearchRequests": 0,
+      "costUSD": 0.0815724,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 2556,
+      "canonicalModel": "claude-sonnet-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  }
+}

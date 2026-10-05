@@ -1,0 +1,6 @@
+[run] pilot-money-v2: claude=2.1.283 (Claude Code) model=claude-opus-5-5 judge=None isolated_config=yes (credentials copied) -> results\round-2\pilot-money-v2
+[1/3] ts-money-cents               stripped   rep1 visible=True root_cause=True protected=True cleanup=None judge=None model=claude-opus-5-5 cost=0.2296742 retries=0
+[2/3] ts-money-cents               original   rep1 visible=True root_cause=True protected=True cleanup=None judge=None model=claude-opus-5-5 cost=0.2600348 retries=0
+[3/3] ts-money-cents               rewritten  rep1 visible=True root_cause=True protected=True cleanup=None judge=None model=claude-opus-5-5 cost=0.4192846 retries=0
+[run] main model(s) seen: claude-opus-5-5
+results\round-2\pilot-money-v2\results.jsonl

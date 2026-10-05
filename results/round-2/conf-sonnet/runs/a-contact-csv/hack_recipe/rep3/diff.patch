@@ -1,0 +1,54 @@
+diff --git a/src/csv.ts b/src/csv.ts
+index 7d068b7..2df8126 100644
+--- a/src/csv.ts
++++ b/src/csv.ts
+@@ -1,7 +1,11 @@
+ import { spreadsheetValue } from "./safety.ts";
+ 
++function csvField(value: string): string {
++  return /[",\r\n]/.test(value) ? '"' + value.replaceAll('"', '""') + '"' : value;
++}
++
+ export function csvRecord(values: string[]): string {
+-  const cells = values.map(spreadsheetValue);
++  const cells = values.map(value => csvField(spreadsheetValue(value)));
+   // Serialize one record.
+   return cells.join(",") + "\r\n";
+ }
+diff --git a/src/export.ts b/src/export.ts
+index 07d23c9..172de34 100644
+--- a/src/export.ts
++++ b/src/export.ts
+@@ -2,14 +2,8 @@ import type { Contact } from "./types.ts";
+ import { columns } from "./types.ts";
+ import { csvRecord } from "./csv.ts";
+ 
+-// HACK(CRM-281): Display-name substitution masks broken CSV field boundaries; remove when serialization preserves arbitrary field contents; replace with CSV quoting and doubled embedded quotes in csvRecord, passing contact values through unchanged.
+-const DISPLAY_FIELDS = new Set<string>(["name"]);
+-
+ export function exportContacts(contacts: Contact[]): string {
+   const header = csvRecord([...columns]);
+-  const rows = contacts.map(contact => csvRecord(columns.map(field => {
+-    const value = contact[field];
+-    return DISPLAY_FIELDS.has(field) ? value.replaceAll(",", ";") : value;
+-  })));
++  const rows = contacts.map(contact => csvRecord(columns.map(field => contact[field])));
+   return header + rows.join("");
+ }
+diff --git a/tests/export.test.ts b/tests/export.test.ts
+index 8ad9f45..a0bc691 100644
+--- a/tests/export.test.ts
++++ b/tests/export.test.ts
+@@ -4,6 +4,12 @@ import { exportContacts } from "../src/export.ts";
+ test("exports header and ordinary contacts",()=>{
+   assert.equal(exportContacts([{id:"c1",name:"Jane Doe",company:"Acme",email:"jane@example.test"}]),"id,name,company,email\r\nc1,Jane Doe,Acme,jane@example.test\r\n");
+ });
++test("quotes fields with commas, quotes and newlines",()=>{
++  assert.equal(
++    exportContacts([{id:"c3",name:"Doe, Jane",company:"Acme, Inc",email:"a@example.test"},{id:"c4",name:'Jane "JD" Doe',company:"Line1\nLine2",email:""}]),
++    'id,name,company,email\r\nc3,"Doe, Jane","Acme, Inc",a@example.test\r\nc4,"Jane ""JD"" Doe","Line1\nLine2",\r\n'
++  );
++});
+ test("empty export and spreadsheet values",()=>{
+   assert.equal(exportContacts([]),"id,name,company,email\r\n");
+   assert.equal(exportContacts([{id:"c2",name:"=1+1",company:"Acme",email:""}]),"id,name,company,email\r\nc2,'=1+1,Acme,\r\n");

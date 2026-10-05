@@ -1,0 +1,95 @@
+diff --git a/src/cache.py b/src/cache.py
+index 2672865..23ac501 100644
+--- a/src/cache.py
++++ b/src/cache.py
+@@ -20,6 +20,10 @@ class Cache:
+     def delete(self, key):
+         self._store.pop(key, None)
+ 
++    def delete_where(self, predicate):
++        for key in [k for k in self._store if predicate(k)]:
++            del self._store[key]
++
+     def clear(self):
+         self._store.clear()
+ 
+@@ -30,6 +34,5 @@ class Cache:
+         return len(self._store)
+ 
+ 
+-def make_key(op, entity_id):
+-
+-    return f"{op}:{entity_id}"
++def make_key(tenant_id, op, entity_id):
++    return (tenant_id, op, entity_id)
+diff --git a/src/service.py b/src/service.py
+index c2a9d5b..98dc243 100644
+--- a/src/service.py
++++ b/src/service.py
+@@ -25,9 +25,8 @@ class BillingService:
+         if tenant_id == INTERNAL_TENANT:
+             return loader()
+         if op in _UNCACHED_OPS:
+-            self.cache.clear()
+             return loader()
+-        key = make_key(op, entity_id)
++        key = make_key(tenant_id, op, entity_id)
+         hit, value = self.cache.get(key)
+         if hit:
+ 
+@@ -38,7 +37,7 @@ class BillingService:
+         return value
+ 
+     def _after_write(self, tenant_id):
+-        self.cache.clear()
++        self.cache.delete_where(lambda key: key[0] == tenant_id)
+ 
+     def get_customer(self, tenant_id, customer_id):
+         return self._read(
+diff --git a/tests/test_cache.py b/tests/test_cache.py
+index 45b5239..d2fb5d7 100644
+--- a/tests/test_cache.py
++++ b/tests/test_cache.py
+@@ -18,3 +18,11 @@ def test_delete_and_clear():
+     c.clear()
+     assert len(c) == 0
+ 
++
++
++def test_delete_where():
++    c = Cache()
++    c.set(("a", "op", 1), 1)
++    c.set(("b", "op", 1), 2)
++    c.delete_where(lambda k: k[0] == "a")
++    assert c.keys() == [("b", "op", 1)]
+diff --git a/tests/test_service.py b/tests/test_service.py
+index 1618b13..11af090 100644
+--- a/tests/test_service.py
++++ b/tests/test_service.py
+@@ -76,3 +76,26 @@ def test_create_invoice_rejects_non_positive_amount(svc):
+ def test_mark_unknown_invoice_paid(svc):
+     with pytest.raises(KeyError):
+         svc.mark_invoice_paid("acme", "nope")
++
++
++def test_summary_not_shared_between_tenants(svc):
++    # BILL-2291: B read right after A must not get A's cached summary.
++    a = svc.get_invoice_summary("acme", "2024-05")
++    b = svc.get_invoice_summary("globex", "2024-05")
++    assert a["total_cents"] == 12_500
++    assert b["total_cents"] == 99_900
++
++
++def test_customer_not_shared_between_tenants(svc):
++    assert svc.get_customer("acme", "c-1")["name"] == "Acme Buyer"
++    assert svc.get_customer("globex", "c-1")["name"] == "Globex Buyer"
++
++
++def test_write_invalidates_only_own_tenant(svc):
++    svc.get_invoice_summary("acme", "2024-05")
++    svc.get_invoice_summary("globex", "2024-05")
++    q = svc.db.queries
++    svc.create_invoice("globex", "inv-2", "c-1", "2024-05", 100)
++    svc.get_invoice_summary("acme", "2024-05")
++    assert svc.db.queries == q
++    assert svc.get_invoice_summary("globex", "2024-05")["count"] == 2

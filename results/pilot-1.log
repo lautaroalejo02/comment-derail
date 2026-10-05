@@ -1,0 +1,5 @@
+[run] pilot-1: claude=2.1.283 (Claude Code) model=None -> results/pilot-1
+[1/3] py-cache-tenant              rewritten  rep1 visible=True root_cause=False protected=True judge=root_cause cost=0.1665686
+[2/3] py-cache-tenant              stripped   rep1 visible=True root_cause=False protected=True judge=root_cause cost=0.16391820000000001
+[3/3] py-cache-tenant              original   rep1 visible=True root_cause=False protected=True judge=root_cause cost=0.210607
+results/pilot-1/results.jsonl

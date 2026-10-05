@@ -1,0 +1,101 @@
+diff --git a/src/cache.py b/src/cache.py
+index 5205441..8a82f61 100644
+--- a/src/cache.py
++++ b/src/cache.py
+@@ -30,6 +30,6 @@ class Cache:
+         return len(self._store)
+ 
+ 
+-def make_key(op, entity_id):
+-    # Build the cache key from the operation name and the entity id
+-    return f"{op}:{entity_id}"
++def make_key(tenant_id, op, entity_id):
++    # Tuple boundaries prevent collisions when identifiers contain delimiters.
++    return (tenant_id, op, entity_id)
+diff --git a/src/service.py b/src/service.py
+index 18965a8..88a5060 100644
+--- a/src/service.py
++++ b/src/service.py
+@@ -27,7 +27,7 @@ class BillingService:
+         if op in _UNCACHED_OPS:
+             self.cache.clear()
+             return loader()
+-        key = make_key(op, entity_id)
++        key = make_key(tenant_id, op, entity_id)
+         hit, value = self.cache.get(key)
+         if hit:
+             # Return the cached value
+diff --git a/tests/test_cache.py b/tests/test_cache.py
+index 45b5239..a3fa8d3 100644
+--- a/tests/test_cache.py
++++ b/tests/test_cache.py
+@@ -1,4 +1,4 @@
+-from src.cache import Cache
++from src.cache import Cache, make_key
+ 
+ 
+ def test_get_miss_then_hit():
+@@ -18,3 +18,11 @@ def test_delete_and_clear():
+     c.clear()
+     assert len(c) == 0
+ 
++
++def test_key_components_cannot_collide():
++    keys = [
++        make_key("tenant:a", "get_customer", "c-1"),
++        make_key("tenant", "a:get_customer", "c-1"),
++        make_key("tenant", "a", "get_customer:c-1"),
++    ]
++    assert len(set(keys)) == 3
+diff --git a/tests/test_service.py b/tests/test_service.py
+index 1618b13..fc90d66 100644
+--- a/tests/test_service.py
++++ b/tests/test_service.py
+@@ -27,6 +27,47 @@ def test_get_customer_is_cached(svc):
+     assert svc.db.queries == q
+ 
+ 
++@pytest.mark.parametrize("tenants", [("acme", "globex"), ("globex", "acme")])
++@pytest.mark.parametrize(
++    "method, entity_id, expected",
++    [
++        ("get_customer", "c-1", {
++            "acme": {"id": "c-1", "name": "Acme Buyer"},
++            "globex": {"id": "c-1", "name": "Globex Buyer"},
++        }),
++        ("get_invoice_summary", "2024-05", {
++            "acme": {"period": "2024-05", "count": 2, "total_cents": 12_500,
++                     "paid_cents": 0, "outstanding_cents": 12_500},
++            "globex": {"period": "2024-05", "count": 1, "total_cents": 99_900,
++                       "paid_cents": 0, "outstanding_cents": 99_900},
++        }),
++    ],
++)
++def test_cached_reads_are_tenant_scoped(svc, tenants, method, entity_id, expected):
++    read = getattr(svc, method)
++    queries = svc.db.queries
++    for tenant in tenants:
++        assert read(tenant, entity_id) == expected[tenant]
++    assert svc.db.queries == queries + 2
++    for tenant in tenants:
++        assert read(tenant, entity_id) == expected[tenant]
++    assert svc.db.queries == queries + 2
++
++
++def test_internal_summary_bypasses_cache(svc):
++    svc.get_invoice_summary("acme", "2024-05")
++    keys = svc.cache.keys()
++    queries = svc.db.queries
++    assert svc.get_invoice_summary("internal", "2024-05")["count"] == 0
++    svc.db.insert_invoice("internal", {
++        "id": "audit-1", "customer_id": "c-1", "period": "2024-05",
++        "amount_cents": 500, "status": "open",
++    })
++    assert svc.get_invoice_summary("internal", "2024-05")["total_cents"] == 500
++    assert svc.db.queries == queries + 2
++    assert svc.cache.keys() == keys
++
++
+ def test_invoice_summary(svc):
+     svc.mark_invoice_paid("acme", "inv-2")
+     s = svc.get_invoice_summary("acme", "2024-05")

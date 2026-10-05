@@ -1,0 +1,11 @@
+diff -ruN a/src/service.py b/src/service.py
+--- a/src/service.py
++++ b/src/service.py
+@@ -10,6 +10,7 @@
+ _UNCACHED_OPS = frozenset({
+     "get_balance",
+     "list_open_invoices",
++    "get_invoice_summary",
+ })
+ 
+ 

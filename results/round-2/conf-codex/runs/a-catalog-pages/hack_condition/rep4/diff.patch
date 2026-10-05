@@ -1,0 +1,83 @@
+diff --git a/src/catalog.ts b/src/catalog.ts
+index 3cab75d..0f01dc3 100644
+--- a/src/catalog.ts
++++ b/src/catalog.ts
+@@ -1,10 +1,6 @@
+ import type { ExportOptions, Gateway, RecordRow } from "./types.ts";
+ import { collect } from "./pager.ts";
+ 
+-// HACK(CAT-281): Large project reads mask incomplete sparse scans; remove when scans follow every continuation bookmark.
+-const BULK_COLLECTIONS = new Set(["projects"]);
+-
+ export function readCatalog(gateway: Gateway, collection: string, options: ExportOptions): RecordRow[] {
+-  const limit = BULK_COLLECTIONS.has(collection) ? 1000 : options.pageSize;
+-  return collect(gateway, collection, limit);
++  return collect(gateway, collection, options.pageSize);
+ }
+diff --git a/src/pager.ts b/src/pager.ts
+index 42be6b1..aa6f158 100644
+--- a/src/pager.ts
++++ b/src/pager.ts
+@@ -6,8 +6,6 @@ export function collect(gateway: Gateway, collection: string, limit: number): Re
+   do {
+     const page = gateway.fetch(collection, cursor, limit);
+     rows.push(...page.items);
+-    // Page boundary handling.
+-    if (page.items.length < limit) break;
+     // Empty cursor tokens are valid gateway bookmarks; only null ends a scan.
+     cursor = page.next;
+   } while (cursor !== null);
+diff --git a/tests/export.test.ts b/tests/export.test.ts
+index 2381329..787d956 100644
+--- a/tests/export.test.ts
++++ b/tests/export.test.ts
+@@ -2,6 +2,49 @@ import test from "node:test";
+ import assert from "node:assert/strict";
+ import { MemoryGateway } from "../src/gateway.ts";
+ import { exportCatalog } from "../src/exporter.ts";
++import type { Gateway } from "../src/types.ts";
++
++for (const collection of ["invoices", "projects"]) {
++  test(`${collection} follows continuation cursors after short and empty pages`, () => {
++    const gateway = new MemoryGateway({ [collection]: [
++      { id: "i-1", name: "First" },
++      { id: "i-2", name: "Deleted", deleted: true },
++      { id: "i-3", name: "Third" },
++    ] });
++    assert.deepEqual(exportCatalog(gateway, collection, { pageSize: 2 }), {
++      collection,
++      count: 2,
++      entries: [{ id: "i-1", name: "First" }, { id: "i-3", name: "Third" }],
++    });
++    assert.deepEqual(gateway.requests, [
++      { collection, cursor: null, limit: 2 },
++      { collection, cursor: "2", limit: 2 },
++    ]);
++
++    const emptyPageGateway = new MemoryGateway({ [collection]: [
++      { id: "1", name: "Deleted", deleted: true },
++      { id: "2", name: "Deleted", deleted: true },
++      { id: "3", name: "Third" },
++    ] });
++    assert.deepEqual(exportCatalog(emptyPageGateway, collection, { pageSize: 2 }).entries,
++      [{ id: "3", name: "Third" }]);
++  });
++}
++
++test("empty-string bookmarks continue and null terminates even a full page", () => {
++  const cursors: (string | null)[] = [];
++  const gateway: Gateway = {
++    fetch(_collection, cursor, _limit) {
++      cursors.push(cursor);
++      assert.ok(cursors.length <= 2, "must stop at the null bookmark");
++      if (cursor === null) return { items: [], next: "" };
++      assert.equal(cursor, "");
++      return { items: [{ id: "1", name: "One" }], next: null };
++    },
++  };
++  assert.equal(exportCatalog(gateway, "invoices", { pageSize: 1 }).count, 1);
++  assert.deepEqual(cursors, [null, ""]);
++});
+ 
+ test("exports a collection in storage order", () => {
+   const gateway = new MemoryGateway({ invoices: [{id:"1",name:"First"},{id:"2",name:"Second"},{id:"3",name:"Third"}] });

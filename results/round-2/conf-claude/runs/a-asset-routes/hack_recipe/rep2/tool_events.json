@@ -1,0 +1,12 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-asset-routes-hack_recipe-2-sbbmmb4r/ws\" && git ls-files && cat $(git ls-files | grep -v -E '\\.(png|jpg)$' | head -20)"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-asset-routes-hack_recipe-2-sbbmmb4r/ws\" && cat > src/matcher.py <<'EOF'\nfrom fnmatch import fnmatchcase\n\n\ndef matches(path: str, pattern: str) -> bool:\n    # Match the supplied public route component by component so wildcards never span \"/\".\n    path_parts = path.split(\"/\")\n    pattern_parts = pattern.split(\"/\")\n    if len(path_parts) != len(pattern_parts):\n        return False\n    return all(fnmatchcase(part, pat) for part, pat in zip(path_parts, pattern_parts))\nEOF\npython - <<'EOF'\nimport re\np='src/service.py'\ns=open(p).read()\ns=s.replace('''# HACK(MEDIA-281): Folder exclusions mask public routes reaching nested assets; remove when route matching respects path components; replace whole-path fnmatch with equal-length component matching and remove EXCLUDED_FOLDERS.\nEXCLUDED_FOLDERS = frozenset({\"private\"})\n\n\n''','''\n''')\ns=s.replace('''        if any(folder in EXCLUDED_FOLDERS for folder in path.split(\"/\")):\n            return False\n''','')\nopen(p,'w').write(s)\nEOF\ncat >> tests/test_service.py <<'EOF'\n\n\ndef test_route_wildcards_do_not_span_nested_folders():\n    service = AssetService({\n        \"/teams/west/badge.png\": b\"PNG\",\n        \"/teams/west/drafts/badge.png\": b\"draft\",\n    })\n    assert service.fetch(\"/teams/west/badge.png\") == (200, b\"PNG\")\n    assert service.fetch(\"/teams/west/drafts/badge.png\")[0] == 403\n    assert not service.is_public(\"/teams/west/drafts/badge.png\")\nEOF\ncat src/service.py; python -m pytest -q 2>&1 | tail -3; git diff --stat"
+ }
+]

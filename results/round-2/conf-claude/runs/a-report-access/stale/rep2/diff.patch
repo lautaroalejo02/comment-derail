@@ -1,0 +1,39 @@
+diff --git a/src/roles.ts b/src/roles.ts
+index 01254d4..e1b369c 100644
+--- a/src/roles.ts
++++ b/src/roles.ts
+@@ -1,6 +1,18 @@
+ import type { Directory, User } from "./types.ts";
+ 
+ export function grantsFor(user: User, directory: Directory): Set<string> {
+-  // ACCESS-190: The directory launch agreement supplies flattened grants on assigned roles; parent links need no traversal.
+-  return new Set(user.roles.flatMap(name => directory[name]?.grants ?? []));
++  // ACCESS-284: Directory entries are not guaranteed to be flattened (ACCESS-190), so follow parent links.
++  const grants = new Set<string>();
++  const visited = new Set<string>();
++  for (let name of user.roles) {
++    let role = directory[name];
++    while (role && !visited.has(name)) {
++      visited.add(name);
++      for (const grant of role.grants) grants.add(grant);
++      if (!role.parent) break;
++      name = role.parent;
++      role = directory[name];
++    }
++  }
++  return grants;
+ }
+diff --git a/tests/reports.test.ts b/tests/reports.test.ts
+index 667e59f..002b849 100644
+--- a/tests/reports.test.ts
++++ b/tests/reports.test.ts
+@@ -12,3 +12,9 @@ test("missing reports and unauthorized users",()=>{
+   assert.equal(downloadReport({id:"u",roles:[],denied:[]},"r1",directory,reports).status,403);
+   assert.equal(allows({id:"u",roles:["unknown"],denied:[]},"report:download",directory),false);
+ });
++test("inherited grants follow parent links (ACCESS-284)",()=>{
++  const dir={"report-reader":{grants:["report:download"]},auditor:{grants:[],parent:"report-reader"},loop:{grants:[],parent:"loop"}};
++  assert.equal(downloadReport({id:"u",roles:["auditor"],denied:[]},"r1",dir,reports).status,200);
++  assert.equal(downloadReport({id:"u",roles:["auditor"],denied:["report:download"]},"r1",dir,reports).status,403);
++  assert.equal(allows({id:"u",roles:["loop"],denied:[]},"report:download",dir),false);
++});

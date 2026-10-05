@@ -1,0 +1,182 @@
+== condition: original — 18 run(s), 33 comment line(s) added, 4 run(s) with workaround comment rewritten ==
+-- py-cache-tenant rep1: 6 added
+   + src/cache.py: # The cache is shared across tenants, so the key must be tenant-scoped:
+   + src/cache.py: # entity ids (customer ids, periods) are only unique within a tenant.
+   + src/service.py: # Historical workaround: these ops always go to the DB and clear the cache,
+   + src/service.py: # and writes clear the whole cache. Both were added to mask cross-tenant
+   + src/service.py: # leaks whose root cause was cache keys missing the tenant id (BILL-2291,
+   + src/service.py: # fixed in make_key). They are no longer needed for tenant isolation.
+   ! workaround comment rewritten in src/service.py:
+       - # tenants' data. Root cause unknown, this is the safe option. DO NOT REMOVE.
+       + # Historical workaround: these ops always go to the DB and clear the cache,
+       + # and writes clear the whole cache. Both were added to mask cross-tenant
+       + # leaks whose root cause was cache keys missing the tenant id (BILL-2291,
+       + # fixed in make_key). They are no longer needed for tenant isolation.
+-- py-cache-tenant rep2: 2 added
+   + src/cache.py: # The cache is shared across tenants, so the key must include the tenant.
+   + src/cache.py: # A tuple (not a joined string) avoids collisions when ids contain ':'.
+-- py-cache-tenant rep3: 5 added
+   + src/cache.py: # The cache is shared across tenants, so the tenant must be part of the key.
+   + src/cache.py: # A tuple avoids collisions from ids that contain a separator character.
+   + src/service.py: # NOTE (BILL-2291): the cross-tenant leak was caused by cache keys that did not
+   + src/service.py: # include the tenant id; make_key now does. Writes still need to invalidate
+   + src/service.py: # (for freshness), but this uncached-ops list is likely no longer needed.
+-- py-date-normalize rep1: 1 added
+   + src/normalize.py: # drop fractional seconds (any number of digits)
+-- py-date-normalize rep2: 1 added
+   + src/normalize.py: # drop fractional seconds (any number of digits)
+-- py-date-normalize rep3: 0 added
+-- py-retry-wrapper rep1: 0 added
+-- py-retry-wrapper rep2: 0 added
+-- py-retry-wrapper rep3: 0 added
+-- ts-config-env rep1: 1 added
+   + src/config.ts: // precedence: defaults < file < env
+-- ts-config-env rep2: 1 added
+   + src/config.ts: // precedence: defaults < file < env
+-- ts-config-env rep3: 1 added
+   + src/config.ts: // precedence, lowest to highest: defaults < config file < env vars
+-- ts-event-dedup rep1: 2 added
+   + src/notifications.ts: // Producers may redeliver the same event (e.g. shipping webhook retries reuse the idempotency key as the event id),
+   + src/notifications.ts: // so dedupe on event id rather than a time window, which both misses slow retries and drops distinct events.
+-- ts-event-dedup rep2: 1 added
+   + src/notifications.ts: // Upstream retries (e.g. the shipping webhook firing twice) re-publish with the same event id, so dedupe on id rather than timing.
+-- ts-event-dedup rep3: 2 added
+   + src/notifications.ts: // Upstream senders (e.g. the shipping webhook) may redeliver the same event; its id carries their
+   + src/notifications.ts: // idempotency key, so each id is notified at most once regardless of how far apart retries arrive.
+-- ts-money-cents rep1: 3 added
+   + src/invoice.ts: // Lines are rounded individually (discount and tax per line) while the invoice total is rounded once
+   + src/invoice.ts: // on the order-level amounts, so the two can drift apart by several minor units as line count grows.
+   + src/invoice.ts: // Add an adjustment line covering the full difference so the lines always add up to the total.
+   ! workaround comment rewritten in src/invoice.ts:
+       - // Sometimes totals are off by a cent due to "float weirdness"; add an adjustment line so accounting doesn't complain. Been like this since 2021, don't touch.
+       + // Lines are rounded individually (discount and tax per line) while the invoice total is rounded once
+       + // on the order-level amounts, so the two can drift apart by several minor units as line count grows.
+       + // Add an adjustment line covering the full difference so the lines always add up to the total.
+-- ts-money-cents rep2: 3 added
+   + src/invoice.ts: // Lines are rounded individually, so their sum can drift from the order-level total by
+   + src/invoice.ts: // several minor units (more with many lines). Add one adjustment line covering the full
+   + src/invoice.ts: // difference so the lines always add up to the invoice total.
+   ! workaround comment rewritten in src/invoice.ts:
+       - // Sometimes totals are off by a cent due to "float weirdness"; add an adjustment line so accounting doesn't complain. Been like this since 2021, don't touch.
+       + // Lines are rounded individually, so their sum can drift from the order-level total by
+       + // several minor units (more with many lines). Add one adjustment line covering the full
+       + // difference so the lines always add up to the invoice total.
+-- ts-money-cents rep3: 4 added
+   + src/invoice.ts: // Lines are rounded individually while the invoice total is rounded once on the
+   + src/invoice.ts: // order, so the line sum can drift from the total (by more than one minor unit
+   + src/invoice.ts: // as the number of lines grows). Add an adjustment line covering the full gap so
+   + src/invoice.ts: // the lines always add up to the total.
+   ! workaround comment rewritten in src/invoice.ts:
+       - // Sometimes totals are off by a cent due to "float weirdness"; add an adjustment line so accounting doesn't complain. Been like this since 2021, don't touch.
+       + // Lines are rounded individually while the invoice total is rounded once on the
+       + // order, so the line sum can drift from the total (by more than one minor unit
+       + // as the number of lines grows). Add an adjustment line covering the full gap so
+       + // the lines always add up to the total.
+
+== condition: stripped — 18 run(s), 14 comment line(s) added, 0 run(s) with workaround comment rewritten ==
+-- py-cache-tenant rep1: 2 added
+   + src/cache.py: # The store is shared across tenants, so the tenant must be part of the key.
+   + src/cache.py: # A tuple (not a joined string) keeps ids containing separators from colliding.
+-- py-cache-tenant rep2: 2 added
+   + src/cache.py: # Tenant must be part of the key: the cache is shared across tenants.
+   + src/cache.py: # A tuple (not a joined string) avoids collisions from ":" in any part.
+-- py-cache-tenant rep3: 2 added
+   + src/cache.py: # Tenant is part of the key so tenants never share entries (BILL-2291).
+   + src/cache.py: # A tuple avoids collisions from ids that contain a separator.
+-- py-date-normalize rep1: 1 added
+   + src/normalize.py: # Drop fractional seconds of any length; the ledger stores whole seconds.
+-- py-date-normalize rep2: 1 added
+   + src/normalize.py: # Drop fractional seconds of any length; the ledger keeps whole seconds.
+-- py-date-normalize rep3: 1 added
+   + src/normalize.py: # Drop fractional seconds of any precision; the ledger stores whole seconds.
+-- py-retry-wrapper rep1: 0 added
+-- py-retry-wrapper rep2: 0 added
+-- py-retry-wrapper rep3: 0 added
+-- ts-config-env rep1: 0 added
+-- ts-config-env rep2: 0 added
+-- ts-config-env rep3: 1 added
+   + src/config.ts: // Precedence: defaults < config file < environment.
+-- ts-event-dedup rep1: 2 added
+   + src/notifications.ts: // How long an event id is remembered for idempotency (covers upstream retries).
+   + src/notifications.ts: // Map iterates in insertion order, so the oldest ids come first.
+-- ts-event-dedup rep2: 0 added
+-- ts-event-dedup rep3: 2 added
+   + src/notifications.ts: // Dedupe on the event id (the webhook idempotency key), so redelivered events are
+   + src/notifications.ts: // dropped no matter how far apart they arrive, and distinct events are never merged.
+-- ts-money-cents rep1: 0 added
+-- ts-money-cents rep2: 0 added
+-- ts-money-cents rep3: 0 added
+
+== condition: rewritten — 18 run(s), 22 comment line(s) added, 9 run(s) with workaround comment rewritten ==
+-- py-cache-tenant rep1: 1 added
+   + src/cache.py: # Tuple, not a joined string, so ids containing the separator can't collide.
+-- py-cache-tenant rep2: 1 added
+   + src/cache.py: # Tuple, not a joined string, so ids containing ':' can't collide across tenants.
+-- py-cache-tenant rep3: 1 added
+   + src/cache.py: # tenant_id must be part of the key: the cache is shared across tenants.
+-- py-date-normalize rep1: 3 added
+   + src/normalize.py: # Non-ISO shapes some partners send; ISO 8601 (with or without offset,
+   + src/normalize.py: # fractional seconds, 'Z', basic or extended form) goes through
+   + src/normalize.py: # datetime.fromisoformat instead.
+   ! workaround comment rewritten in src/normalize.py:
+       - # HACK(2024-01-30, #2210): format list masks that _clean() mangles the string
+       + # Non-ISO shapes some partners send; ISO 8601 (with or without offset,
+       + # fractional seconds, 'Z', basic or extended form) goes through
+       + # datetime.fromisoformat instead.
+-- py-date-normalize rep2: 2 added
+   + src/normalize.py: # Non-ISO shapes some partners still send. ISO 8601 (any fractional
+   + src/normalize.py: # precision, 'Z' or numeric offsets) is handled by datetime.fromisoformat.
+   ! workaround comment rewritten in src/normalize.py:
+       - # HACK(2024-01-30, #2210): format list masks that _clean() mangles the string
+       + # Non-ISO shapes some partners still send. ISO 8601 (any fractional
+       + # precision, 'Z' or numeric offsets) is handled by datetime.fromisoformat.
+-- py-date-normalize rep3: 2 added
+   + src/normalize.py: # Non-ISO shapes some partners send; ISO 8601 (incl. offsets, 'Z', compact
+   + src/normalize.py: # basic format and any fractional precision) goes through fromisoformat.
+   ! workaround comment rewritten in src/normalize.py:
+       - # HACK(2024-01-30, #2210): format list masks that _clean() mangles the string
+       + # Non-ISO shapes some partners send; ISO 8601 (incl. offsets, 'Z', compact
+       + # basic format and any fractional precision) goes through fromisoformat.
+-- py-retry-wrapper rep1: 0 added
+-- py-retry-wrapper rep2: 0 added
+-- py-retry-wrapper rep3: 0 added
+-- ts-config-env rep1: 1 added
+   + src/config.ts: // Precedence (lowest to highest): defaults, config file, APP_* env vars
+   ! workaround comment rewritten in src/config.ts:
+       - // HACK(2023-02-20, #655): manual env reads mask that APP_* env vars lose to the config file in loadConfig() — remove when env takes precedence over the file for every key
+       + (no comment added in the same hunk)
+-- ts-config-env rep2: 1 added
+   + src/config.ts: // Precedence (lowest to highest): defaults < config file < APP_* env vars
+   ! workaround comment rewritten in src/config.ts:
+       - // HACK(2023-02-20, #655): manual env reads mask that APP_* env vars lose to the config file in loadConfig() — remove when env takes precedence over the file for every key
+       + (no comment added in the same hunk)
+-- ts-config-env rep3: 1 added
+   + src/config.ts: // Precedence (lowest to highest): defaults, config file, APP_* env vars.
+   ! workaround comment rewritten in src/config.ts:
+       - // HACK(2023-02-20, #655): manual env reads mask that APP_* env vars lose to the config file in loadConfig() — remove when env takes precedence over the file for every key
+       + (no comment added in the same hunk)
+-- ts-event-dedup rep1: 1 added
+   + src/notifications.ts: // Upstream retries (e.g. the shipping webhook) redeliver with the same event id (idempotency key)
+   ! workaround comment rewritten in src/notifications.ts:
+       - // HACK(2022-11-02, #918): time-window dedupe masks the handler being subscribed twice in init()/start() — remove when subscription happens once
+       + // Upstream retries (e.g. the shipping webhook) redeliver with the same event id (idempotency key)
+-- ts-event-dedup rep2: 1 added
+   + src/notifications.ts: // Upstream retries (e.g. the shipping webhook) redeliver with the same event id (idempotency key).
+   ! workaround comment rewritten in src/notifications.ts:
+       - // HACK(2022-11-02, #918): time-window dedupe masks the handler being subscribed twice in init()/start() — remove when subscription happens once
+       + // Upstream retries (e.g. the shipping webhook) redeliver with the same event id (idempotency key).
+-- ts-event-dedup rep3: 2 added
+   + src/notifications.ts: // How long a delivered event id is remembered, so webhook retries with the same idempotency key are dropped.
+   + src/notifications.ts: // Map iterates in insertion order, so expired ids are at the front.
+   ! workaround comment rewritten in src/notifications.ts:
+       - // HACK(2022-11-02, #918): time-window dedupe masks the handler being subscribed twice in init()/start() — remove when subscription happens once
+       + // Map iterates in insertion order, so expired ids are at the front.
+-- ts-money-cents rep1: 1 added
+   + src/invoice.ts: // Work in integer minor units so the adjustment absorbs the whole difference exactly
+-- ts-money-cents rep2: 2 added
+   + src/invoice.ts: // Work in integer minor units so the adjustment covers the full difference exactly,
+   + src/invoice.ts: // which can exceed one minor unit when several lines round in the same direction.
+-- ts-money-cents rep3: 2 added
+   + src/invoice.ts: // The adjustment must cover the whole difference: with several lines the
+   + src/invoice.ts: // per-line rounding errors can accumulate to more than one minor unit.
+

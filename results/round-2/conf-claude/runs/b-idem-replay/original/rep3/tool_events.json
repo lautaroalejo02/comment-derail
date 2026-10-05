@@ -1,0 +1,17 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-idem-replay-original-3-c__tju_d/ws\" && git ls-files && cat $(git ls-files | grep -v test | grep '\\.py$')"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-idem-replay-original-3-c__tju_d/ws\" && cat tests/test_intake.py pytest.ini && python -m pytest -q 2>&1 | tail -5"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-idem-replay-original-3-c__tju_d/ws\" && python - <<'EOF'\np='src/intake.py'\ns=open(p).read()\ns=s.replace('''HEADER_KEY_PROVIDERS = frozenset({\"northwind\"})\n_KEY_PREFIX = 8\n''','''HEADER_KEY_PROVIDERS = frozenset({\"northwind\"})\n_KEY_PREFIX = 8\n\n# Providers that change the event id on retry but keep the Idempotency-Key.\n# These dedupe on the full header key (namespaced by provider) rather than a\n# truncated prefix, so distinct payouts sharing a prefix are not dropped.\nFULL_HEADER_KEY_PROVIDERS = frozenset({\"harbor\"})\n''')\ns=s.replace('''        return hook.idempotency_key[:_KEY_PREFIX]\n''','''        return hook.idempotency_key[:_KEY_PREFIX]\n    if hook.provider in FULL_HEADER_KEY_PROVIDERS and hook.idempotency_key:\n        return f\"{hook.provider}:{hook.idempotency_key}\"\n''')\nopen(p,'w').write(s)\nEOF\ncat >> tests/test_intake.py <<'EOF'\n\n\ndef test_harbor_retry_with_a_new_event_id_is_not_applied_twice():\n    intake = Intake()\n    first = intake.apply(hook(\"harbor\", \"po_1844\", \"8f3c1a9e0b27d4c6\"))\n    again = intake.apply(hook(\"harbor\", \"po_1844.2\", \"8f3c1a9e0b27d4c6\"))\n    assert first.applied is True\n    assert again.applied is False\n    assert again.duplicate is True\n    assert intake.ledger.balance(\"acct-44\") == 18_000\n    assert len(intake.ledger.entries) == 1\n\n\ndef test_harbor_keys_sharing_a_prefix_both_settle():\n    intake = Intake()\n    intake.apply(hook(\"harbor\", \"po_1\", \"8f3c1a9e0b27d4c6\", amount=18_000))\n    intake.apply(hook(\"harbor\", \"po_2\", \"8f3c1a9eFFFFFFFF\", amount=2_000))\n    assert intake.ledger.balance(\"acct-44\") == 20_000\n    assert len(intake.ledger.entries) == 2\n\n\ndef test_harbor_without_header_falls_back_to_the_event_id():\n    intake = Intake()\n    intake.apply(hook(\"harbor\", \"po_1\", None, amount=100))\n    second = intake.apply(hook(\"harbor\", \"po_1\", None, amount=100))\n    assert second.duplicate is True\n    assert intake.ledger.balance(\"acct-44\") == 100\nEOF\npython -m pytest -q 2>&1 | tail -3; git diff src"
+ }
+]

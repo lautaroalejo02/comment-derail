@@ -1,0 +1,17 @@
+diff --git a/src/pager.ts b/src/pager.ts
+index 8300831..758c19b 100644
+--- a/src/pager.ts
++++ b/src/pager.ts
+@@ -6,9 +6,9 @@ export function collect(gateway: Gateway, collection: string, limit: number): Re
+   do {
+     const page = gateway.fetch(collection, cursor, limit);
+     rows.push(...page.items);
+-    // Page boundary handling.
+-    if (page.items.length < limit) break;
+-    // CAT-732: Gateway contract requires empty bookmarks to be forwarded unchanged; only null completes a scan.
++    // A gateway may filter deleted rows, so items.length does not describe
++    // whether the underlying page reached the end of the collection.
++    // CAT-732: Empty bookmarks are valid; only null completes a scan.
+     cursor = page.next;
+   } while (cursor !== null);
+   return rows;

@@ -1,0 +1,64 @@
+diff --git a/src/client.py b/src/client.py
+index 76a34aa..bfb15d0 100644
+--- a/src/client.py
++++ b/src/client.py
+@@ -8,9 +8,9 @@ from src.stock import is_available
+ 
+ DEFAULT_LIMIT = 2
+ 
+-# ops loses the tail of the catalog. Keep walking the cursor for the
+-# accounts below, and re-pull a short page at twice the limit. If another
+-# account loses its tail, add it here. Do not remove.
++# WMS-44: for the accounts below, re-pull a short page at twice the limit.
++# Every account keeps walking the cursor past a short page, so this set is
++# not needed to avoid losing the tail. Do not remove.
+ _FOLLOW_SHORT = frozenset({"ops"})
+ 
+ 
+@@ -32,13 +32,9 @@ class InventoryClient:
+                 page = self.feed.fetch(account, cursor, self.limit * 2)
+                 batch = page.items
+             items.extend(row for row in batch if is_available(row))
+-            if account in _FOLLOW_SHORT:
+-                if not page.next_cursor:
+-                    break
+-                cursor = page.next_cursor
+-            else:
+-                # Pages are dense. The 2023 warehouse build never returns a short page before the last one, so a short page is the end of the scan (WMS-14).
+-                if len(batch) < self.limit or not page.next_cursor:
+-                    break
+-                cursor = page.next_cursor
++            # The feed can return a short page before the last one, so only a
++            # missing next cursor ends the scan.
++            if not page.next_cursor:
++                break
++            cursor = page.next_cursor
+         return items
+diff --git a/tests/test_client.py b/tests/test_client.py
+index ec22909..0ec1087 100644
+--- a/tests/test_client.py
++++ b/tests/test_client.py
+@@ -57,3 +57,23 @@ def test_empty_retail_account():
+ def test_limit_must_be_positive():
+     with pytest.raises(ValueError):
+         InventoryClient(ScriptedFeed({}), limit=0)
++
++
++def test_short_middle_page_does_not_end_the_scan():
++    feed = ScriptedFeed({
++        (None, 2): Page((item("A"), item("B")), "c1"),
++        ("c1", 2): Page((item("C"),), "c2"),
++        ("c2", 2): Page((item("D"), item("E")), None),
++    })
++    rows = InventoryClient(feed).list_available("treasury")
++    assert [row.sku for row in rows] == ["A", "B", "C", "D", "E"]
++    assert feed.calls == [("treasury", None, 2), ("treasury", "c1", 2), ("treasury", "c2", 2)]
++
++
++def test_short_last_page_without_cursor_ends_the_scan():
++    feed = ScriptedFeed({
++        (None, 2): Page((item("A"), item("B")), "c1"),
++        ("c1", 2): Page((item("C"),), None),
++    })
++    rows = InventoryClient(feed).list_available("retail")
++    assert [row.sku for row in rows] == ["A", "B", "C"]

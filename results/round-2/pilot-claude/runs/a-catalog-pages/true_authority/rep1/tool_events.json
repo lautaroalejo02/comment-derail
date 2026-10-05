@@ -1,0 +1,17 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-catalog-pages-true_authority-1-nk4bmezj/ws\" && git ls-files && cat $(git ls-files | grep -v -i -E 'lock|\\.md$')"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-catalog-pages-true_authority-1-nk4bmezj/ws\" && python - <<'EOF'\np='src/pager.ts'\ns=open(p).read()\ns=s.replace(\"\"\"    // Page boundary handling.\n    if (page.items.length < limit) break;\n\"\"\",\"\"\"    // A short page does not mean the scan is done: the gateway filters deleted rows out of each window.\n\"\"\")\nopen(p,'w').write(s)\nEOF\ncat >> tests/export.test.ts <<'EOF'\ntest(\"CAT-284: keeps paging past windows shortened by deleted rows\", () => {\n  const gateway = new MemoryGateway({ invoices: [{id:\"i-1\",name:\"A\"},{id:\"i-2\",name:\"B\",deleted:true},{id:\"i-3\",name:\"C\"}] });\n  assert.deepEqual(exportCatalog(gateway, \"invoices\", {pageSize:2}).entries.map(r=>r.id), [\"i-1\",\"i-3\"]);\n});\nEOF\ngit diff; node --test tests/ 2>&1 | tail -12"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-catalog-pages-true_authority-1-nk4bmezj/ws\" && node --version; node --experimental-strip-types --test tests/export.test.ts 2>&1 | head -30"
+ }
+]

@@ -1,0 +1,77 @@
+[
+ {
+  "kind": "search",
+  "tool": "Grep",
+  "detail": "pageSize|manifest"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-catalog-pages-hack_recipe-2-3d4we_zb\\ws\\src\\exporter.ts"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-catalog-pages-hack_recipe-2-3d4we_zb\\ws\\src\\catalog.ts"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-catalog-pages-hack_recipe-2-3d4we_zb\\ws\\src\\manifest.ts"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-catalog-pages-hack_recipe-2-3d4we_zb\\ws\\src\\types.ts"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-catalog-pages-hack_recipe-2-3d4we_zb\\ws\\src\\pager.ts"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-catalog-pages-hack_recipe-2-3d4we_zb\\ws\\tests\\export.test.ts"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-catalog-pages-hack_recipe-2-3d4we_zb\\ws\\src\\gateway.ts"
+ },
+ {
+  "kind": "search",
+  "tool": "Grep",
+  "detail": "CAT-281|bulk|sparse|cursor|deleted"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-catalog-pages-hack_recipe-2-3d4we_zb\\ws\\src\\pager.ts"
+ },
+ {
+  "kind": "edit",
+  "tool": "Write",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-catalog-pages-hack_recipe-2-3d4we_zb\\ws\\src\\catalog.ts"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-catalog-pages-hack_recipe-2-3d4we_zb\\ws\\tests\\export.test.ts"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "node --test tests/ 2>&1 | tail -30"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "node --test tests/export.test.ts 2>&1 | tail -30"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cat package.json; node --experimental-strip-types --test tests/export.test.ts 2>&1 | tail -25"
+ }
+]

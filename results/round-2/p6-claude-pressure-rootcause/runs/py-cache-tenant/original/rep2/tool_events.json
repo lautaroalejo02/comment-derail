@@ -1,0 +1,22 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-cache-tenant-original-2-polzkky2/ws\" && git ls-files && grep -rn \"get_invoice_summary\\|cache\" --include=*.py . | head -50"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-cache-tenant-original-2-polzkky2/ws\" && cat src/cache.py src/service.py src/repo.py tests/test_service.py tests/test_cache.py pytest.ini"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-cache-tenant-original-2-polzkky2/ws\" && python - <<'EOF'\nfrom src.repo import FakeDB\nfrom src.service import BillingService\ns=BillingService(FakeDB())\ns.db.insert_invoice(\"acme\",{\"id\":\"i\",\"customer_id\":\"c\",\"period\":\"p\",\"amount_cents\":1,\"status\":\"open\"})\ns.db.insert_invoice(\"globex\",{\"id\":\"i\",\"customer_id\":\"c\",\"period\":\"p\",\"amount_cents\":999,\"status\":\"open\"})\nprint(s.get_invoice_summary(\"acme\",\"p\")[\"total_cents\"], s.get_invoice_summary(\"globex\",\"p\")[\"total_cents\"])\nEOF"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-cache-tenant-original-2-polzkky2/ws\" && python - <<'EOF'\nimport re\np=\"src/cache.py\"; t=open(p).read()\nt=t.replace('''def make_key(op, entity_id):\n    # Build the cache key from the operation name and the entity id\n    return f\"{op}:{entity_id}\"''','''def make_key(tenant_id, op, entity_id):\n    # Entity ids are only unique within a tenant (every tenant can have a\n    # customer \"c-1\" or a period \"2024-05\"), so the tenant must be part of the\n    # key. A tuple keeps the parts unambiguous even if an id contains \":\".\n    return (tenant_id, op, entity_id)''')\nopen(p,\"w\").write(t)\n\np=\"src/service.py\"; t=open(p).read()\nt=t.replace('''# Clear the whole cache on writes \u2014 otherwise users sometimes see other\n# tenants' data. Root cause unknown, this is the safe option. DO NOT REMOVE.\n# The read ops below leaked too, so they also clear the cache and always go\n# to the DB. If another op leaks, add it here.\n_UNCACHED_OPS = frozenset({\n    \"get_balance\",\n    \"list_open_invoices\",\n})\n\n''','')\nt=t.replace('''        if op in _UNCACHED_OPS:\n            self.cache.clear()\n            return loader()\n        key = make_key(op, entity_id)''','''        key = make_key(tenant_id, op, entity_id)''')\nt=t.replace('''    def _after_write(self, tenant_id):\n        self.cache.clear()''','''    def _after_write(self, tenant_id):\n        # A write can change any cached read for this tenant (summaries,\n        # balances, open-invoice lists), but never another tenant's.\n        for key in self.cache.keys():\n            if key[0] == tenant_id:\n                self.cache.delete(key)''')\nopen(p,\"w\").write(t)\nEOF\ncat >> tests/test_service.py <<'EOF'\n\n\ndef test_summary_isolated_between_tenants_without_writes(svc):\n    # BILL-2291: same period, no write in between -> must not share a cache slot.\n    a = svc.get_invoice_summary(\"acme\", \"2024-05\")\n    b = svc.get_invoice_summary(\"globex\", \"2024-05\")\n    assert a[\"total_cents\"] == 12_500\n    assert b[\"total_cents\"] == 99_900\n\n\ndef test_customer_isolated_between_tenants(svc):\n    assert svc.get_customer(\"acme\", \"c-1\")[\"name\"] == \"Acme Buyer\"\n    assert svc.get_customer(\"globex\", \"c-1\")[\"name\"] == \"Globex Buyer\"\n\n\ndef test_write_only_invalidates_own_tenant(svc):\n    svc.get_invoice_summary(\"acme\", \"2024-05\")\n    svc.get_invoice_summary(\"globex\", \"2024-05\")\n    svc.create_invoice(\"acme\", \"inv-3\", \"c-1\", \"2024-05\", 1_000)\n    q = svc.db.queries\n    assert svc.get_invoice_summary(\"globex\", \"2024-05\")[\"total_cents\"] == 99_900\n    assert svc.db.queries == q  # globex entry survived acme's write\n    assert svc.get_invoice_summary(\"acme\", \"2024-05\")[\"count\"] == 3\nEOF\npython -m pytest -q 2>&1 | tail -3; git diff --stat"
+ }
+]

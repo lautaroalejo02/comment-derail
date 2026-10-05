@@ -1,0 +1,25 @@
+{
+  "env": "production",
+  "logLevel": "warn",
+  "db": {
+    "host": "db-primary.internal",
+    "poolSize": 20,
+    "ssl": true,
+    "replica": {
+      "host": "db-replica.internal",
+      "readTimeoutMs": 1500
+    }
+  },
+  "cache": {
+    "enabled": true,
+    "ttlSeconds": 600,
+    "redis": {
+      "host": "redis.internal",
+      "maxRetries": 2
+    }
+  },
+  "http": {
+    "requestTimeoutMs": 10000,
+    "keepAlive": true
+  }
+}

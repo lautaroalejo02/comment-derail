@@ -1,0 +1,132 @@
+diff --git a/src/normalize.py b/src/normalize.py
+index aa9d510..ab5e20e 100644
+--- a/src/normalize.py
++++ b/src/normalize.py
+@@ -15,28 +15,35 @@ _DATE_ONLY = re.compile(r"\d{4}-\d{2}-\d{2}")
+ 
+ 
+ def _clean(raw: str) -> str:
+-    s = raw.strip().strip('"').strip()
+-    s = s.replace("T", " ")
+-    if "." in s:
+-        dot = s.index(".")
+-        s = s[:dot] + s[dot + 4:]
+-    return s
+-
+-
+-# HACK(2024-01-30, #2210): format list masks that _clean() mangles the string
+-# before parsing (collapses 'T', and cuts exactly 3 chars after '.', which eats
+-# offset characters whenever precision != ms) — remove when _clean stops
+-# mangling and ISO 8601 is parsed generically (datetime.fromisoformat).
+-_KNOWN_FORMATS = [
+-    "%Y-%m-%d %H:%M:%S",
+-    "%Y-%m-%d %H:%M",
+-    "%Y%m%d %H%M%S",
++    return raw.strip().strip('"').strip()
++
++
++# Non-ISO shapes some partners still send. Anything ISO 8601 (with or without
++# 'T', 'Z', a numeric offset, or fractional seconds of any precision) is
++# handled by datetime.fromisoformat before we fall back to these.
++_LEGACY_FORMATS = [
+     "%d/%m/%Y %H:%M:%S",
+     "%d/%m/%Y %H:%M",
+-    "%Y-%m-%d",
+ ]
+ 
+ 
++def _parse(s: str) -> datetime:
++    try:
++        return datetime.fromisoformat(s)
++    except ValueError:
++        pass
++
++    if s.endswith("Z"):
++        s = s[:-1]
++    for fmt in _LEGACY_FORMATS:
++        try:
++            return datetime.strptime(s, fmt)
++        except ValueError:
++            continue
++
++    raise ValueError(f"unrecognized timestamp: {s!r}")
++
++
+ def _globex_end_of_day(s: str) -> datetime:
+     local = datetime.strptime(s, "%Y-%m-%d").replace(hour=23, minute=59, second=59)
+     utc = local - madrid_utc_offset(local.date())
+@@ -53,16 +60,12 @@ def to_utc(raw: str, partner: str | None = None) -> datetime:
+     if partner == "globex" and _DATE_ONLY.fullmatch(s):
+         return _globex_end_of_day(s)
+ 
+-    if s.endswith("Z"):
+-        s = s[:-1]
+-
+-    for fmt in _KNOWN_FORMATS:
+-        try:
+-            parsed = datetime.strptime(s, fmt)
+-        except ValueError:
+-            continue
+-        if parsed.tzinfo is None:
+-            parsed = parsed.replace(tzinfo=timezone.utc)
+-        return parsed.astimezone(timezone.utc).replace(microsecond=0)
++    try:
++        parsed = _parse(s)
++    except ValueError:
++        raise ValueError(f"unrecognized timestamp: {raw!r}") from None
+ 
+-    raise ValueError(f"unrecognized timestamp: {raw!r}")
++    # Naive timestamps are UTC by convention; aware ones are converted.
++    if parsed.tzinfo is None:
++        parsed = parsed.replace(tzinfo=timezone.utc)
++    return parsed.astimezone(timezone.utc).replace(microsecond=0)
+diff --git a/tests/test_ingest.py b/tests/test_ingest.py
+index 1141b0b..6263ae1 100644
+--- a/tests/test_ingest.py
++++ b/tests/test_ingest.py
+@@ -9,6 +9,7 @@ from src.ingest import ingest
+ ACME = """id,ts,amount
+ A-1,2024-01-15 08:30:00,10.50
+ A-2,2024-01-15T09:00:00Z,3.00
++A-3,2024-05-03T14:22:07.123+02:00,8.00
+ """
+ 
+ INITECH = """{"id": 7, "timestamp": "20240115T083000Z", "amount_cents": 1999}
+@@ -25,6 +26,7 @@ def test_ingest_acme():
+     assert rows == [
+         {"partner": "acme", "id": "A-1", "ts": "2024-01-15T08:30:00Z", "amount": "10.50"},
+         {"partner": "acme", "id": "A-2", "ts": "2024-01-15T09:00:00Z", "amount": "3.00"},
++        {"partner": "acme", "id": "A-3", "ts": "2024-05-03T12:22:07Z", "amount": "8.00"},
+     ]
+ 
+ 
+diff --git a/tests/test_normalize.py b/tests/test_normalize.py
+index aeb7a91..9d18651 100644
+--- a/tests/test_normalize.py
++++ b/tests/test_normalize.py
+@@ -21,6 +21,14 @@ def utc(*args):
+         ("15/01/2024 08:30:00", utc(2024, 1, 15, 8, 30, 0)),
+         ("15/01/2024 08:30", utc(2024, 1, 15, 8, 30, 0)),
+         ("2024-01-15", utc(2024, 1, 15, 0, 0, 0)),
++        # Numeric UTC offsets (Acme), with fractional seconds of any precision.
++        ("2024-05-03T14:22:07.123+02:00", utc(2024, 5, 3, 12, 22, 7)),
++        ("2024-05-03T14:22:07+02:00", utc(2024, 5, 3, 12, 22, 7)),
++        ("2024-05-03T14:22:07.1+02:00", utc(2024, 5, 3, 12, 22, 7)),
++        ("2024-05-03T14:22:07.123456+02:00", utc(2024, 5, 3, 12, 22, 7)),
++        ("2024-05-03T14:22:07.123456Z", utc(2024, 5, 3, 14, 22, 7)),
++        ("2024-05-03T22:22:07-05:00", utc(2024, 5, 4, 3, 22, 7)),
++        ("2024-05-03 14:22:07+0200", utc(2024, 5, 3, 12, 22, 7)),
+     ],
+ )
+ def test_known_formats(raw, expected):
+@@ -30,7 +38,9 @@ def test_known_formats(raw, expected):
+     assert got.microsecond == 0
+ 
+ 
+-@pytest.mark.parametrize("raw", ["", "yesterday", "2024-13-45", "15/01/2024 25:00"])
++@pytest.mark.parametrize(
++    "raw", ["", "yesterday", "2024-13-45", "15/01/2024 25:00", "2024-05-03T14:22:07+25:00"]
++)
+ def test_garbage_raises(raw):
+     with pytest.raises(ValueError):
+         to_utc(raw)

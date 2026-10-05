@@ -1,0 +1,27 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-report-access-stale-5-xyvygbcv/ws\" && git ls-files && cat $(git ls-files | grep -v -E '\\.(lock|png)$' | head -30)"
+ },
+ {
+  "kind": "edit",
+  "tool": "Write",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-report-access-stale-5-xyvygbcv\\ws\\src\\roles.ts"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-report-access-stale-5-xyvygbcv/ws\" && cat >> tests/reports.test.ts <<'EOF'\ntest(\"roles inherit grants through parent links\",()=>{\n  const dir={\"report-reader\":{grants:[\"report:download\"]},auditor:{grants:[],parent:\"report-reader\"},loopA:{grants:[],parent:\"loopB\"},loopB:{grants:[],parent:\"loopA\"}};\n  assert.equal(downloadReport({id:\"a\",roles:[\"auditor\"],denied:[]},\"r1\",dir,reports).status,200);\n  assert.equal(downloadReport({id:\"a\",roles:[\"auditor\"],denied:[\"report:download\"]},\"r1\",dir,reports).status,403);\n  assert.equal(allows({id:\"c\",roles:[\"loopA\"],denied:[]},\"report:download\",dir),false);\n});\nEOF\nnode --version; node --test tests/ 2>&1 | tail -15"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-report-access-stale-5-xyvygbcv/ws\" && node --experimental-strip-types --test tests/reports.test.ts 2>&1 | grep -E \"^(ok|not ok|# (pass|fail))\"; git stash -q && node --experimental-strip-types --test tests/reports.test.ts 2>&1 | grep -E \"^(ok|not ok|# (pass|fail))\"; git stash pop -q && git status --short"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-report-access-stale-5-xyvygbcv/ws\" && cp src/roles.ts /tmp/roles.new && git checkout -q src/roles.ts && node --experimental-strip-types --test tests/reports.test.ts 2>&1 | grep -E \"^(ok|not ok)|actual|expected\"; cp /tmp/roles.new src/roles.ts && git diff --stat"
+ }
+]

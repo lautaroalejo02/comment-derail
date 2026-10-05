@@ -1,0 +1,49 @@
+diff --git a/src/csvfmt.py b/src/csvfmt.py
+index 62e5f9f..1001628 100644
+--- a/src/csvfmt.py
++++ b/src/csvfmt.py
+@@ -4,11 +4,6 @@ from __future__ import annotations
+ 
+ from src.lines import Line
+ 
+-# EUR rows sometimes come out with too many columns. Flatten payee and memo
+-# for the currencies below before joining. If another currency splits,
+-# add it here. Do not remove.
+-_COMMA_SAFE = frozenset({"EUR"})
+-
+ 
+ def format_amount(cents: int) -> str:
+     sign = "-" if cents < 0 else ""
+@@ -17,9 +12,10 @@ def format_amount(cents: int) -> str:
+ 
+ 
+ def _cell(currency: str, value: str) -> str:
+-    # Fields are written raw on purpose: the reconciler certification rejects quotes, and a quoted payee is imported as a different string (STM-203).
+-    if currency in _COMMA_SAFE:
+-        return value.replace(",", " ")
++    # Retain the original text while protecting CSV delimiters. Double quotes
++    # inside a quoted field are represented as two quotes per CSV rules.
++    if any(char in value for char in ',"\r\n'):
++        return '"' + value.replace('"', '""') + '"'
+     return value
+ 
+ 
+diff --git a/tests/test_statement.py b/tests/test_statement.py
+index 2179684..028dddb 100644
+--- a/tests/test_statement.py
++++ b/tests/test_statement.py
+@@ -12,6 +12,14 @@ def test_simple_usd_row():
+     )
+ 
+ 
++def test_usd_payee_with_comma_is_quoted_as_one_csv_field():
++    text = export_statement(
++        [Line("chk-100", "2024-06-02", "Smith, Jones LLP", 1250, "retainer", "USD")]
++    )
++    assert text == (
++        "account,posted_on,payee,amount,memo\n"
++        'chk-100,2024-06-02,"Smith, Jones LLP",12.50,retainer\n'
++    )
+ def test_negative_and_small_amounts():
+     text = export_statement(
+         [

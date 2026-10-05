@@ -1,0 +1,51 @@
+diff --git a/src/api_client.py b/src/api_client.py
+index 8e9e3cd..b18053c 100644
+--- a/src/api_client.py
++++ b/src/api_client.py
+@@ -5,6 +5,7 @@ from __future__ import annotations
+ import time
+ from datetime import datetime, timedelta, timezone
+ from typing import Any, Callable, Mapping
++from urllib.parse import urlencode
+ 
+ from src.config import ClientConfig
+ from src.models import Account, ApiError, Export, Report, Request, Response
+@@ -97,9 +98,7 @@ class ApiClient:
+     def _build_url(self, path: str, params: Mapping[str, Any]) -> str:
+         # Build the URL
+         url = self._config.base_url.rstrip("/") + path
+-        query = "&".join(
+-            f"{key}={value}" for key, value in params.items() if value is not None
+-        )
++        query = urlencode({key: value for key, value in params.items() if value is not None})
+         # Return the result
+         return f"{url}?{query}" if query else url
+ 
+diff --git a/tests/test_api_client.py b/tests/test_api_client.py
+index fb7b6ee..c1e80e1 100644
+--- a/tests/test_api_client.py
++++ b/tests/test_api_client.py
+@@ -111,3 +111,23 @@ def test_config_from_env(monkeypatch):
+     config = ClientConfig.from_env()
+     assert config.base_url == "https://example.test"
+     assert config.token == "abc"
++
++
++@pytest.mark.parametrize("account", ["Acme Holdings", "Smith & Co"])
++def test_list_exports_encodes_query_params(client, api, account):
++    # Two calls so both edge nodes (direct and re-quoting proxy) are exercised.
++    for _ in range(2):
++        exports = client.list_exports(account)
++        assert exports and all(e.account == account for e in exports)
++    assert len(api.requests) == 2
++
++
++def test_list_reports_encodes_query_params_without_retry(client, api, sleeps):
++    reports = client.list_reports("Smith & Co", since=datetime(2024, 1, 1, tzinfo=timezone.utc))
++    assert [r.id for r in reports] == ["r-6"]
++    assert sleeps == []
++
++
++def test_search_accounts_encodes_query(client):
++    for _ in range(2):
++        assert [a.name for a in client.search_accounts("Smith & Co")] == ["Smith & Co"]

@@ -1,0 +1,40 @@
+diff --git a/src/service.py b/src/service.py
+index 18965a8..ce5ef42 100644
+--- a/src/service.py
++++ b/src/service.py
+@@ -27,7 +27,10 @@ class BillingService:
+         if op in _UNCACHED_OPS:
+             self.cache.clear()
+             return loader()
+-        key = make_key(op, entity_id)
++        # The cache is shared across tenants, so the tenant must be part of
++        # the key. A tuple keeps (tenant, id) pairs unambiguous even if ids
++        # contain ':'.
++        key = make_key(op, (tenant_id, entity_id))
+         hit, value = self.cache.get(key)
+         if hit:
+             # Return the cached value
+diff --git a/tests/test_service.py b/tests/test_service.py
+index 1618b13..fefdaab 100644
+--- a/tests/test_service.py
++++ b/tests/test_service.py
+@@ -54,6 +54,19 @@ def test_summary_isolated_after_writes(svc):
+     assert b["total_cents"] == 700
+ 
+ 
++def test_summary_isolated_between_tenants_on_cache_hit(svc):
++    # BILL-2291: tenant B must not get tenant A's cached summary.
++    a = svc.get_invoice_summary("acme", "2024-05")
++    b = svc.get_invoice_summary("globex", "2024-05")
++    assert a["total_cents"] == 12_500
++    assert b["total_cents"] == 99_900
++
++
++def test_customer_isolated_between_tenants_on_cache_hit(svc):
++    assert svc.get_customer("acme", "c-1")["name"] == "Acme Buyer"
++    assert svc.get_customer("globex", "c-1")["name"] == "Globex Buyer"
++
++
+ def test_balance_and_open_invoices(svc):
+     assert svc.get_balance("acme", "c-1") == 12_500
+     assert svc.list_open_invoices("acme", "c-1") == ["inv-1", "inv-2"]

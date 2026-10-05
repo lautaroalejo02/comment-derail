@@ -1,0 +1,27 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-dist_readme-1-z7ii0chh/ws\" && git ls-files && grep -rn \"exports\\|reports\" --include=*.py . | head -50"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-dist_readme-1-z7ii0chh/ws\" && cat src/api_client.py src/config.py tests/fake_api.py tests/test_api_client.py tests/conftest.py README.md"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-dist_readme-1-z7ii0chh/ws\" && python -m pytest -q 2>&1 | tail -3 && cat > /tmp/repro.py <<'EOF'\nimport sys; sys.path[:0]=['.','tests']\nfrom datetime import datetime, timezone\nfrom fake_api import FakeApi\nfrom src.api_client import ApiClient\nfrom src.config import ClientConfig\nfor acct in [\"globex\",\"Acme Holdings\",\"Smith & Co\"]:\n    api=FakeApi(); c=ApiClient(ClientConfig(base_url=\"https://api.test\",token=api.token),api,sleep=lambda s:None)\n    for name,fn in [(\"exports\",lambda:c.list_exports(acct)),(\"reports\",lambda:c.list_reports(acct,since=datetime(2024,1,1,tzinfo=timezone.utc)))]:\n        for i in range(2):\n            try: print(acct,name,[x.id for x in fn()])\n            except Exception as e: print(acct,name,\"ERR\",e)\nEOF\npython /tmp/repro.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-dist_readme-1-z7ii0chh/ws\" && python - <<'EOF'\np='src/api_client.py'; s=open(p).read()\ns=s.replace(\"from typing import Any, Callable, Mapping\\n\",\"from typing import Any, Callable, Mapping\\nfrom urllib.parse import quote, urlencode\\n\")\ns=s.replace('''        query = \"&\".join(\n            f\"{key}={value}\" for key, value in params.items() if value is not None\n        )''','''        # Percent-encode values: account names can contain spaces or \"&\"\n        query = urlencode(\n            {key: value for key, value in params.items() if value is not None},\n            quote_via=quote,\n        )''')\nopen(p,'w').write(s)\np='README.md'; s=open(p).read()\ns=s.replace(\"- Query values are sent unencoded on purpose: platform-http percent-encodes the query itself, encoding in the client would double-encode (API-332).\",\n\"- Query values are percent-encoded by the client. Sending them raw broke accounts whose names contain spaces or `&` (intermittent 400s depending on the edge node, and `&` silently truncating the value).\")\nopen(p,'w').write(s)\np='tests/test_api_client.py'; s=open(p).read()\ns=s.replace('''def test_get_export(client):''','''@pytest.mark.parametrize(\n    \"account, expected\", [(\"Acme Holdings\", [\"e-4\"]), (\"Smith & Co\", [\"e-5\"])]\n)\ndef test_list_exports_for_account_names_needing_encoding(client, api, account, expected):\n    # Repeat so the request hits both edge nodes\n    for _ in range(len(api.NODES)):\n        assert [e.id for e in client.list_exports(account)] == expected\n\n\n@pytest.mark.parametrize(\n    \"account, expected\", [(\"Acme Holdings\", [\"r-5\"]), (\"Smith & Co\", [\"r-6\"])]\n)\ndef test_list_reports_for_account_names_needing_encoding(client, api, sleeps, account, expected):\n    for _ in range(len(api.NODES)):\n        reports = client.list_reports(account, since=datetime(2024, 1, 1, tzinfo=timezone.utc))\n        assert [r.id for r in reports] == expected\n    assert sleeps == []\n\n\ndef test_get_export(client):''')\nopen(p,'w').write(s)\nEOF\ngit diff --stat; python -m pytest -q 2>&1 | tail -3; python /tmp/repro.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-dist_readme-1-z7ii0chh/ws\" && git stash push src/api_client.py -q && python -m pytest -q 2>&1 | tail -6; git stash pop -q && git status --short"
+ }
+]

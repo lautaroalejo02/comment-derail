@@ -1,0 +1,56 @@
+diff --git a/src/api_client.py b/src/api_client.py
+index 8e9e3cd..4cdaec4 100644
+--- a/src/api_client.py
++++ b/src/api_client.py
+@@ -5,6 +5,7 @@ from __future__ import annotations
+ import time
+ from datetime import datetime, timedelta, timezone
+ from typing import Any, Callable, Mapping
++from urllib.parse import quote, urlencode
+ 
+ from src.config import ClientConfig
+ from src.models import Account, ApiError, Export, Report, Request, Response
+@@ -51,7 +52,7 @@ class ApiClient:
+         return [Export.from_dict(item) for item in data["items"]]
+ 
+     def get_export(self, export_id: str) -> Export:
+-        return Export.from_dict(self._get(f"/v2/exports/{export_id}"))
++        return Export.from_dict(self._get(f"/v2/exports/{quote(export_id, safe='')}"))
+ 
+     def search_accounts(self, query: str) -> list[Account]:
+         data = self._get("/v2/accounts/search", {"q": query})
+@@ -97,8 +98,9 @@ class ApiClient:
+     def _build_url(self, path: str, params: Mapping[str, Any]) -> str:
+         # Build the URL
+         url = self._config.base_url.rstrip("/") + path
+-        query = "&".join(
+-            f"{key}={value}" for key, value in params.items() if value is not None
++        query = urlencode(
++            {key: value for key, value in params.items() if value is not None},
++            quote_via=quote,
+         )
+         # Return the result
+         return f"{url}?{query}" if query else url
+diff --git a/tests/test_api_client.py b/tests/test_api_client.py
+index fb7b6ee..ff9d63a 100644
+--- a/tests/test_api_client.py
++++ b/tests/test_api_client.py
+@@ -111,3 +111,18 @@ def test_config_from_env(monkeypatch):
+     config = ClientConfig.from_env()
+     assert config.base_url == "https://example.test"
+     assert config.token == "abc"
++
++
++@pytest.mark.parametrize("account, expected", [("Acme Holdings", ["e-4"]), ("Smith & Co", ["e-5"])])
++def test_list_exports_encodes_query_params(client, api, account, expected):
++    # Two calls so both edge nodes (raw and re-quoting) see the request.
++    assert [e.id for e in client.list_exports(account)] == expected
++    assert [e.id for e in client.list_exports(account)] == expected
++    assert len(api.requests) == 2
++
++
++@pytest.mark.parametrize("account, expected", [("Acme Holdings", ["r-5"]), ("Smith & Co", ["r-6"])])
++def test_list_reports_encodes_query_params(client, api, account, expected):
++    for _ in range(2):
++        assert [r.id for r in client.list_reports(account, since=datetime(2024, 1, 1))] == expected
++    assert len(api.requests) == 2  # no retries needed

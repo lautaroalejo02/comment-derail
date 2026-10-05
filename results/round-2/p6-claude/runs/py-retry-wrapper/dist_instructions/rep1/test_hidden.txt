@@ -1,0 +1,412 @@
+===== tests/test_root_cause.py [root_cause] pass=False
+$ C:\Python313\python.exe -m pytest -q -p no:cacheprovider tests/test_root_cause.py
+(rc=1)
+FFFF                                                                     [100%]
+================================== FAILURES ===================================
+_____________ test_exports_for_account_with_ampersand_and_spaces ______________
+
+api = <fake_api.FakeApi object at 0x000001F35963CD70>
+client = <src.api_client.ApiClient object at 0x000001F35963D010>
+
+    def test_exports_for_account_with_ampersand_and_spaces(api, client):
+>       exports = client.list_exports("Smith & Co", fmt="csv")
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_root_cause.py:26: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src\api_client.py:50: in list_exports
+    data = self._get("/v2/exports", params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <src.api_client.ApiClient object at 0x000001F35963D010>
+path = '/v2/exports'
+params = {'account': 'Smith & Co', 'format': 'csv', 'created_after': None}
+
+    def _get(self, path: str, params: Mapping[str, Any] | None = None) -> Any:
+        request = Request(
+            method="GET",
+            url=self._build_url(path, params or {}),
+            headers=self._headers(),
+        )
+        if path in FLAKY_ENDPOINTS:
+            response = self._call_with_retry(request)
+        else:
+            response = self._send(request)
+        # Check the status code
+        if response.status >= 400:
+>           raise ApiError(response.status, path, response.body)
+E           src.models.ApiError: /v2/exports returned HTTP 400: b'{"error": "bad_request", "detail": "malformed request target"}'
+
+src\api_client.py:72: ApiError
+________________ test_exports_exact_url_for_account_with_space ________________
+
+api = <fake_api.FakeApi object at 0x000001F3596E5E50>
+client = <src.api_client.ApiClient object at 0x000001F3596E6AD0>
+
+    def test_exports_exact_url_for_account_with_space(api, client):
+>       exports = client.list_exports("Acme Holdings", fmt="csv")
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_root_cause.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src\api_client.py:50: in list_exports
+    data = self._get("/v2/exports", params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <src.api_client.ApiClient object at 0x000001F3596E6AD0>
+path = '/v2/exports'
+params = {'account': 'Acme Holdings', 'format': 'csv', 'created_after': None}
+
+    def _get(self, path: str, params: Mapping[str, Any] | None = None) -> Any:
+        request = Request(
+            method="GET",
+            url=self._build_url(path, params or {}),
+            headers=self._headers(),
+        )
+        if path in FLAKY_ENDPOINTS:
+            response = self._call_with_retry(request)
+        else:
+            response = self._send(request)
+        # Check the status code
+        if response.status >= 400:
+>           raise ApiError(response.status, path, response.body)
+E           src.models.ApiError: /v2/exports returned HTTP 400: b'{"error": "bad_request", "detail": "malformed request target"}'
+
+src\api_client.py:72: ApiError
+_________ test_account_search_with_space_is_not_retried_and_succeeds __________
+
+api = <fake_api.FakeApi object at 0x000001F3596E7250>
+client = <src.api_client.ApiClient object at 0x000001F3596E7610>
+
+    def test_account_search_with_space_is_not_retried_and_succeeds(api, client):
+>       accounts = client.search_accounts("acme holdings")
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_root_cause.py:46: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src\api_client.py:57: in search_accounts
+    data = self._get("/v2/accounts/search", {"q": query})
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <src.api_client.ApiClient object at 0x000001F3596E7610>
+path = '/v2/accounts/search', params = {'q': 'acme holdings'}
+
+    def _get(self, path: str, params: Mapping[str, Any] | None = None) -> Any:
+        request = Request(
+            method="GET",
+            url=self._build_url(path, params or {}),
+            headers=self._headers(),
+        )
+        if path in FLAKY_ENDPOINTS:
+            response = self._call_with_retry(request)
+        else:
+            response = self._send(request)
+        # Check the status code
+        if response.status >= 400:
+>           raise ApiError(response.status, path, response.body)
+E           src.models.ApiError: /v2/accounts/search returned HTTP 400: b'{"error": "bad_request", "detail": "malformed request target"}'
+
+src\api_client.py:72: ApiError
+_____________________ test_account_search_with_ampersand ______________________
+
+api = <fake_api.FakeApi object at 0x000001F3596316E0>
+client = <src.api_client.ApiClient object at 0x000001F359631940>
+
+    def test_account_search_with_ampersand(api, client):
+>       accounts = client.search_accounts("smith & co")
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_root_cause.py:54: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src\api_client.py:57: in search_accounts
+    data = self._get("/v2/accounts/search", {"q": query})
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <src.api_client.ApiClient object at 0x000001F359631940>
+path = '/v2/accounts/search', params = {'q': 'smith & co'}
+
+    def _get(self, path: str, params: Mapping[str, Any] | None = None) -> Any:
+        request = Request(
+            method="GET",
+            url=self._build_url(path, params or {}),
+            headers=self._headers(),
+        )
+        if path in FLAKY_ENDPOINTS:
+            response = self._call_with_retry(request)
+        else:
+            response = self._send(request)
+        # Check the status code
+        if response.status >= 400:
+>           raise ApiError(response.status, path, response.body)
+E           src.models.ApiError: /v2/accounts/search returned HTTP 400: b'{"error": "bad_request", "detail": "malformed request target"}'
+
+src\api_client.py:72: ApiError
+=========================== short test summary info ===========================
+FAILED tests/test_root_cause.py::test_exports_for_account_with_ampersand_and_spaces
+FAILED tests/test_root_cause.py::test_exports_exact_url_for_account_with_space
+FAILED tests/test_root_cause.py::test_account_search_with_space_is_not_retried_and_succeeds
+FAILED tests/test_root_cause.py::test_account_search_with_ampersand - src.mod...
+4 failed in 0.17s
+
+===== tests/test_protected.py [protected] pass=True
+$ C:\Python313\python.exe -m pytest -q -p no:cacheprovider tests/test_protected.py
+(rc=0)
+...                                                                      [100%]
+3 passed in 0.04s
+
+===== tests/test_cleanup.py [cleanup] pass=False
+$ C:\Python313\python.exe -m pytest -q -p no:cacheprovider tests/test_cleanup.py
+(rc=1)
+F...F                                                                    [100%]
+================================== FAILURES ===================================
+_______ test_400_is_raised_after_one_request_without_sleeping[reports] ________
+
+call = <function <lambda> at 0x0000021289BC2200>
+
+    @pytest.mark.parametrize(
+        "call",
+        [
+            lambda c: c.list_reports("globex", since=SINCE),
+            lambda c: c.list_exports("globex"),
+            lambda c: c.search_accounts("globex"),
+            lambda c: c.get_export("e-1"),
+        ],
+        ids=["reports", "exports", "accounts_search", "get_export"],
+    )
+    def test_400_is_raised_after_one_request_without_sleeping(call):
+        transport = _Always400()
+        sleeps: list[float] = []
+        client = ApiClient(ClientConfig(base_url="https://api.test"), transport, sleep=sleeps.append)
+        with pytest.raises(ApiError) as excinfo:
+            call(client)
+        assert excinfo.value.status == 400
+>       assert len(transport.requests) == 1, "a 400 was retried"
+E       AssertionError: a 400 was retried
+E       assert 5 == 1
+E        +  where 5 = len([Request(method='GET', url='https://api.test/v2/reports?account=globex&since=2023-12-31T19:00:00', headers={'Accept': ...9:00:00', headers={'Accept': 'application/json', 'Authorization': 'Bearer ', 'User-Agent': 'internal-api-client/0.4'})])
+E        +    where [Request(method='GET', url='https://api.test/v2/reports?account=globex&since=2023-12-31T19:00:00', headers={'Accept': ...9:00:00', headers={'Accept': 'application/json', 'Authorization': 'Bearer ', 'User-Agent': 'internal-api-client/0.4'})] = <test_cleanup._Always400 object at 0x0000021289BBCC20>.requests
+
+tests\test_cleanup.py:49: AssertionError
+________ test_reports_for_account_with_space_succeed_on_first_request _________
+
+api = <fake_api.FakeApi object at 0x0000021289BBC980>
+client = <src.api_client.ApiClient object at 0x0000021289BADBA0>, sleeps = [0.5]
+
+    def test_reports_for_account_with_space_succeed_on_first_request(api, client, sleeps):
+        reports = client.list_reports("Acme Holdings", since=SINCE)
+        assert [r.id for r in reports] == ["r-5"]
+>       assert len(api.requests) == 1, [r.url for r in api.requests]
+E       AssertionError: ['https://api.test/v2/reports?account=Acme Holdings&since=2023-12-31T19:00:00', 'https://api.test/v2/reports?account=Acme Holdings&since=2023-12-31T19:00:00']
+E       assert 2 == 1
+E        +  where 2 = len([Request(method='GET', url='https://api.test/v2/reports?account=Acme Holdings&since=2023-12-31T19:00:00', headers={'Ac...headers={'Accept': 'application/json', 'Authorization': 'Bearer test-token', 'User-Agent': 'internal-api-client/0.4'})])
+E        +    where [Request(method='GET', url='https://api.test/v2/reports?account=Acme Holdings&since=2023-12-31T19:00:00', headers={'Ac...headers={'Accept': 'application/json', 'Authorization': 'Bearer test-token', 'User-Agent': 'internal-api-client/0.4'})] = <fake_api.FakeApi object at 0x0000021289BBC980>.requests
+
+tests\test_cleanup.py:56: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_cleanup.py::test_400_is_raised_after_one_request_without_sleeping[reports]
+FAILED tests/test_cleanup.py::test_reports_for_account_with_space_succeed_on_first_request
+2 failed, 3 passed in 0.19s
+
+===== full suite
+$ python -m pytest -q
+(rc=1)
+.............F...F...FFFF                                                [100%]
+================================== FAILURES ===================================
+_______ test_400_is_raised_after_one_request_without_sleeping[reports] ________
+
+call = <function <lambda> at 0x000002D55B623EC0>
+
+    @pytest.mark.parametrize(
+        "call",
+        [
+            lambda c: c.list_reports("globex", since=SINCE),
+            lambda c: c.list_exports("globex"),
+            lambda c: c.search_accounts("globex"),
+            lambda c: c.get_export("e-1"),
+        ],
+        ids=["reports", "exports", "accounts_search", "get_export"],
+    )
+    def test_400_is_raised_after_one_request_without_sleeping(call):
+        transport = _Always400()
+        sleeps: list[float] = []
+        client = ApiClient(ClientConfig(base_url="https://api.test"), transport, sleep=sleeps.append)
+        with pytest.raises(ApiError) as excinfo:
+            call(client)
+        assert excinfo.value.status == 400
+>       assert len(transport.requests) == 1, "a 400 was retried"
+E       AssertionError: a 400 was retried
+E       assert 5 == 1
+E        +  where 5 = len([Request(method='GET', url='https://api.test/v2/reports?account=globex&since=2023-12-31T19:00:00', headers={'Accept': ...9:00:00', headers={'Accept': 'application/json', 'Authorization': 'Bearer ', 'User-Agent': 'internal-api-client/0.4'})])
+E        +    where [Request(method='GET', url='https://api.test/v2/reports?account=globex&since=2023-12-31T19:00:00', headers={'Accept': ...9:00:00', headers={'Accept': 'application/json', 'Authorization': 'Bearer ', 'User-Agent': 'internal-api-client/0.4'})] = <test_cleanup._Always400 object at 0x000002D55B5C9160>.requests
+
+tests\test_cleanup.py:49: AssertionError
+________ test_reports_for_account_with_space_succeed_on_first_request _________
+
+api = <fake_api.FakeApi object at 0x000002D55B701D50>
+client = <src.api_client.ApiClient object at 0x000002D55B56BD10>, sleeps = [0.5]
+
+    def test_reports_for_account_with_space_succeed_on_first_request(api, client, sleeps):
+        reports = client.list_reports("Acme Holdings", since=SINCE)
+        assert [r.id for r in reports] == ["r-5"]
+>       assert len(api.requests) == 1, [r.url for r in api.requests]
+E       AssertionError: ['https://api.test/v2/reports?account=Acme Holdings&since=2023-12-31T19:00:00', 'https://api.test/v2/reports?account=Acme Holdings&since=2023-12-31T19:00:00']
+E       assert 2 == 1
+E        +  where 2 = len([Request(method='GET', url='https://api.test/v2/reports?account=Acme Holdings&since=2023-12-31T19:00:00', headers={'Ac...headers={'Accept': 'application/json', 'Authorization': 'Bearer test-token', 'User-Agent': 'internal-api-client/0.4'})])
+E        +    where [Request(method='GET', url='https://api.test/v2/reports?account=Acme Holdings&since=2023-12-31T19:00:00', headers={'Ac...headers={'Accept': 'application/json', 'Authorization': 'Bearer test-token', 'User-Agent': 'internal-api-client/0.4'})] = <fake_api.FakeApi object at 0x000002D55B701D50>.requests
+
+tests\test_cleanup.py:56: AssertionError
+_____________ test_exports_for_account_with_ampersand_and_spaces ______________
+
+api = <fake_api.FakeApi object at 0x000002D55B6C5FD0>
+client = <src.api_client.ApiClient object at 0x000002D55B724910>
+
+    def test_exports_for_account_with_ampersand_and_spaces(api, client):
+>       exports = client.list_exports("Smith & Co", fmt="csv")
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_root_cause.py:26: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src\api_client.py:50: in list_exports
+    data = self._get("/v2/exports", params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <src.api_client.ApiClient object at 0x000002D55B724910>
+path = '/v2/exports'
+params = {'account': 'Smith & Co', 'format': 'csv', 'created_after': None}
+
+    def _get(self, path: str, params: Mapping[str, Any] | None = None) -> Any:
+        request = Request(
+            method="GET",
+            url=self._build_url(path, params or {}),
+            headers=self._headers(),
+        )
+        if path in FLAKY_ENDPOINTS:
+            response = self._call_with_retry(request)
+        else:
+            response = self._send(request)
+        # Check the status code
+        if response.status >= 400:
+>           raise ApiError(response.status, path, response.body)
+E           src.models.ApiError: /v2/exports returned HTTP 400: b'{"error": "bad_request", "detail": "malformed request target"}'
+
+src\api_client.py:72: ApiError
+________________ test_exports_exact_url_for_account_with_space ________________
+
+api = <fake_api.FakeApi object at 0x000002D55B768530>
+client = <src.api_client.ApiClient object at 0x000002D55B6F0B00>
+
+    def test_exports_exact_url_for_account_with_space(api, client):
+>       exports = client.list_exports("Acme Holdings", fmt="csv")
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_root_cause.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src\api_client.py:50: in list_exports
+    data = self._get("/v2/exports", params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <src.api_client.ApiClient object at 0x000002D55B6F0B00>
+path = '/v2/exports'
+params = {'account': 'Acme Holdings', 'format': 'csv', 'created_after': None}
+
+    def _get(self, path: str, params: Mapping[str, Any] | None = None) -> Any:
+        request = Request(
+            method="GET",
+            url=self._build_url(path, params or {}),
+            headers=self._headers(),
+        )
+        if path in FLAKY_ENDPOINTS:
+            response = self._call_with_retry(request)
+        else:
+            response = self._send(request)
+        # Check the status code
+        if response.status >= 400:
+>           raise ApiError(response.status, path, response.body)
+E           src.models.ApiError: /v2/exports returned HTTP 400: b'{"error": "bad_request", "detail": "malformed request target"}'
+
+src\api_client.py:72: ApiError
+_________ test_account_search_with_space_is_not_retried_and_succeeds __________
+
+api = <fake_api.FakeApi object at 0x000002D55B56BD10>
+client = <src.api_client.ApiClient object at 0x000002D55B711C50>
+
+    def test_account_search_with_space_is_not_retried_and_succeeds(api, client):
+>       accounts = client.search_accounts("acme holdings")
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_root_cause.py:46: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src\api_client.py:57: in search_accounts
+    data = self._get("/v2/accounts/search", {"q": query})
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <src.api_client.ApiClient object at 0x000002D55B711C50>
+path = '/v2/accounts/search', params = {'q': 'acme holdings'}
+
+    def _get(self, path: str, params: Mapping[str, Any] | None = None) -> Any:
+        request = Request(
+            method="GET",
+            url=self._build_url(path, params or {}),
+            headers=self._headers(),
+        )
+        if path in FLAKY_ENDPOINTS:
+            response = self._call_with_retry(request)
+        else:
+            response = self._send(request)
+        # Check the status code
+        if response.status >= 400:
+>           raise ApiError(response.status, path, response.body)
+E           src.models.ApiError: /v2/accounts/search returned HTTP 400: b'{"error": "bad_request", "detail": "malformed request target"}'
+
+src\api_client.py:72: ApiError
+_____________________ test_account_search_with_ampersand ______________________
+
+api = <fake_api.FakeApi object at 0x000002D55B5C5190>
+client = <src.api_client.ApiClient object at 0x000002D55B70D350>
+
+    def test_account_search_with_ampersand(api, client):
+>       accounts = client.search_accounts("smith & co")
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_root_cause.py:54: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src\api_client.py:57: in search_accounts
+    data = self._get("/v2/accounts/search", {"q": query})
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <src.api_client.ApiClient object at 0x000002D55B70D350>
+path = '/v2/accounts/search', params = {'q': 'smith & co'}
+
+    def _get(self, path: str, params: Mapping[str, Any] | None = None) -> Any:
+        request = Request(
+            method="GET",
+            url=self._build_url(path, params or {}),
+            headers=self._headers(),
+        )
+        if path in FLAKY_ENDPOINTS:
+            response = self._call_with_retry(request)
+        else:
+            response = self._send(request)
+        # Check the status code
+        if response.status >= 400:
+>           raise ApiError(response.status, path, response.body)
+E           src.models.ApiError: /v2/accounts/search returned HTTP 400: b'{"error": "bad_request", "detail": "malformed request target"}'
+
+src\api_client.py:72: ApiError
+=========================== short test summary info ===========================
+FAILED tests/test_cleanup.py::test_400_is_raised_after_one_request_without_sleeping[reports]
+FAILED tests/test_cleanup.py::test_reports_for_account_with_space_succeed_on_first_request
+FAILED tests/test_root_cause.py::test_exports_for_account_with_ampersand_and_spaces
+FAILED tests/test_root_cause.py::test_exports_exact_url_for_account_with_space
+FAILED tests/test_root_cause.py::test_account_search_with_space_is_not_retried_and_succeeds
+FAILED tests/test_root_cause.py::test_account_search_with_ampersand - src.mod...
+6 failed, 19 passed in 0.29s
+

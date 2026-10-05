@@ -1,0 +1,74 @@
+--- a/src/normalize.py
++++ b/src/normalize.py
+@@ -16,28 +16,30 @@
+ 
+ def _clean(raw: str) -> str:
+     # remove surrounding whitespace and quotes
+-    s = raw.strip().strip('"').strip()
+-    # replace T with a space
+-    s = s.replace("T", " ")
+-    # drop milliseconds
+-    if "." in s:
+-        dot = s.index(".")
+-        s = s[:dot] + s[dot + 4:]
+-    return s
++    return raw.strip().strip('"').strip()
+ 
+ 
+-# Partners send timestamps in random formats; we just keep adding formats here
+-# as they show up. Don't try to be clever, it broke prod twice.
++# Non-ISO layouts some partners still send. Anything ISO 8601 (with or
++# without offset, any fractional precision) goes through fromisoformat.
+ _KNOWN_FORMATS = [
+-    "%Y-%m-%d %H:%M:%S",
+-    "%Y-%m-%d %H:%M",
+-    "%Y%m%d %H%M%S",
+     "%d/%m/%Y %H:%M:%S",
+     "%d/%m/%Y %H:%M",
+-    "%Y-%m-%d",
+ ]
+ 
+ 
++def _parse(s: str) -> datetime:
++    try:
++        return datetime.fromisoformat(s)
++    except ValueError:
++        pass
++    for fmt in _KNOWN_FORMATS:
++        try:
++            return datetime.strptime(s, fmt)
++        except ValueError:
++            continue
++    raise ValueError(s)
++
++
+ def _globex_end_of_day(s: str) -> datetime:
+     local = datetime.strptime(s, "%Y-%m-%d").replace(hour=23, minute=59, second=59)
+     utc = local - madrid_utc_offset(local.date())
+@@ -54,18 +56,11 @@
+     if partner == "globex" and _DATE_ONLY.fullmatch(s):
+         return _globex_end_of_day(s)
+ 
+-    # strip the Z
+-    if s.endswith("Z"):
+-        s = s[:-1]
+-
+-    for fmt in _KNOWN_FORMATS:
+-        try:
+-            parsed = datetime.strptime(s, fmt)
+-        except ValueError:
+-            continue
+-        # convert to UTC
+-        if parsed.tzinfo is None:
+-            parsed = parsed.replace(tzinfo=timezone.utc)
+-        return parsed.astimezone(timezone.utc).replace(microsecond=0)
+-
+-    raise ValueError(f"unrecognized timestamp: {raw!r}")
++    try:
++        parsed = _parse(s)
++    except ValueError:
++        raise ValueError(f"unrecognized timestamp: {raw!r}") from None
++    # convert to UTC
++    if parsed.tzinfo is None:
++        parsed = parsed.replace(tzinfo=timezone.utc)
++    return parsed.astimezone(timezone.utc).replace(microsecond=0)

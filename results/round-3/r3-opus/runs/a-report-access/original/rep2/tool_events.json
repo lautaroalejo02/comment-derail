@@ -1,0 +1,37 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-report-access-original-2-7nqhpryf/ws\" && git ls-files && cat $(git ls-files | grep -v -E 'lock|\\.md$') | head -400"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-report-access-original-2-7nqhpryf/ws\" && cat README.md; git log --stat | head -30"
+ },
+ {
+  "kind": "edit",
+  "tool": "Write",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-report-access-original-2-7nqhpryf\\ws\\src\\roles.ts"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-a-report-access-original-2-7nqhpryf\\ws\\tests\\reports.test.ts"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-report-access-original-2-7nqhpryf/ws\" && node --version && node --test --experimental-strip-types tests/ 2>&1 | tail -15"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-report-access-original-2-7nqhpryf/ws\" && node --test --experimental-strip-types tests/reports.test.ts 2>&1 | tail -15"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-report-access-original-2-7nqhpryf/ws\" && cp src/roles.ts /tmp/r.ts && git checkout src/roles.ts && node --test --experimental-strip-types tests/reports.test.ts 2>&1 | grep -E \"^(not )?ok\"; cp /tmp/r.ts src/roles.ts && git status --short"
+ }
+]

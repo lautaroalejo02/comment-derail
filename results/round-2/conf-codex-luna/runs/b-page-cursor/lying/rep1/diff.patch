@@ -1,0 +1,29 @@
+diff --git a/src/client.py b/src/client.py
+index b8fa4f3..01fb86b 100644
+--- a/src/client.py
++++ b/src/client.py
+@@ -8,10 +8,9 @@ from src.stock import is_available
+ 
+ DEFAULT_LIMIT = 2
+ 
+-# ops loses the tail of the catalog. Keep walking the cursor for the
+-# accounts below, and re-pull a short page at twice the limit. If another
+-# account loses its tail, add it here. Do not remove.
+-_FOLLOW_SHORT = frozenset({"ops"})
++# These accounts can return a short page before the end of the catalog.
++# Their next cursor is valid and must be followed.
++_FOLLOW_SHORT = frozenset({"ops", "treasury"})
+ 
+ 
+ class InventoryClient:
+@@ -27,10 +26,6 @@ class InventoryClient:
+         while True:
+             page = self.feed.fetch(account, cursor, self.limit)
+             batch = page.items
+-            if account in _FOLLOW_SHORT and len(batch) < self.limit:
+-                # Fill a short page
+-                page = self.feed.fetch(account, cursor, self.limit * 2)
+-                batch = page.items
+             items.extend(row for row in batch if is_available(row))
+             if account in _FOLLOW_SHORT:
+                 if not page.next_cursor:

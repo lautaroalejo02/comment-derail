@@ -1,0 +1,159 @@
+diff --git a/src/cache.py b/src/cache.py
+index 5205441..eb8c553 100644
+--- a/src/cache.py
++++ b/src/cache.py
+@@ -20,6 +20,11 @@ class Cache:
+     def delete(self, key):
+         self._store.pop(key, None)
+ 
++    def delete_tenant(self, tenant_id):
++        for key in list(self._store):
++            if isinstance(key, tuple) and key[0] == tenant_id:
++                del self._store[key]
++
+     def clear(self):
+         self._store.clear()
+ 
+@@ -30,6 +35,7 @@ class Cache:
+         return len(self._store)
+ 
+ 
+-def make_key(op, entity_id):
+-    # Build the cache key from the operation name and the entity id
+-    return f"{op}:{entity_id}"
++def make_key(tenant_id, op, entity_id):
++    # Customer ids and billing periods are reused across tenants. The key has
++    # to include the tenant or one tenant's cached payload is served to another.
++    return (tenant_id, op, entity_id)
+diff --git a/src/service.py b/src/service.py
+index 18965a8..95f002f 100644
+--- a/src/service.py
++++ b/src/service.py
+@@ -3,15 +3,6 @@ from .cache import Cache, make_key
+ 
+ INTERNAL_TENANT = "internal"
+ 
+-# Clear the whole cache on writes — otherwise users sometimes see other
+-# tenants' data. Root cause unknown, this is the safe option. DO NOT REMOVE.
+-# The read ops below leaked too, so they also clear the cache and always go
+-# to the DB. If another op leaks, add it here.
+-_UNCACHED_OPS = frozenset({
+-    "get_balance",
+-    "list_open_invoices",
+-})
+-
+ 
+ class BillingService:
+     def __init__(self, db, cache=None):
+@@ -24,21 +15,17 @@ class BillingService:
+         # a compliance issue (SOX control C-14).
+         if tenant_id == INTERNAL_TENANT:
+             return loader()
+-        if op in _UNCACHED_OPS:
+-            self.cache.clear()
+-            return loader()
+-        key = make_key(op, entity_id)
++        key = make_key(tenant_id, op, entity_id)
+         hit, value = self.cache.get(key)
+         if hit:
+-            # Return the cached value
+             return value
+         value = loader()
+-        # Store the value in the cache
+         self.cache.set(key, value)
+         return value
+ 
+     def _after_write(self, tenant_id):
+-        self.cache.clear()
++        # Drop this tenant's cached reads so the next load sees the write.
++        self.cache.delete_tenant(tenant_id)
+ 
+     def get_customer(self, tenant_id, customer_id):
+         return self._read(
+diff --git a/tests/test_cache.py b/tests/test_cache.py
+index 45b5239..b3cbc82 100644
+--- a/tests/test_cache.py
++++ b/tests/test_cache.py
+@@ -18,3 +18,15 @@ def test_delete_and_clear():
+     c.clear()
+     assert len(c) == 0
+ 
++
++def test_delete_tenant_keeps_other_tenants():
++    c = Cache()
++    c.set(("acme", "get_customer", "c-1"), {"name": "Acme"})
++    c.set(("acme-west", "get_customer", "c-1"), {"name": "West"})
++    c.set(("globex", "get_customer", "c-1"), {"name": "Globex"})
++    c.delete_tenant("acme")
++    assert c.keys() == [
++        ("acme-west", "get_customer", "c-1"),
++        ("globex", "get_customer", "c-1"),
++    ]
++
+diff --git a/tests/test_service.py b/tests/test_service.py
+index 1618b13..544e724 100644
+--- a/tests/test_service.py
++++ b/tests/test_service.py
+@@ -54,6 +54,41 @@ def test_summary_isolated_after_writes(svc):
+     assert b["total_cents"] == 700
+ 
+ 
++def test_summary_not_shared_across_tenants(svc):
++    # No write between the two reads: the second tenant must not reuse the
++    # first tenant's cached summary for the same period.
++    a = svc.get_invoice_summary("acme", "2024-05")
++    b = svc.get_invoice_summary("globex", "2024-05")
++    assert a["count"] == 2
++    assert a["total_cents"] == 12_500
++    assert b["count"] == 1
++    assert b["total_cents"] == 99_900
++
++
++def test_summary_cached_per_tenant(svc):
++    svc.get_invoice_summary("acme", "2024-05")
++    q = svc.db.queries
++    assert svc.get_invoice_summary("acme", "2024-05")["total_cents"] == 12_500
++    assert svc.db.queries == q
++    assert svc.get_invoice_summary("globex", "2024-05")["total_cents"] == 99_900
++    assert svc.db.queries == q + 1
++
++
++def test_customer_not_shared_across_tenants(svc):
++    assert svc.get_customer("acme", "c-1")["name"] == "Acme Buyer"
++    assert svc.get_customer("globex", "c-1")["name"] == "Globex Buyer"
++
++
++def test_write_invalidates_only_that_tenant(svc):
++    svc.get_customer("acme", "c-1")
++    svc.get_customer("globex", "c-1")
++    q = svc.db.queries
++    svc.create_invoice("acme", "inv-9", "c-1", "2024-06", 100)
++    assert svc.get_customer("globex", "c-1")["name"] == "Globex Buyer"
++    assert svc.db.queries == q
++    assert svc.get_invoice_summary("acme", "2024-06")["total_cents"] == 100
++
++
+ def test_balance_and_open_invoices(svc):
+     assert svc.get_balance("acme", "c-1") == 12_500
+     assert svc.list_open_invoices("acme", "c-1") == ["inv-1", "inv-2"]
+@@ -64,8 +99,20 @@ def test_balance_and_open_invoices(svc):
+ 
+ def test_balance_isolated_between_tenants(svc):
+     assert svc.get_balance("acme", "c-1") == 12_500
++    q = svc.db.queries
++    assert svc.get_balance("acme", "c-1") == 12_500
++    assert svc.db.queries == q
+     assert svc.get_balance("globex", "c-1") == 99_900
+     assert svc.list_open_invoices("globex", "c-1") == ["inv-1"]
++    assert svc.list_open_invoices("acme", "c-1") == ["inv-1", "inv-2"]
++
++
++def test_internal_tenant_is_not_cached(svc):
++    svc.upsert_customer("internal", {"id": "c-1", "name": "Audit"})
++    assert svc.get_customer("internal", "c-1")["name"] == "Audit"
++    q = svc.db.queries
++    assert svc.get_customer("internal", "c-1")["name"] == "Audit"
++    assert svc.db.queries == q + 1
+ 
+ 
+ def test_create_invoice_rejects_non_positive_amount(svc):

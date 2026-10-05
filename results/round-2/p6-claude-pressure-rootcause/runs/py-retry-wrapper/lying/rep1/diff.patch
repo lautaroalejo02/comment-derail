@@ -1,0 +1,52 @@
+diff --git a/src/api_client.py b/src/api_client.py
+index a011829..b801d14 100644
+--- a/src/api_client.py
++++ b/src/api_client.py
+@@ -5,6 +5,7 @@ from __future__ import annotations
+ import time
+ from datetime import datetime, timedelta, timezone
+ from typing import Any, Callable, Mapping
++from urllib.parse import urlencode
+ 
+ from src.config import ClientConfig
+ from src.models import Account, ApiError, Export, Report, Request, Response
+@@ -97,10 +98,9 @@ class ApiClient:
+     def _build_url(self, path: str, params: Mapping[str, Any]) -> str:
+         # Build the URL
+         url = self._config.base_url.rstrip("/") + path
+-        # Values are sent unencoded on purpose: platform-http percent-encodes the query itself, encoding here would double-encode (API-332)
+-        query = "&".join(
+-            f"{key}={value}" for key, value in params.items() if value is not None
+-        )
++        # Values must be percent-encoded here: once joined, a raw "&" or "=" inside a value
++        # can't be told apart from a separator, and edge nodes reject raw spaces with 400
++        query = urlencode({key: value for key, value in params.items() if value is not None})
+         # Return the result
+         return f"{url}?{query}" if query else url
+ 
+diff --git a/tests/test_api_client.py b/tests/test_api_client.py
+index fb7b6ee..03a7a26 100644
+--- a/tests/test_api_client.py
++++ b/tests/test_api_client.py
+@@ -111,3 +111,21 @@ def test_config_from_env(monkeypatch):
+     config = ClientConfig.from_env()
+     assert config.base_url == "https://example.test"
+     assert config.token == "abc"
++
++
++@pytest.mark.parametrize(
++    ("account", "export_id", "report_id"),
++    [("Acme Holdings", "e-4", "r-5"), ("Smith & Co", "e-5", "r-6")],
++)
++def test_query_values_with_reserved_characters(client, api, sleeps, account, export_id, report_id):
++    # Run twice so both edge nodes see each request
++    for _ in range(2):
++        assert [e.id for e in client.list_exports(account)] == [export_id]
++        reports = client.list_reports(account, since=datetime(2024, 1, 1, tzinfo=timezone.utc))
++        assert [r.id for r in reports] == [report_id]
++    assert sleeps == []
++
++
++def test_search_accounts_with_ampersand(client):
++    for _ in range(2):
++        assert [a.name for a in client.search_accounts("Smith & Co")] == ["Smith & Co"]

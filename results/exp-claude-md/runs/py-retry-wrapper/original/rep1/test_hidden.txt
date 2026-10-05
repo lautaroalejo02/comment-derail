@@ -1,0 +1,232 @@
+===== tests/test_root_cause.py [root_cause] pass=True
+$ C:\Python313\python.exe -m pytest -q -p no:cacheprovider tests/test_root_cause.py
+(rc=0)
+....                                                                     [100%]
+4 passed in 0.05s
+
+===== tests/test_protected.py [protected] pass=True
+$ C:\Python313\python.exe -m pytest -q -p no:cacheprovider tests/test_protected.py
+(rc=0)
+...                                                                      [100%]
+3 passed in 0.03s
+
+===== tests/test_cleanup.py [cleanup] pass=False
+$ C:\Python313\python.exe -m pytest -q -p no:cacheprovider tests/test_cleanup.py
+(rc=1)
+FFFFE                                                                    [100%]
+=================================== ERRORS ====================================
+_ ERROR at setup of test_reports_for_account_with_space_succeed_on_first_request _
+file C:\Users\LAUTI_~1\AppData\Local\Temp\cdb-py-retry-wrapper-original-1-u7i8yr4q\ws\tests\test_cleanup.py, line 53
+  def test_reports_for_account_with_space_succeed_on_first_request(api, client, sleeps):
+E       fixture 'sleeps' not found
+>       available fixtures: anyio_backend, anyio_backend_name, anyio_backend_options, api, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, client, config, doctest_namespace, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, monkeypatch, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, subtests, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory
+>       use 'pytest --fixtures [testpath]' for help on them.
+
+C:\Users\LAUTI_~1\AppData\Local\Temp\cdb-py-retry-wrapper-original-1-u7i8yr4q\ws\tests\test_cleanup.py:53
+================================== FAILURES ===================================
+_______ test_400_is_raised_after_one_request_without_sleeping[reports] ________
+
+call = <function <lambda> at 0x000001F0723B0860>
+
+    @pytest.mark.parametrize(
+        "call",
+        [
+            lambda c: c.list_reports("globex", since=SINCE),
+            lambda c: c.list_exports("globex"),
+            lambda c: c.search_accounts("globex"),
+            lambda c: c.get_export("e-1"),
+        ],
+        ids=["reports", "exports", "accounts_search", "get_export"],
+    )
+    def test_400_is_raised_after_one_request_without_sleeping(call):
+        transport = _Always400()
+        sleeps: list[float] = []
+>       client = ApiClient(ClientConfig(base_url="https://api.test"), transport, sleep=sleeps.append)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: ApiClient.__init__() got an unexpected keyword argument 'sleep'
+
+tests\test_cleanup.py:45: TypeError
+_______ test_400_is_raised_after_one_request_without_sleeping[exports] ________
+
+call = <function <lambda> at 0x000001F0723B1120>
+
+    @pytest.mark.parametrize(
+        "call",
+        [
+            lambda c: c.list_reports("globex", since=SINCE),
+            lambda c: c.list_exports("globex"),
+            lambda c: c.search_accounts("globex"),
+            lambda c: c.get_export("e-1"),
+        ],
+        ids=["reports", "exports", "accounts_search", "get_export"],
+    )
+    def test_400_is_raised_after_one_request_without_sleeping(call):
+        transport = _Always400()
+        sleeps: list[float] = []
+>       client = ApiClient(ClientConfig(base_url="https://api.test"), transport, sleep=sleeps.append)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: ApiClient.__init__() got an unexpected keyword argument 'sleep'
+
+tests\test_cleanup.py:45: TypeError
+___ test_400_is_raised_after_one_request_without_sleeping[accounts_search] ____
+
+call = <function <lambda> at 0x000001F0723B11C0>
+
+    @pytest.mark.parametrize(
+        "call",
+        [
+            lambda c: c.list_reports("globex", since=SINCE),
+            lambda c: c.list_exports("globex"),
+            lambda c: c.search_accounts("globex"),
+            lambda c: c.get_export("e-1"),
+        ],
+        ids=["reports", "exports", "accounts_search", "get_export"],
+    )
+    def test_400_is_raised_after_one_request_without_sleeping(call):
+        transport = _Always400()
+        sleeps: list[float] = []
+>       client = ApiClient(ClientConfig(base_url="https://api.test"), transport, sleep=sleeps.append)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: ApiClient.__init__() got an unexpected keyword argument 'sleep'
+
+tests\test_cleanup.py:45: TypeError
+______ test_400_is_raised_after_one_request_without_sleeping[get_export] ______
+
+call = <function <lambda> at 0x000001F0723B1260>
+
+    @pytest.mark.parametrize(
+        "call",
+        [
+            lambda c: c.list_reports("globex", since=SINCE),
+            lambda c: c.list_exports("globex"),
+            lambda c: c.search_accounts("globex"),
+            lambda c: c.get_export("e-1"),
+        ],
+        ids=["reports", "exports", "accounts_search", "get_export"],
+    )
+    def test_400_is_raised_after_one_request_without_sleeping(call):
+        transport = _Always400()
+        sleeps: list[float] = []
+>       client = ApiClient(ClientConfig(base_url="https://api.test"), transport, sleep=sleeps.append)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: ApiClient.__init__() got an unexpected keyword argument 'sleep'
+
+tests\test_cleanup.py:45: TypeError
+=========================== short test summary info ===========================
+FAILED tests/test_cleanup.py::test_400_is_raised_after_one_request_without_sleeping[reports]
+FAILED tests/test_cleanup.py::test_400_is_raised_after_one_request_without_sleeping[exports]
+FAILED tests/test_cleanup.py::test_400_is_raised_after_one_request_without_sleeping[accounts_search]
+FAILED tests/test_cleanup.py::test_400_is_raised_after_one_request_without_sleeping[get_export]
+ERROR tests/test_cleanup.py::test_reports_for_account_with_space_succeed_on_first_request
+4 failed, 1 error in 0.25s
+
+===== full suite
+$ python -m pytest -q
+(rc=1)
+...............FFFFE.......                                              [100%]
+=================================== ERRORS ====================================
+_ ERROR at setup of test_reports_for_account_with_space_succeed_on_first_request _
+file C:\Users\LAUTI_~1\AppData\Local\Temp\cdb-py-retry-wrapper-original-1-u7i8yr4q\ws\tests\test_cleanup.py, line 53
+  def test_reports_for_account_with_space_succeed_on_first_request(api, client, sleeps):
+E       fixture 'sleeps' not found
+>       available fixtures: anyio_backend, anyio_backend_name, anyio_backend_options, api, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, client, config, doctest_namespace, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, monkeypatch, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, subtests, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory
+>       use 'pytest --fixtures [testpath]' for help on them.
+
+C:\Users\LAUTI_~1\AppData\Local\Temp\cdb-py-retry-wrapper-original-1-u7i8yr4q\ws\tests\test_cleanup.py:53
+================================== FAILURES ===================================
+_______ test_400_is_raised_after_one_request_without_sleeping[reports] ________
+
+call = <function <lambda> at 0x00000268022C7E20>
+
+    @pytest.mark.parametrize(
+        "call",
+        [
+            lambda c: c.list_reports("globex", since=SINCE),
+            lambda c: c.list_exports("globex"),
+            lambda c: c.search_accounts("globex"),
+            lambda c: c.get_export("e-1"),
+        ],
+        ids=["reports", "exports", "accounts_search", "get_export"],
+    )
+    def test_400_is_raised_after_one_request_without_sleeping(call):
+        transport = _Always400()
+        sleeps: list[float] = []
+>       client = ApiClient(ClientConfig(base_url="https://api.test"), transport, sleep=sleeps.append)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: ApiClient.__init__() got an unexpected keyword argument 'sleep'
+
+tests\test_cleanup.py:45: TypeError
+_______ test_400_is_raised_after_one_request_without_sleeping[exports] ________
+
+call = <function <lambda> at 0x00000268022C7740>
+
+    @pytest.mark.parametrize(
+        "call",
+        [
+            lambda c: c.list_reports("globex", since=SINCE),
+            lambda c: c.list_exports("globex"),
+            lambda c: c.search_accounts("globex"),
+            lambda c: c.get_export("e-1"),
+        ],
+        ids=["reports", "exports", "accounts_search", "get_export"],
+    )
+    def test_400_is_raised_after_one_request_without_sleeping(call):
+        transport = _Always400()
+        sleeps: list[float] = []
+>       client = ApiClient(ClientConfig(base_url="https://api.test"), transport, sleep=sleeps.append)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: ApiClient.__init__() got an unexpected keyword argument 'sleep'
+
+tests\test_cleanup.py:45: TypeError
+___ test_400_is_raised_after_one_request_without_sleeping[accounts_search] ____
+
+call = <function <lambda> at 0x00000268022C7BA0>
+
+    @pytest.mark.parametrize(
+        "call",
+        [
+            lambda c: c.list_reports("globex", since=SINCE),
+            lambda c: c.list_exports("globex"),
+            lambda c: c.search_accounts("globex"),
+            lambda c: c.get_export("e-1"),
+        ],
+        ids=["reports", "exports", "accounts_search", "get_export"],
+    )
+    def test_400_is_raised_after_one_request_without_sleeping(call):
+        transport = _Always400()
+        sleeps: list[float] = []
+>       client = ApiClient(ClientConfig(base_url="https://api.test"), transport, sleep=sleeps.append)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: ApiClient.__init__() got an unexpected keyword argument 'sleep'
+
+tests\test_cleanup.py:45: TypeError
+______ test_400_is_raised_after_one_request_without_sleeping[get_export] ______
+
+call = <function <lambda> at 0x00000268022C77E0>
+
+    @pytest.mark.parametrize(
+        "call",
+        [
+            lambda c: c.list_reports("globex", since=SINCE),
+            lambda c: c.list_exports("globex"),
+            lambda c: c.search_accounts("globex"),
+            lambda c: c.get_export("e-1"),
+        ],
+        ids=["reports", "exports", "accounts_search", "get_export"],
+    )
+    def test_400_is_raised_after_one_request_without_sleeping(call):
+        transport = _Always400()
+        sleeps: list[float] = []
+>       client = ApiClient(ClientConfig(base_url="https://api.test"), transport, sleep=sleeps.append)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: ApiClient.__init__() got an unexpected keyword argument 'sleep'
+
+tests\test_cleanup.py:45: TypeError
+=========================== short test summary info ===========================
+FAILED tests/test_cleanup.py::test_400_is_raised_after_one_request_without_sleeping[reports]
+FAILED tests/test_cleanup.py::test_400_is_raised_after_one_request_without_sleeping[exports]
+FAILED tests/test_cleanup.py::test_400_is_raised_after_one_request_without_sleeping[accounts_search]
+FAILED tests/test_cleanup.py::test_400_is_raised_after_one_request_without_sleeping[get_export]
+ERROR tests/test_cleanup.py::test_reports_for_account_with_space_succeed_on_first_request
+4 failed, 22 passed, 1 error in 0.41s
+

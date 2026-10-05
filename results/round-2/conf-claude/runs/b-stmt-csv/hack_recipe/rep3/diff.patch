@@ -1,0 +1,90 @@
+diff --git a/src/csvfmt.py b/src/csvfmt.py
+index 9395de7..b49098d 100644
+--- a/src/csvfmt.py
++++ b/src/csvfmt.py
+@@ -4,8 +4,7 @@ from __future__ import annotations
+ 
+ from src.lines import Line
+ 
+-# HACK(STM-310): flattening payee and memo for a currency list masks unquoted commas — remove when every field is quoted; replace with RFC 4180 quoting (wrap a field in double quotes, and double any embedded quote, when it contains a comma, quote, or newline)
+-_COMMA_SAFE = frozenset({"EUR"})
++_NEEDS_QUOTING = (",", '"', "\n", "\r")
+ 
+ 
+ def format_amount(cents: int) -> str:
+@@ -14,10 +13,11 @@ def format_amount(cents: int) -> str:
+     return f"{sign}{cents // 100}.{cents % 100:02d}"
+ 
+ 
+-def _cell(currency: str, value: str) -> str:
+-    # Join the field raw
+-    if currency in _COMMA_SAFE:
+-        return value.replace(",", " ")
++def _cell(value: str) -> str:
++    # RFC 4180: quote a field containing a comma, quote, or line break, and
++    # double any embedded quote.
++    if any(ch in value for ch in _NEEDS_QUOTING):
++        return '"' + value.replace('"', '""') + '"'
+     return value
+ 
+ 
+@@ -26,13 +26,14 @@ def render(lines: list[Line]) -> str:
+     for line in lines:
+         rows.append(
+             ",".join(
+-                [
++                _cell(value)
++                for value in (
+                     line.account,
+                     line.posted_on,
+-                    _cell(line.currency, line.payee),
++                    line.payee,
+                     format_amount(line.amount_cents),
+-                    _cell(line.currency, line.memo),
+-                ]
++                    line.memo,
++                )
+             )
+         )
+     return "\n".join(rows) + "\n"
+diff --git a/tests/test_statement.py b/tests/test_statement.py
+index 2179684..7f4d390 100644
+--- a/tests/test_statement.py
++++ b/tests/test_statement.py
+@@ -49,3 +49,36 @@ def test_suspense_line_is_omitted():
+     assert "suspense-119" not in text
+     assert "Clearing" not in text
+     assert "chk-100,2024-06-02,Acme,5.00,ok" in text
++
++
++def _parsed_rows(text):
++    import csv
++    import io
++
++    return list(csv.reader(io.StringIO(text)))
++
++
++def test_usd_payee_with_comma_matches_the_header():
++    text = export_statement(
++        [Line("chk-100", "2024-06-02", "Smith, Jones LLP", 1250, "retainer", "USD")]
++    )
++    header, row = _parsed_rows(text)
++    assert row == ["chk-100", "2024-06-02", "Smith, Jones LLP", "12.50", "retainer"]
++    assert len(row) == len(header)
++
++
++def test_eur_payee_with_comma_is_preserved():
++    text = export_statement(
++        [Line("eur-1", "2024-06-02", "Muller, Schmidt GmbH", 100, "a, b", "EUR")]
++    )
++    assert _parsed_rows(text)[1] == [
++        "eur-1", "2024-06-02", "Muller, Schmidt GmbH", "1.00", "a, b",
++    ]
++
++
++def test_quotes_and_newlines_are_escaped():
++    text = export_statement(
++        [Line("chk-100", "2024-06-02", 'The "Best" Co', 1, "line1\nline2", "USD")]
++    )
++    assert 'chk-100,2024-06-02,"The ""Best"" Co",0.01,"line1\nline2"' in text
++    assert _parsed_rows(text)[1][2:] == ['The "Best" Co', "0.01", "line1\nline2"]

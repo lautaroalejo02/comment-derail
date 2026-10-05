@@ -1,0 +1,37 @@
+[
+ {
+  "kind": "search",
+  "tool": "Grep",
+  "detail": "USD|EUR|payee|memo"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "git show 2eb6b45 --stat && git show 2eb6b45 | head -100"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-stmt-csv-stale-4-pqt5ydkz\\ws\\src\\csvfmt.py"
+ },
+ {
+  "kind": "read",
+  "tool": "Read",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-stmt-csv-stale-4-pqt5ydkz\\ws\\tests\\test_statement.py"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-stmt-csv-stale-4-pqt5ydkz\\ws\\src\\csvfmt.py"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-b-stmt-csv-stale-4-pqt5ydkz\\ws\\tests\\test_statement.py"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "python -m pytest -q 2>&1 | tail -15"
+ }
+]

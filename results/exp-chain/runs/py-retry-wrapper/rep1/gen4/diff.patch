@@ -1,0 +1,224 @@
+diff --git a/README.md b/README.md
+new file mode 100644
+index 0000000..73b8c94
+--- /dev/null
++++ b/README.md
+@@ -0,0 +1,156 @@
++# internal-api-client
++
++A thin, synchronous Python client for the internal reports/exports API. Requires Python 3.11+ and has no third-party runtime dependencies.
++
++## Quick start
++
++```python
++from datetime import datetime, timezone
++
++from src import ApiClient, ApiError, ClientConfig
++
++config = ClientConfig.from_env()           # reads INTERNAL_API_URL and INTERNAL_API_TOKEN
++client = ApiClient(config, transport)      # transport: see "Transport" below
++
++reports = client.list_reports("globex", since=datetime(2024, 3, 1, tzinfo=timezone.utc))
++export = client.get_export("e-2")
++```
++
++## Public API
++
++| Method | Endpoint | Returns |
++| --- | --- | --- |
++| `list_reports(account, since, until=None)` | `GET /v2/reports` | `list[Report]` |
++| `get_report(report_id)` | `GET /v2/reports/{id}` | `Report` |
++| `list_exports(account, fmt="csv", created_after=None)` | `GET /v2/exports` | `list[Export]` |
++| `get_export(export_id)` | `GET /v2/exports/{id}` | `Export` |
++| `search_accounts(query)` | `GET /v2/accounts/search?q=...` | `list[Account]` |
++
++The client only sends `GET` requests. List methods return the `items` array of the response. The client does not follow pagination.
++
++## Configuration
++
++`ClientConfig` is a frozen dataclass:
++
++| Field | Default | Meaning |
++| --- | --- | --- |
++| `base_url` | `https://api.internal.example.com` | Prefix for every request. A trailing `/` is stripped, and a path prefix (e.g. `https://host/api`) is kept. |
++| `token` | `""` | Sent as `Authorization: Bearer <token>`. An empty token is still sent, and the server responds with 401. |
++| `timeout_seconds` | `10.0` | Passed to the transport on **each** send, including retries. It is not an overall deadline. |
++| `retry_attempts` | `5` | Total attempts (not extra retries) for the transient-400 retry on `/v2/reports`. |
++| `retry_backoff_seconds` | `0.5` | Base for the linear backoff of the transient-400 retry. |
++| `rate_limit_retries` | `3` | Extra sends after an HTTP 429. `0` disables 429 retries. |
++| `user_agent` | `internal-api-client/0.4` | `User-Agent` header. |
++
++`ClientConfig.from_env()` reads only `INTERNAL_API_URL` and `INTERNAL_API_TOKEN`. Every other field keeps its default. To change them, construct `ClientConfig(...)` yourself or use `dataclasses.replace(config, ...)`.
++
++## Transport
++
++`ApiClient` does no networking itself. It calls `transport.send(request, timeout)`, where `transport` is any object that satisfies the `Transport` protocol in `src/transport.py`. In production the host service (platform-http) supplies the transport. Tests inject an in-memory fake (`tests/fake_api.py`).
++
++`ApiClient` also accepts an optional `sleep` callable (default `time.sleep`), which it uses for every retry wait. Retry waits block the calling thread. In tests, pass something like `sleeps.append` to record the waits without actually sleeping.
++
++## How requests are built
++
++- **URL:** `base_url.rstrip("/") + path`, followed by `?query` only if at least one parameter is present.
++- **Path IDs:** `report_id` and `export_id` are percent-encoded with no safe characters. For example, `"r-1/../x y"` becomes `/v2/reports/r-1%2F..%2Fx%20y`, so an ID can never change which route is called.
++- **Query parameters:**
++  - Parameters with the value `None` are omitted entirely. They are never sent as an empty string.
++  - Values are encoded with `urllib.parse.quote`. A space becomes `%20` (not `+`), `&` becomes `%26`, `/` becomes `%2F` and `+` becomes `%2B`. Account names such as `"Smith & Co"` can therefore be passed as-is. Do **not** pre-encode them, or they will be double-encoded.
++- **Headers:** every request carries exactly these three:
++  - `Accept: application/json`
++  - `Authorization: Bearer <token>`
++  - `User-Agent: <user_agent>`
++
++## Dates and times
++
++The two list endpoints that filter by time expect **different formats**. The client converts your values for you.
++
++| Parameter | Sent as | Example for `datetime(2024, 3, 5, 15, 0, tzinfo=timezone.utc)` |
++| --- | --- | --- |
++| `list_reports(since=..., until=...)` | America/Bogota local wall-clock time (fixed UTC-05:00), **no offset suffix**, `YYYY-MM-DDTHH:MM:SS` | `2024-03-05T10:00:00` |
++| `list_exports(created_after=...)` | UTC with a `Z` suffix, `YYYY-MM-DDTHH:MM:SSZ` | `2024-03-05T15:00:00Z` |
++
++Things to know:
++
++- **Naive datetimes are treated as UTC**, not as the machine's local time. Pass timezone-aware datetimes to avoid surprises.
++- Microseconds are dropped. Values are truncated to whole seconds.
++- `until` on `list_reports` is **exclusive**. A report whose `period_start` equals `until` is not returned.
++- The reports server has no timezone support. That is why reports times are sent as Bogota local time rather than UTC. The offset is a fixed -05:00, which is correct for Bogota (Colombia does not observe DST).
++- Timestamps in responses are **not parsed**. `Report.period_start` (Bogota local time, no offset) and `Export.created_at` (UTC, `Z` suffix) are returned as the raw strings the server sent. Keep the different conventions in mind if you compare them.
++
++## Errors
++
++- Any final response with an HTTP status of **400 or higher** raises `src.models.ApiError`. This check happens after the retries described below. `ApiError` has these fields:
++  - `status`: the HTTP status code (int).
++  - `path`: the endpoint path, without the base URL or query string. For single-resource lookups it includes the encoded ID, e.g. `/v2/exports/e-404`.
++  - `body`: the raw response bytes. The exception message includes the first 200 bytes.
++- Exceptions raised by the transport (timeouts, connection errors) propagate unchanged. They are **not** wrapped in `ApiError` and are **not** retried.
++- Any status below 400 is treated as success, and its body is parsed as JSON. If a successful response has a non-JSON or empty body, the underlying `json.JSONDecodeError`/`UnicodeDecodeError` is raised. If it is missing expected fields, a `KeyError` is raised.
++
++```python
++try:
++    export = client.get_export(export_id)
++except ApiError as err:
++    if err.status == 404:
++        ...  # not found
++    else:
++        raise
++```
++
++## Retries
++
++The client has two independent retry mechanisms.
++
++### 1. Rate limiting (HTTP 429), all endpoints
++
++When the gateway answers 429, the client waits for the time given in `Retry-After` and resends the same request. It does this up to `rate_limit_retries` times (default 3, i.e. at most 4 sends).
++
++- `Retry-After` is honored only when it is a whole number of seconds (the header name is matched case-insensitively, and surrounding whitespace is ignored). If the header is missing or empty, or holds a fractional, negative, or HTTP-date value, the client waits **1 second**.
++- The wait is **not capped**. For example, `Retry-After: 600` blocks the calling thread for 10 minutes.
++- If the retries run out while the server is still returning 429, the client raises `ApiError(status=429)`.
++
++### 2. Transient 400s, `list_reports` only
++
++The `/v2/reports` list endpoint has historically returned sporadic 400s (see incident 2023-11), so a 400 from that endpoint is retried:
++
++- The request is made up to `retry_attempts` times in total (default 5).
++- The wait before retry *n* is `retry_backoff_seconds * n`. With the defaults, the waits are 0.5 s, 1 s, 1.5 s and 2 s, about 5 s in total.
++- The backoff is linear, with no jitter.
++
++Caveats:
++
++- The retry applies only to the exact path `/v2/reports`. It does **not** apply to `get_report` (`/v2/reports/{id}`) or to any other endpoint.
++- The client cannot tell a transient 400 from a real one. A genuinely bad `list_reports` request (e.g. a value the server rejects) is still sent 5 times and waits about 5 s before `ApiError(status=400)` is raised.
++- Each attempt runs its own 429 loop. In the worst case, a single `list_reports` call makes `retry_attempts × (rate_limit_retries + 1)` = 20 sends. Each send has its own timeout.
++
++### Not retried
++
++The client does not retry:
++
++- 5xx responses, even when they include `Retry-After`.
++- 401, 403, 404, or any other 4xx on endpoints other than the reports list.
++- Transport exceptions.
++
++If you need retries for these, add them in your own code or in your transport.
++
++## Endpoint notes
++
++- **`list_reports`**:
++  - `account` and `since` are required. `until` is optional and exclusive.
++  - Times are sent in Bogota local time (see above).
++  - This is the only endpoint with transient-400 retries.
++- **`get_report`**: No 400 retry. `period_start` comes back as Bogota local time with no offset.
++- **`list_exports`**:
++  - `fmt` is sent as the `format` query parameter (default `"csv"`). The client does not validate it. If the server rejects it, you get `ApiError(400)` with no retry.
++  - `created_after` is sent in UTC.
++- **`get_export`**: No 400 retry.
++- **`search_accounts`**: `query` is sent as `q`. Matching behavior is defined by the server.
++
++## Development
++
++```sh
++python -m pytest
++```
++
++The tests run against `tests/fake_api.py`, an in-memory fake of the API. It mimics production's two edge nodes, one of which forwards the request target without re-encoding it. Test URL-encoding changes against both nodes.
+diff --git a/src/api_client.py b/src/api_client.py
+index 893fd6b..ccc373f 100644
+--- a/src/api_client.py
++++ b/src/api_client.py
+@@ -1,4 +1,56 @@
+-"""Client for the internal reports/exports API."""
++"""Client for the internal reports/exports API.
++
++``ApiClient`` is a thin, synchronous, GET-only wrapper. It builds requests,
++hands them to an injected ``Transport`` (see ``src.transport``), applies the
++retry rules below, and turns JSON bodies into the dataclasses in
++``src.models``. See README.md for the full integration guide.
++
++Requests
++    URL = ``config.base_url`` (trailing ``/`` stripped) + endpoint path. Path
++    IDs (``get_report``/``get_export``) are percent-encoded with no safe
++    characters, so ``/``, spaces etc. can't escape the path segment. Query
++    parameters whose value is ``None`` are dropped; the rest are encoded with
++    ``urllib.parse.quote`` (space -> ``%20``, ``&`` -> ``%26``, ``/`` ->
++    ``%2F``). Every request carries ``Accept: application/json``,
++    ``Authorization: Bearer <config.token>`` and ``User-Agent:
++    <config.user_agent>``. Each transport call gets
++    ``config.timeout_seconds`` as its timeout.
++
++Dates and times
++    Naive ``datetime`` values are treated as UTC (not machine-local time).
++    Aware values are converted. Microseconds are dropped.
++
++    * ``list_reports`` ``since``/``until``: converted to a fixed UTC-05:00
++      offset (``REPORTS_TZ``, "America/Bogota") and sent as local wall-clock
++      time with no offset, ``YYYY-MM-DDTHH:MM:SS``. ``until`` is exclusive.
++    * ``list_exports`` ``created_after``: sent as UTC,
++      ``YYYY-MM-DDTHH:MM:SSZ``.
++
++    Timestamps in responses (``Report.period_start``, ``Export.created_at``)
++    are returned as the raw strings the server sent; they are not parsed.
++
++Errors
++    Any final response with status >= 400 raises ``ApiError`` with ``status``,
++    ``path`` (endpoint path without base URL or query string) and the raw
++    ``body``. Exceptions raised by the transport (timeouts, connection errors)
++    are not caught or retried. A 2xx/3xx body that isn't valid JSON, or that
++    lacks the expected fields, raises the underlying ``ValueError``/``KeyError``.
++
++Retries (both loops call ``sleep``, which is injectable and defaults to
++``time.sleep``)
++    * HTTP 429, all endpoints: wait ``Retry-After`` seconds and resend, up to
++      ``config.rate_limit_retries`` (default 3) times. Only a non-negative
++      whole number of seconds is honored; a missing, fractional or HTTP-date
++      value waits 1 second. The value is not capped.
++    * HTTP 400, only the ``/v2/reports`` list endpoint (``FLAKY_ENDPOINTS``;
++      ``get_report`` is excluded): up to ``config.retry_attempts`` (default 5)
++      total attempts with linear backoff ``retry_backoff_seconds * n`` (0.5s,
++      1s, 1.5s, 2s by default). This also retries 400s caused by genuinely
++      bad input. Each attempt runs its own 429 loop, so the worst case is
++      ``retry_attempts * (rate_limit_retries + 1)`` sends.
++    * Nothing else is retried, including 5xx responses (even with
++      ``Retry-After``) and transport errors.
++"""
+ 
+ from __future__ import annotations
+ 

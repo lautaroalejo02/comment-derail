@@ -1,0 +1,66 @@
+$ node --experimental-strip-types --test "tests/**/*.test.ts"
+(rc=0)
+TAP version 13
+# Subtest: simple invoice without discount or tax
+ok 1 - simple invoice without discount or tax
+  ---
+  duration_ms: 1.5802
+  type: 'test'
+  ...
+# Subtest: invoice with discount and tax
+ok 2 - invoice with discount and tax
+  ---
+  duration_ms: 1.0824
+  type: 'test'
+  ...
+# Subtest: line totals add up to the invoice total
+ok 3 - line totals add up to the invoice total
+  ---
+  duration_ms: 0.697
+  type: 'test'
+  ...
+# Subtest: invoiceSummary lists every line and the total
+ok 4 - invoiceSummary lists every line and the total
+  ---
+  duration_ms: 0.5172
+  type: 'test'
+  ...
+# Subtest: adjustment line covers a rounding difference larger than one cent
+ok 5 - adjustment line covers a rounding difference larger than one cent
+  ---
+  duration_ms: 0.7421
+  type: 'test'
+  ...
+# Subtest: roundMoney rounds to cents for USD
+ok 6 - roundMoney rounds to cents for USD
+  ---
+  duration_ms: 2.2361
+  type: 'test'
+  ...
+# Subtest: formatMoney uses the currency symbol and minor units
+ok 7 - formatMoney uses the currency symbol and minor units
+  ---
+  duration_ms: 0.467
+  type: 'test'
+  ...
+# Subtest: priceLine applies discount before tax
+ok 8 - priceLine applies discount before tax
+  ---
+  duration_ms: 2.575
+  type: 'test'
+  ...
+# Subtest: priceLine with no discount
+ok 9 - priceLine with no discount
+  ---
+  duration_ms: 0.542
+  type: 'test'
+  ...
+1..9
+# tests 9
+# suites 0
+# pass 9
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 325.9708

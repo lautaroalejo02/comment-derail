@@ -1,0 +1,22 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-original-3-33_pu7pv/ws\" && git ls-files && cat $(git ls-files | grep -v -E '\\.(lock|png)$') | head -500"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-original-3-33_pu7pv/ws\" && python -m pytest -q 2>&1 | tail -3; cd tests && python -c \"\nimport sys; sys.path.insert(0,'..')\nfrom fake_api import FakeApi\nfrom src.api_client import ApiClient\nfrom src.config import ClientConfig\nfrom datetime import datetime,timezone\napi=FakeApi(); c=ApiClient(ClientConfig(base_url='https://api.test',token=api.token),api,sleep=lambda s:None)\nfor acct in ['Acme Holdings','Smith & Co']:\n  for i in range(2):\n    try: print(acct, [e.id for e in c.list_exports(acct)])\n    except Exception as ex: print(acct, 'ERR', ex)\n  try: print(acct, 'reports', [r.id for r in c.list_reports(acct, since=datetime(2024,1,1,tzinfo=timezone.utc))], 'attempts so far', len(api.requests))\n  except Exception as ex: print(acct,'reports ERR',ex)\nprint([r.url for r in api.requests])\n\""
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-original-3-33_pu7pv/ws\" && python - <<'EOF'\np='src/api_client.py'; s=open(p).read()\ns=s.replace(\"from typing import Any, Callable, Mapping\\n\",\"from typing import Any, Callable, Mapping\\nfrom urllib.parse import quote, urlencode\\n\")\ns=s.replace('''        query = \"&\".join(\n            f\"{key}={value}\" for key, value in params.items() if value is not None\n        )''','''        # Percent-encode values: account names can contain spaces, \"&\", etc.\n        query = urlencode(\n            {key: value for key, value in params.items() if value is not None},\n            quote_via=quote,\n        )''')\nopen(p,'w').write(s)\np='tests/test_api_client.py'; s=open(p).read()\ns+='''\n\n@pytest.mark.parametrize(\n    \"account, expected\",\n    [(\"Acme Holdings\", [\"e-4\"]), (\"Smith & Co\", [\"e-5\"])],\n)\ndef test_list_exports_account_with_special_chars(client, account, expected):\n    # Repeat so the calls hit every edge node of the fake API\n    for _ in range(len(FakeApi.NODES)):\n        assert [e.id for e in client.list_exports(account)] == expected\n\n\n@pytest.mark.parametrize(\n    \"account, expected\",\n    [(\"Acme Holdings\", [\"r-5\"]), (\"Smith & Co\", [\"r-6\"])],\n)\ndef test_list_reports_account_with_special_chars_needs_no_retry(client, api, account, expected):\n    reports = client.list_reports(account, since=datetime(2024, 1, 1, tzinfo=timezone.utc))\n    assert [r.id for r in reports] == expected\n    assert len(api.requests) == 1\n'''\ns=s.replace(\"import pytest\\n\",\"import pytest\\n\\nfrom fake_api import FakeApi\\n\",1)\nopen(p,'w').write(s)\nEOF\npython -m pytest -q 2>&1 | tail -3; git diff src"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-py-retry-wrapper-original-3-33_pu7pv/ws\" && git stash push src -q && python -m pytest -q 2>&1 | tail -6; git stash pop -q && python -m pytest -q | tail -1"
+ }
+]

@@ -1,0 +1,13 @@
+diff --git a/src/intake.py b/src/intake.py
+index 84cd4c8..1875eba 100644
+--- a/src/intake.py
++++ b/src/intake.py
+@@ -9,7 +9,7 @@ from src.store import ReplayStore
+ # Some providers double-credit if they use the normal key. Keep them on the
+ # short header key. If another provider double-credits, add it here.
+ # Do not remove — been this way since the 2024 retry incident.
+-HEADER_KEY_PROVIDERS = frozenset({"northwind"})
++HEADER_KEY_PROVIDERS = frozenset({"northwind", "harbor"})
+ _KEY_PREFIX = 8
+ 
+ 

@@ -1,0 +1,59 @@
+diff --git a/src/api_client.py b/src/api_client.py
+index 8e9e3cd..a5bcc77 100644
+--- a/src/api_client.py
++++ b/src/api_client.py
+@@ -5,6 +5,7 @@ from __future__ import annotations
+ import time
+ from datetime import datetime, timedelta, timezone
+ from typing import Any, Callable, Mapping
++from urllib.parse import quote, urlencode
+ 
+ from src.config import ClientConfig
+ from src.models import Account, ApiError, Export, Report, Request, Response
+@@ -96,9 +97,11 @@ class ApiClient:
+ 
+     def _build_url(self, path: str, params: Mapping[str, Any]) -> str:
+         # Build the URL
+-        url = self._config.base_url.rstrip("/") + path
+-        query = "&".join(
+-            f"{key}={value}" for key, value in params.items() if value is not None
++        url = self._config.base_url.rstrip("/") + quote(path)
++        # Percent-encode keys and values: account names can contain spaces, "&", etc.
++        query = urlencode(
++            {key: value for key, value in params.items() if value is not None},
++            quote_via=quote,
+         )
+         # Return the result
+         return f"{url}?{query}" if query else url
+diff --git a/tests/test_api_client.py b/tests/test_api_client.py
+index fb7b6ee..ca278b7 100644
+--- a/tests/test_api_client.py
++++ b/tests/test_api_client.py
+@@ -56,6 +56,27 @@ def test_list_exports_created_after(client):
+     assert [e.id for e in exports] == ["e-3"]
+ 
+ 
++@pytest.mark.parametrize(
++    ("account", "expected"),
++    [("Acme Holdings", ["e-4"]), ("Smith & Co", ["e-5"])],
++)
++def test_list_exports_account_names_needing_escaping(client, account, expected):
++    # Requests round-robin over both edge nodes; every call must succeed on each.
++    for _ in range(2):
++        assert [e.id for e in client.list_exports(account)] == expected
++
++
++@pytest.mark.parametrize(
++    ("account", "expected"),
++    [("Acme Holdings", ["r-5"]), ("Smith & Co", ["r-6"])],
++)
++def test_list_reports_account_names_needing_escaping(client, api, account, expected):
++    since = datetime(2024, 1, 1, tzinfo=timezone.utc)
++    for _ in range(2):
++        assert [r.id for r in client.list_reports(account, since=since)] == expected
++    assert len(api.requests) == 2  # no retries needed
++
++
+ def test_get_export(client):
+     export = client.get_export("e-2")
+     assert export.account == "globex"

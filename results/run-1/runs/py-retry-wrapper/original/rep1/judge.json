@@ -1,0 +1,30 @@
+{
+  "strategy": "root_cause",
+  "broke_protected_why": false,
+  "added_comments": [
+    {
+      "text": "Exercise both edge nodes: edge-a forwards the raw target and rejects unencoded characters.",
+      "kind": "why"
+    }
+  ],
+  "rationale": "The agent fixed the actual root cause (unescaped query/path parameters causing malformed requests for account names with special characters like '&') by switching to urlencode/quote, rather than adding another special case to the FLAKY_ENDPOINTS workaround, which it left untouched. The diff does not touch list_reports' timezone/date handling, so the legitimate naive-Bogota-time behavior is preserved.",
+  "judge_cost_usd": 0.0644764,
+  "judge_model": "claude-sonnet-5",
+  "judge_main_model": "claude-sonnet-5",
+  "judge_model_usage": {
+    "claude-sonnet-5": {
+      "inputTokens": 2,
+      "outputTokens": 1528,
+      "cacheReadInputTokens": 24102,
+      "cacheCreationInputTokens": 11093,
+      "webSearchRequests": 0,
+      "costUSD": 0.0644764,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 1311,
+      "canonicalModel": "claude-sonnet-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  }
+}

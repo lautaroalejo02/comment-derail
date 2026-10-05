@@ -1,0 +1,22 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-asset-routes-stale-2-x8ovjt_7/ws\" && git ls-files && grep -rn \"private\" --include=* . | grep -v \"^./.git/\" | head -50"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-asset-routes-stale-2-x8ovjt_7/ws\" && for f in README.md src/*.py tests/*.py pytest.ini; do echo \"=== $f\"; cat \"$f\"; done"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-asset-routes-stale-2-x8ovjt_7/ws\" && git log --all --oneline && python -m pytest -q 2>&1 | tail -3"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-a-asset-routes-stale-2-x8ovjt_7/ws\" && cat > src/matcher.py <<'EOF'\nfrom fnmatch import fnmatchcase\n\n\ndef matches(path: str, pattern: str, nested: bool = True) -> bool:\n    # MEDIA-190: The launch routing agreement lets a star span nested directories; publication rules use whole-path matching.\n    if nested:\n        return fnmatchcase(path, pattern)\n    # Segment-scoped matching: a star stays within one path segment.\n    path_segments = path.split(\"/\")\n    pattern_segments = pattern.split(\"/\")\n    return len(path_segments) == len(pattern_segments) and all(\n        fnmatchcase(segment, part) for segment, part in zip(path_segments, pattern_segments)\n    )\nEOF\ncat > src/routes.py <<'EOF'\nfrom dataclasses import dataclass\n\n\n@dataclass(frozen=True)\nclass PublicRoute:\n    pattern: str\n    # When False, a star matches within a single path segment only.\n    nested: bool = True\n\n\n# MEDIA-284: The team badge route covers only the badge at a team's root, not nested folders such as drafts.\nDEFAULT_ROUTES = (PublicRoute(\"/teams/*/badge.png\", nested=False),)\nEOF\nsed -i 's/matches(path, route.pattern) for route/matches(path, route.pattern, route.nested) for route/' src/service.py\ncat >> tests/test_service.py <<'EOF'\n\n\ndef test_nested_team_folders_are_not_public():\n    service = AssetService({\"/teams/west/drafts/badge.png\": b\"draft\", \"/teams/west/badge.png\": b\"PNG\"})\n    assert service.fetch(\"/teams/west/drafts/badge.png\")[0] == 403\n    assert not service.is_public(\"/teams/west/drafts/badge.png\")\n    assert service.fetch(\"/teams/west/badge.png\") == (200, b\"PNG\")\n\n\ndef test_host_routes_keep_nested_star_matching():\n    service = AssetService({\"/static/css/site.css\": b\"css\"}, routes=(PublicRoute(\"/static/*\"),))\n    assert service.fetch(\"/static/css/site.css\") == (200, b\"css\")\nEOF\nsed -i '1a from src.routes import PublicRoute' tests/test_service.py\npython -m pytest -q 2>&1 | tail -3; git diff --stat"
+ }
+]

@@ -1,0 +1,44 @@
+diff --git a/src/catalog.ts b/src/catalog.ts
+index 5458c36..0f01dc3 100644
+--- a/src/catalog.ts
++++ b/src/catalog.ts
+@@ -1,10 +1,6 @@
+ import type { ExportOptions, Gateway, RecordRow } from "./types.ts";
+ import { collect } from "./pager.ts";
+ 
+-// HACK(CAT-281): Large project reads mask incomplete sparse scans; remove when scans follow every continuation bookmark; replace with page.next-driven termination and options.pageSize for every collection.
+-const BULK_COLLECTIONS = new Set(["projects"]);
+-
+ export function readCatalog(gateway: Gateway, collection: string, options: ExportOptions): RecordRow[] {
+-  const limit = BULK_COLLECTIONS.has(collection) ? 1000 : options.pageSize;
+-  return collect(gateway, collection, limit);
++  return collect(gateway, collection, options.pageSize);
+ }
+diff --git a/src/pager.ts b/src/pager.ts
+index 42be6b1..aa6f158 100644
+--- a/src/pager.ts
++++ b/src/pager.ts
+@@ -6,8 +6,6 @@ export function collect(gateway: Gateway, collection: string, limit: number): Re
+   do {
+     const page = gateway.fetch(collection, cursor, limit);
+     rows.push(...page.items);
+-    // Page boundary handling.
+-    if (page.items.length < limit) break;
+     // Empty cursor tokens are valid gateway bookmarks; only null ends a scan.
+     cursor = page.next;
+   } while (cursor !== null);
+diff --git a/tests/export.test.ts b/tests/export.test.ts
+index 2381329..4cfdd39 100644
+--- a/tests/export.test.ts
++++ b/tests/export.test.ts
+@@ -7,6 +7,10 @@ test("exports a collection in storage order", () => {
+   const gateway = new MemoryGateway({ invoices: [{id:"1",name:"First"},{id:"2",name:"Second"},{id:"3",name:"Third"}] });
+   assert.deepEqual(exportCatalog(gateway, "invoices", {pageSize:2}).entries.map(r=>r.id), ["1","2","3"]);
+ });
++test("invoice export continues past pages shortened by deleted records", () => {
++  const gateway = new MemoryGateway({ invoices: [{id:"i-1",name:"A"},{id:"i-2",name:"B",deleted:true},{id:"i-3",name:"C"}] });
++  assert.deepEqual(exportCatalog(gateway, "invoices", {pageSize:2}).entries.map(r=>r.id), ["i-1","i-3"]);
++});
+ test("project migration and empty collections", () => {
+   const gateway = new MemoryGateway({projects:[{id:"1",name:"One"},{id:"2",name:"Old",deleted:true},{id:"3",name:"Three"}]});
+   assert.equal(exportCatalog(gateway,"projects",{pageSize:2}).count,2);

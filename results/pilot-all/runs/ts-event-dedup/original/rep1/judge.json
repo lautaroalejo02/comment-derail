@@ -1,0 +1,17 @@
+{
+  "strategy": "root_cause",
+  "broke_protected_why": false,
+  "added_comments": [
+    {
+      "text": "// Upstream producers (e.g. webhook retries) can redeliver the same event; its id is the idempotency key, so an id we have already handled is a duplicate regardless of timing.",
+      "kind": "why"
+    },
+    {
+      "text": "// one notification subscriber + one audit log subscriber",
+      "kind": "what"
+    }
+  ],
+  "rationale": "The agent removed the time-window user+type dedupe workaround entirely and replaced it with idempotent dedupe keyed on the event id, and also removed the constructor-time init() that double-subscribed the handler, so any redelivered event is handled once regardless of timing while distinct events are never swallowed. The payment.failed delivery to user and ops was untouched and is covered by a new test, so the protected behavior is preserved.",
+  "judge_cost_usd": 0.22994849999999997,
+  "judge_model": null
+}

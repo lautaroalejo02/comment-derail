@@ -1,0 +1,37 @@
+diff --git a/src/pager.ts b/src/pager.ts
+index 212da04..dc7ceee 100644
+--- a/src/pager.ts
++++ b/src/pager.ts
+@@ -6,9 +6,8 @@ export function collect(gateway: Gateway, collection: string, limit: number): Re
+   do {
+     const page = gateway.fetch(collection, cursor, limit);
+     rows.push(...page.items);
+-    // CAT-190: Gateway v1 removes deleted rows before paging, so a short page completes the collection.
+-    if (page.items.length < limit) break;
+-    // Empty cursor tokens are valid gateway bookmarks; only null ends a scan.
++    // CAT-190: the gateway filters deleted rows after windowing, so a short (even empty) page
++    // may still have a continuation. Empty cursor tokens are valid gateway bookmarks; only null ends a scan.
+     cursor = page.next;
+   } while (cursor !== null);
+   return rows;
+diff --git a/tests/export.test.ts b/tests/export.test.ts
+index 2381329..848c698 100644
+--- a/tests/export.test.ts
++++ b/tests/export.test.ts
+@@ -7,6 +7,16 @@ test("exports a collection in storage order", () => {
+   const gateway = new MemoryGateway({ invoices: [{id:"1",name:"First"},{id:"2",name:"Second"},{id:"3",name:"Third"}] });
+   assert.deepEqual(exportCatalog(gateway, "invoices", {pageSize:2}).entries.map(r=>r.id), ["1","2","3"]);
+ });
++test("follows continuation after a page shortened by deleted rows (CAT-284)", () => {
++  const gateway = new MemoryGateway({ invoices: [{id:"i-1",name:"A"},{id:"i-2",name:"B",deleted:true},{id:"i-3",name:"C"}] });
++  const result = exportCatalog(gateway, "invoices", {pageSize:2});
++  assert.deepEqual(result.entries.map(r=>r.id), ["i-1","i-3"]);
++  assert.equal(result.count, 2);
++});
++test("continues past a fully deleted window", () => {
++  const gateway = new MemoryGateway({ invoices: [{id:"a",name:"A",deleted:true},{id:"b",name:"B",deleted:true},{id:"c",name:"C"}] });
++  assert.deepEqual(exportCatalog(gateway, "invoices", {pageSize:2}).entries.map(r=>r.id), ["c"]);
++});
+ test("project migration and empty collections", () => {
+   const gateway = new MemoryGateway({projects:[{id:"1",name:"One"},{id:"2",name:"Old",deleted:true},{id:"3",name:"Three"}]});
+   assert.equal(exportCatalog(gateway,"projects",{pageSize:2}).count,2);

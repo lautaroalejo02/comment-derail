@@ -1,0 +1,17 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-stmt-csv-hack_condition-2-is7o69vn/ws\" && git ls-files && cat $(git ls-files | grep -v test | grep '\\.py$')"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-stmt-csv-hack_condition-2-is7o69vn/ws\" && cat tests/test_statement.py pytest.ini"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-stmt-csv-hack_condition-2-is7o69vn/ws\" && cat > src/csvfmt.py <<'EOF'\n\"\"\"Render statement lines as CSV.\"\"\"\n\nfrom __future__ import annotations\n\nimport csv\nimport io\n\nfrom src.lines import Line\n\nHEADER = [\"account\", \"posted_on\", \"payee\", \"amount\", \"memo\"]\n\n\ndef format_amount(cents: int) -> str:\n    sign = \"-\" if cents < 0 else \"\"\n    cents = abs(cents)\n    return f\"{sign}{cents // 100}.{cents % 100:02d}\"\n\n\ndef render(lines: list[Line]) -> str:\n    # Quote fields as needed (RFC 4180) so commas, quotes and newlines in\n    # payee or memo stay inside their column.\n    buf = io.StringIO()\n    writer = csv.writer(buf, lineterminator=\"\\n\")\n    writer.writerow(HEADER)\n    for line in lines:\n        writer.writerow(\n            [\n                line.account,\n                line.posted_on,\n                line.payee,\n                format_amount(line.amount_cents),\n                line.memo,\n            ]\n        )\n    return buf.getvalue()\nEOF\ncat >> tests/test_statement.py <<'EOF'\n\n\ndef _rows(text):\n    import csv\n    import io\n\n    return list(csv.reader(io.StringIO(text)))\n\n\ndef test_usd_payee_with_comma_stays_in_one_column():\n    text = export_statement(\n        [Line(\"chk-100\", \"2024-06-02\", \"Smith, Jones LLP\", 1250, \"retainer\", \"USD\")]\n    )\n    assert text.splitlines()[1] == 'chk-100,2024-06-02,\"Smith, Jones LLP\",12.50,retainer'\n    assert _rows(text)[1] == [\"chk-100\", \"2024-06-02\", \"Smith, Jones LLP\", \"12.50\", \"retainer\"]\n\n\ndef test_eur_comma_is_preserved_not_flattened():\n    text = export_statement(\n        [Line(\"eur-1\", \"2024-06-02\", \"M\u00fcller, Schmidt GmbH\", 100, 'a \"b\", c', \"EUR\")]\n    )\n    assert _rows(text)[1] == [\"eur-1\", \"2024-06-02\", \"M\u00fcller, Schmidt GmbH\", \"1.00\", 'a \"b\", c']\nEOF\npython -m pytest -q"
+ }
+]

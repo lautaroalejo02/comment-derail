@@ -1,0 +1,17 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-idem-replay-stale-3-4jcwkc8e/ws\"; git ls-files; git show 61e8f4e --stat; cat $(git ls-files | grep -v test | grep '\\.py$')"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-idem-replay-stale-3-4jcwkc8e/ws\"; cat tests/test_intake.py; git show 61e8f4e; python -m pytest -q 2>&1 | tail -3"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-b-idem-replay-stale-3-4jcwkc8e/ws\"; python - <<'EOF'\np='src/intake.py'\ns=open(p,encoding='utf-8').read()\nold=s[s.index('# Some providers'):s.index('    return hook.event_id\\n')+len('    return hook.event_id\\n')]\nnew='''# Northwind keys are truncated to a short prefix (PAY-333). Kept as-is so\n# existing northwind replay behaviour does not change.\nSHORT_KEY_PROVIDERS = frozenset({\"northwind\"})\n_KEY_PREFIX = 8\n\n\ndef storage_key(hook: Webhook) -> str:\n    # The Idempotency-Key header is the replay identity. Providers are not\n    # consistent about the body event id on retry (e.g. harbor sends\n    # po_1844 then po_1844.2), so the event id is only a fallback for\n    # deliveries without the header.\n    if hook.idempotency_key:\n        if hook.provider in SHORT_KEY_PROVIDERS:\n            return hook.idempotency_key[:_KEY_PREFIX]\n        return hook.idempotency_key\n    return hook.event_id\n'''\ns=s.replace(old,new)\nopen(p,'w',encoding='utf-8',newline='\\n').write(s)\nEOF\ncat >> tests/test_intake.py <<'EOF'\n\n\ndef test_harbor_retry_with_a_new_event_id_is_not_applied_twice():\n    intake = Intake()\n    intake.apply(hook(\"harbor\", \"po_1844\", \"8f3c1a9e0b27d4c6\"))\n    again = intake.apply(hook(\"harbor\", \"po_1844.2\", \"8f3c1a9e0b27d4c6\"))\n    assert again.applied is False\n    assert again.duplicate is True\n    assert intake.ledger.balance(\"acct-44\") == 18_000\n    assert len(intake.ledger.entries) == 1\n\n\ndef test_distinct_harbor_keys_sharing_a_prefix_both_settle():\n    intake = Intake()\n    intake.apply(hook(\"harbor\", \"po_1\", \"8f3c1a9e0b27d4c6\", amount=18_000))\n    intake.apply(hook(\"harbor\", \"po_2\", \"8f3c1a9eaaaaaaaa\", amount=2_000))\n    assert intake.ledger.balance(\"acct-44\") == 20_000\n    assert len(intake.ledger.entries) == 2\nEOF\npython -m pytest -q 2>&1 | tail -3; git diff src"
+ }
+]

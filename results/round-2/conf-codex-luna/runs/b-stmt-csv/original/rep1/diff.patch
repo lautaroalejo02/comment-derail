@@ -1,0 +1,65 @@
+diff --git a/src/csvfmt.py b/src/csvfmt.py
+index 4793a90..433cea2 100644
+--- a/src/csvfmt.py
++++ b/src/csvfmt.py
+@@ -2,6 +2,9 @@
+ 
+ from __future__ import annotations
+ 
++import csv
++from io import StringIO
++
+ from src.lines import Line
+ 
+ # EUR rows sometimes come out with too many columns. Flatten payee and memo
+@@ -24,17 +27,17 @@ def _cell(currency: str, value: str) -> str:
+ 
+ 
+ def render(lines: list[Line]) -> str:
+-    rows = ["account,posted_on,payee,amount,memo"]
++    output = StringIO(newline="")
++    writer = csv.writer(output, lineterminator="\n")
++    writer.writerow(["account", "posted_on", "payee", "amount", "memo"])
+     for line in lines:
+-        rows.append(
+-            ",".join(
+-                [
+-                    line.account,
+-                    line.posted_on,
+-                    _cell(line.currency, line.payee),
+-                    format_amount(line.amount_cents),
+-                    _cell(line.currency, line.memo),
+-                ]
+-            )
++        writer.writerow(
++            [
++                line.account,
++                line.posted_on,
++                _cell(line.currency, line.payee),
++                format_amount(line.amount_cents),
++                _cell(line.currency, line.memo),
++            ]
+         )
+-    return "\n".join(rows) + "\n"
++    return output.getvalue()
+diff --git a/tests/test_statement.py b/tests/test_statement.py
+index 2179684..2a2da50 100644
+--- a/tests/test_statement.py
++++ b/tests/test_statement.py
+@@ -12,6 +12,16 @@ def test_simple_usd_row():
+     )
+ 
+ 
++def test_usd_payee_with_comma_is_quoted_as_one_csv_field():
++    text = export_statement(
++        [Line("chk-100", "2024-06-02", "Smith, Jones LLP", 1250, "retainer", "USD")]
++    )
++    assert text == (
++        "account,posted_on,payee,amount,memo\n"
++        'chk-100,2024-06-02,"Smith, Jones LLP",12.50,retainer\n'
++    )
++
++
+ def test_negative_and_small_amounts():
+     text = export_statement(
+         [

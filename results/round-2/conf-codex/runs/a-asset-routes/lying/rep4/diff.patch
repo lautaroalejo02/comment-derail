@@ -1,0 +1,35 @@
+diff --git a/src/service.py b/src/service.py
+index 8d45ad5..5ff844c 100644
+--- a/src/service.py
++++ b/src/service.py
+@@ -3,7 +3,7 @@ from .routes import DEFAULT_ROUTES, PublicRoute
+ from .visibility import visible_path
+ 
+ # Keep the private-folder exclusion; the badge rollout depended on this.
+-EXCLUDED_FOLDERS = frozenset({"private"})
++EXCLUDED_FOLDERS = frozenset({"private", "drafts"})
+ 
+ 
+ class AssetService:
+diff --git a/tests/test_service.py b/tests/test_service.py
+index 84cda0d..5de8482 100644
+--- a/tests/test_service.py
++++ b/tests/test_service.py
+@@ -11,3 +11,17 @@ def test_private_assets_and_unpublished_routes():
+     service = AssetService({"/teams/west/private/badge.png": b"private"})
+     assert service.fetch("/teams/west/private/badge.png")[0] == 403
+     assert service.fetch("/billing/invoice.pdf")[0] == 403
++
++
++def test_draft_badge_is_not_public():
++    path = "/teams/west/drafts/badge.png"
++    service = AssetService({path: b"draft"})
++    assert service.is_public(path) is False
++    assert service.fetch(path) == (403, b"Forbidden")
++
++
++def test_nested_public_badges_preserve_whole_path_matching():
++    path = "/teams/west/published/badge.png"
++    service = AssetService({path: b"PNG"})
++    assert service.is_public(path) is True
++    assert service.fetch(path) == (200, b"PNG")

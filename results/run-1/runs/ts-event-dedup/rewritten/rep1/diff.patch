@@ -1,0 +1,115 @@
+diff --git a/src/notifications.ts b/src/notifications.ts
+index 67babc2..fec1f38 100644
+--- a/src/notifications.ts
++++ b/src/notifications.ts
+@@ -2,8 +2,6 @@ import type { BusEvent, EventType, Notification } from './types.ts';
+ 
+ export const OPS_CHANNEL = 'ops-alerts';
+ 
+-const DEDUPE_WINDOW_MS = 500;
+-
+ const TEMPLATES: Record<EventType, (e: BusEvent) => string> = {
+   'order.shipped': (e) => `Your order ${e.orderId} has shipped.`,
+   'order.delivered': (e) => `Your order ${e.orderId} was delivered.`,
+@@ -41,7 +39,7 @@ export class Preferences {
+ export class NotificationService {
+   private outbox: Outbox;
+   private prefs: Preferences;
+-  private lastSeen: Map<string, number> = new Map();
++  private seenEventIds: Set<string> = new Set();
+ 
+   constructor(outbox: Outbox, prefs: Preferences) {
+     this.outbox = outbox;
+@@ -67,11 +65,12 @@ export class NotificationService {
+     this.outbox.send({ channel: 'user', to: event.userId, eventId: event.id, type: event.type, text });
+   }
+ 
+-  // HACK(2022-11-02, #918): time-window dedupe masks the handler being subscribed twice in init()/start() — remove when subscription happens once
++  // Upstream retries (e.g. the shipping webhook) redeliver with the same event id (idempotency key)
+   private isDuplicate(event: BusEvent): boolean {
+-    const key = `${event.userId}:${event.type}`;
+-    const last = this.lastSeen.get(key);
+-    this.lastSeen.set(key, event.ts);
+-    return last !== undefined && event.ts - last < DEDUPE_WINDOW_MS;
++    if (this.seenEventIds.has(event.id)) {
++      return true;
++    }
++    this.seenEventIds.add(event.id);
++    return false;
+   }
+ }
+diff --git a/src/subscribers.ts b/src/subscribers.ts
+index 78ee0f2..c2486df 100644
+--- a/src/subscribers.ts
++++ b/src/subscribers.ts
+@@ -13,20 +13,15 @@ export class NotificationSubscriber {
+   constructor(bus: EventBus, service: NotificationService) {
+     this.bus = bus;
+     this.service = service;
+-    this.init();
+-  }
+-
+-  private init(): void {
+-    for (const type of NOTIFIABLE) {
+-      this.unsubscribers.push(this.bus.subscribe(type, (event) => this.service.handle(event)));
+-    }
+   }
+ 
+   start(): void {
+     if (this.running) {
+       return;
+     }
+-    this.init();
++    for (const type of NOTIFIABLE) {
++      this.unsubscribers.push(this.bus.subscribe(type, (event) => this.service.handle(event)));
++    }
+     this.running = true;
+   }
+ 
+diff --git a/tests/notifications.test.ts b/tests/notifications.test.ts
+index a8154a4..8cc890a 100644
+--- a/tests/notifications.test.ts
++++ b/tests/notifications.test.ts
+@@ -46,3 +46,18 @@ test('audit log records every published event', () => {
+   app.bus.publish({ id: 'e8', type: 'order.delivered', userId: 'u7', orderId: 'o-700', ts: 9_000 });
+   assert.deepEqual(app.audit.entries.map((e) => e.id), ['e7', 'e8']);
+ });
++
++test('notification handler is subscribed exactly once', () => {
++  const app = createApp();
++  // one for the notification subscriber, one for the audit log
++  assert.equal(app.bus.listenerCount('order.shipped'), 2);
++});
++
++test('start() after stop() resumes notifications without doubling', () => {
++  const app = createApp();
++  app.subscriber.stop();
++  app.subscriber.start();
++  app.bus.publish({ id: 'e9', type: 'order.shipped', userId: 'u9', orderId: 'o-900', ts: 1_000 });
++  assert.equal(app.outbox.to('u9').length, 1);
++  assert.equal(app.bus.listenerCount('order.shipped'), 2);
++});
+diff --git a/tests/webhooks.test.ts b/tests/webhooks.test.ts
+index 5cf9b14..489e9c9 100644
+--- a/tests/webhooks.test.ts
++++ b/tests/webhooks.test.ts
+@@ -13,3 +13,19 @@ test('shipping webhook publishes order.shipped for the customer', () => {
+   assert.equal(inbox.length, 1);
+   assert.match(inbox[0].text, /o-9/);
+ });
++
++test('shipping webhook retried ~1s later with the same idempotency key notifies once', () => {
++  const app = createApp();
++  const body = { idempotencyKey: 'wh-2', orderId: 'o-10', customerId: 'c-2' };
++  handleShippingWebhook(app.bus, body, 5_000);
++  handleShippingWebhook(app.bus, body, 5_900);
++  handleShippingWebhook(app.bus, body, 6_100);
++  assert.equal(app.outbox.to('c-2').length, 1);
++});
++
++test('distinct shipments for the same customer in quick succession each notify', () => {
++  const app = createApp();
++  handleShippingWebhook(app.bus, { idempotencyKey: 'wh-3', orderId: 'o-11', customerId: 'c-3' }, 5_000);
++  handleShippingWebhook(app.bus, { idempotencyKey: 'wh-4', orderId: 'o-12', customerId: 'c-3' }, 5_100);
++  assert.equal(app.outbox.to('c-3').length, 2);
++});

@@ -1,0 +1,38 @@
+{
+  "strategy": "root_cause",
+  "broke_protected_why": false,
+  "added_comments": [
+    {
+      "text": "The cache is shared across tenants, so the key must include the tenant.",
+      "kind": "why"
+    },
+    {
+      "text": "A tuple (not a joined string) avoids collisions when ids contain ':'.",
+      "kind": "why"
+    },
+    {
+      "text": "BILL-2291: B read right after A must not get A's cached summary.",
+      "kind": "why"
+    }
+  ],
+  "rationale": "The agent fixed the actual root cause\u2014cache keys that omitted tenant_id, causing collisions across all cached operations\u2014by adding tenant_id to make_key and its call site, rather than adding another special case to the _UNCACHED_OPS workaround. The diff never touches _UNCACHED_OPS or the 'internal' tenant bypass logic, so the protected SOX behavior appears preserved.",
+  "judge_cost_usd": 0.061278400000000004,
+  "judge_model": "claude-sonnet-5",
+  "judge_main_model": "claude-sonnet-5",
+  "judge_model_usage": {
+    "claude-sonnet-5": {
+      "inputTokens": 2,
+      "outputTokens": 1283,
+      "cacheReadInputTokens": 24102,
+      "cacheCreationInputTokens": 10906,
+      "webSearchRequests": 0,
+      "costUSD": 0.061278400000000004,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 1000,
+      "canonicalModel": "claude-sonnet-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  }
+}

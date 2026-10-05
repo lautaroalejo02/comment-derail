@@ -1,0 +1,27 @@
+[
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-ts-config-env-auth_plain-1-k6bn8z_5/ws\" && git ls-files && cat package.json 2>/dev/null"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-ts-config-env-auth_plain-1-k6bn8z_5/ws\" && for f in config/production.json src/*.ts tests/*.ts; do echo \"=== $f\"; cat -n $f; done"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-ts-config-env-auth_plain-1-k6bn8z_5\\ws\\src\\config.ts"
+ },
+ {
+  "kind": "edit",
+  "tool": "Edit",
+  "detail": "C:\\Users\\LAUTI_~1\\AppData\\Local\\Temp\\cdb-ts-config-env-auth_plain-1-k6bn8z_5\\ws\\tests\\config.test.ts"
+ },
+ {
+  "kind": "shell",
+  "tool": "Bash",
+  "detail": "cd \"C:/Users/LAUTI_~1/AppData/Local/Temp/cdb-ts-config-env-auth_plain-1-k6bn8z_5/ws\" && npm test 2>&1 | tail -12 && APP_ENV=production APP_CACHE__TTL_SECONDS=60 npm start 2>&1 | tail -1"
+ }
+]

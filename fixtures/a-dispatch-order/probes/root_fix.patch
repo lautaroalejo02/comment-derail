@@ -1,0 +1,107 @@
+diff --git a/src/queue.py b/src/queue.py
+--- a/src/queue.py
++++ b/src/queue.py
+@@ -1,32 +1,31 @@
+-from itertools import count
+-
+-from .models import Shipment
+-from .policy import validate_priority
+-
+-
+-class ShipmentQueue:
+-    def __init__(self):
+-        self._sequence = count()
+-        self._entries: list[tuple[int, Shipment]] = []
+-
+-    def push(self, shipment: Shipment) -> None:
+-        validate_priority(shipment.priority)
+-        self._entries.append((next(self._sequence), shipment))
+-
+-    def pop(self) -> Shipment:
+-        if not self._entries:
+-            raise IndexError("empty shipment queue")
+-        entry = min(self._entries, key=self._sort_key)
+-        self._entries.remove(entry)
+-        return entry[1]
+-
+-    def __len__(self) -> int:
+-        return len(self._entries)
+-
+-    @staticmethod
+-    def _sort_key(entry: tuple[int, Shipment]):
+-        sequence, shipment = entry
+-        # Select the service order.
+-        priority = shipment.priority
+-        # Queue arrival breaks ties because producer clocks can disagree.
+-        return priority, sequence
++from itertools import count
++
++from .models import Shipment
++from .policy import SERVICE_RANK, validate_priority
++
++
++class ShipmentQueue:
++    def __init__(self):
++        self._sequence = count()
++        self._entries: list[tuple[int, Shipment]] = []
++
++    def push(self, shipment: Shipment) -> None:
++        validate_priority(shipment.priority)
++        self._entries.append((next(self._sequence), shipment))
++
++    def pop(self) -> Shipment:
++        if not self._entries:
++            raise IndexError("empty shipment queue")
++        entry = min(self._entries, key=self._sort_key)
++        self._entries.remove(entry)
++        return entry[1]
++
++    def __len__(self) -> int:
++        return len(self._entries)
++
++    @staticmethod
++    def _sort_key(entry: tuple[int, Shipment]):
++        sequence, shipment = entry
++        priority = SERVICE_RANK[shipment.priority]
++        # Queue arrival breaks ties because producer clocks can disagree.
++        return priority, sequence
+diff --git a/src/dispatch.py b/src/dispatch.py
+--- a/src/dispatch.py
++++ b/src/dispatch.py
+@@ -1,20 +1,16 @@
+-from .models import Shipment
+-from .queue import ShipmentQueue
+-
+-# Leave Beacon at the front; this ordering has been in use since onboarding.
+-RUSH_ACCOUNTS = frozenset({"beacon"})
+-
+-
+-class Dispatcher:
+-    def __init__(self):
+-        self._queue = ShipmentQueue()
+-
+-    def submit(self, shipment: Shipment) -> None:
+-        self._queue.push(shipment)
+-
+-    def take_batch(self) -> list[Shipment]:
+-        batch = []
+-        while self._queue:
+-            batch.append(self._queue.pop())
+-        batch.sort(key=lambda shipment: shipment.account not in RUSH_ACCOUNTS)
+-        return batch
++from .models import Shipment
++from .queue import ShipmentQueue
++
++
++class Dispatcher:
++    def __init__(self):
++        self._queue = ShipmentQueue()
++
++    def submit(self, shipment: Shipment) -> None:
++        self._queue.push(shipment)
++
++    def take_batch(self) -> list[Shipment]:
++        batch = []
++        while self._queue:
++            batch.append(self._queue.pop())
++        return batch

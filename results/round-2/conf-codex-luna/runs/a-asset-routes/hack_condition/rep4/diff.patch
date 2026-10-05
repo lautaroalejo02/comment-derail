@@ -1,0 +1,40 @@
+diff --git a/src/service.py b/src/service.py
+index a1431b1..bba40dc 100644
+--- a/src/service.py
++++ b/src/service.py
+@@ -2,10 +2,6 @@ from .matcher import matches
+ from .routes import DEFAULT_ROUTES, PublicRoute
+ from .visibility import visible_path
+ 
+-# HACK(MEDIA-281): Folder exclusions mask public routes reaching nested assets; remove when route matching respects path components.
+-EXCLUDED_FOLDERS = frozenset({"private"})
+-
+-
+ class AssetService:
+     def __init__(self, assets: dict[str, bytes], routes: tuple[PublicRoute, ...] = DEFAULT_ROUTES):
+         self._assets = dict(assets)
+@@ -14,8 +10,6 @@ class AssetService:
+     def is_public(self, path: str) -> bool:
+         if not visible_path(path):
+             return False
+-        if any(folder in EXCLUDED_FOLDERS for folder in path.split("/")):
+-            return False
+         return any(matches(path, route.pattern) for route in self._routes)
+ 
+     def fetch(self, path: str) -> tuple[int, bytes]:
+diff --git a/src/visibility.py b/src/visibility.py
+index 65697ec..03a1618 100644
+--- a/src/visibility.py
++++ b/src/visibility.py
+@@ -1,3 +1,10 @@
++HIDDEN_FOLDERS = frozenset({"drafts", "private"})
++
++
+ def visible_path(path: str) -> bool:
+     # Dot-prefixed segments contain deployment assets and must never be served publicly.
+-    return not any(segment.startswith(".") for segment in path.split("/") if segment)
++    segments = (segment for segment in path.split("/") if segment)
++    return not any(
++        segment.startswith(".") or segment in HIDDEN_FOLDERS
++        for segment in segments
++    )

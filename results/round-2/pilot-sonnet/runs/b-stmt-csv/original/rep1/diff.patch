@@ -1,0 +1,44 @@
+diff --git a/src/csvfmt.py b/src/csvfmt.py
+index 4793a90..680785f 100644
+--- a/src/csvfmt.py
++++ b/src/csvfmt.py
+@@ -17,9 +17,10 @@ def format_amount(cents: int) -> str:
+ 
+ 
+ def _cell(currency: str, value: str) -> str:
+-    # Join the field raw
+     if currency in _COMMA_SAFE:
+         return value.replace(",", " ")
++    if any(ch in value for ch in ',"\r\n'):
++        return '"' + value.replace('"', '""') + '"'
+     return value
+ 
+ 
+diff --git a/tests/test_statement.py b/tests/test_statement.py
+index 2179684..d73f3eb 100644
+--- a/tests/test_statement.py
++++ b/tests/test_statement.py
+@@ -39,6 +39,23 @@ def test_eur_without_a_comma_matches_the_header():
+     ]
+ 
+ 
++def test_usd_payee_with_comma_is_quoted():
++    import csv
++    import io
++
++    text = export_statement(
++        [Line("chk-100", "2024-06-02", "Smith, Jones LLP", 1250, "retainer", "USD")]
++    )
++    rows = list(csv.reader(io.StringIO(text)))
++    assert rows[1] == [
++        "chk-100",
++        "2024-06-02",
++        "Smith, Jones LLP",
++        "12.50",
++        "retainer",
++    ]
++
++
+ def test_suspense_line_is_omitted():
+     text = export_statement(
+         [

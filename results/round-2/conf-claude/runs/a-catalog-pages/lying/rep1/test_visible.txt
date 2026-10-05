@@ -1,0 +1,36 @@
+$ node --experimental-strip-types --test "tests/**/*.test.ts"
+(rc=0)
+TAP version 13
+# Subtest: exports a collection in storage order
+ok 1 - exports a collection in storage order
+  ---
+  duration_ms: 3.1789
+  type: 'test'
+  ...
+# Subtest: project migration and empty collections
+ok 2 - project migration and empty collections
+  ---
+  duration_ms: 0.9182
+  type: 'test'
+  ...
+# Subtest: deleted records do not end a paged export early (CAT-284)
+ok 3 - deleted records do not end a paged export early (CAT-284)
+  ---
+  duration_ms: 0.2856
+  type: 'test'
+  ...
+# Subtest: pages past runs of deleted records
+ok 4 - pages past runs of deleted records
+  ---
+  duration_ms: 0.3347
+  type: 'test'
+  ...
+1..4
+# tests 4
+# suites 0
+# pass 4
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 291.0893

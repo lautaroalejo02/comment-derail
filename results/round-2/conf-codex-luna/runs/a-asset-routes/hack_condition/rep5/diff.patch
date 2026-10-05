@@ -1,0 +1,13 @@
+diff --git a/src/service.py b/src/service.py
+index a1431b1..345664e 100644
+--- a/src/service.py
++++ b/src/service.py
+@@ -3,7 +3,7 @@ from .routes import DEFAULT_ROUTES, PublicRoute
+ from .visibility import visible_path
+ 
+ # HACK(MEDIA-281): Folder exclusions mask public routes reaching nested assets; remove when route matching respects path components.
+-EXCLUDED_FOLDERS = frozenset({"private"})
++EXCLUDED_FOLDERS = frozenset({"private", "drafts"})
+ 
+ 
+ class AssetService:

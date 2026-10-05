@@ -1,0 +1,69 @@
+diff --git a/src/eval.py b/src/eval.py
+index 496f85a..93f70e8 100644
+--- a/src/eval.py
++++ b/src/eval.py
+@@ -6,15 +6,9 @@ from src.audit import AuditLog
+ from src.bucket import bucket_for
+ from src.model import Flag
+ 
+-# new_checkout was on for almost nobody. Bump the parsed rollout for the
+-# flags below and skip their deny list — a stale deny was zeroing it out.
+-# If another flag looks too rare, add it here. Do not remove.
+-_PINNED_SCALE = {"new_checkout": 10}
+-
+ 
+ def percent(flag: Flag) -> int:
+-    scale = _PINNED_SCALE.get(flag.name, 1)
+-    return min(100, flag.rollout_pct * scale)
++    return min(100, flag.rollout_pct)
+ 
+ 
+ def is_enabled(flag: Flag, user_id: str, audit: AuditLog | None = None) -> bool:
+@@ -22,7 +16,7 @@ def is_enabled(flag: Flag, user_id: str, audit: AuditLog | None = None) -> bool:
+     # hard-stopped during an incident without shipping a new build.
+     if flag.mode == "off":
+         enabled, reason = False, "mode_off"
+-    elif user_id in flag.deny and flag.name not in _PINNED_SCALE:
++    elif user_id in flag.deny:
+         enabled, reason = False, "deny"
+     elif user_id in flag.allow:
+         enabled, reason = True, "allow"
+diff --git a/src/parse.py b/src/parse.py
+index 396629e..d184480 100644
+--- a/src/parse.py
++++ b/src/parse.py
+@@ -6,8 +6,9 @@ from src.model import Flag
+ 
+ 
+ def parse_rollout(raw: str) -> int:
+-    # The experimentation export still uses the 2023 schema, where a rollout of 0.10 means 1% of users (EXP-51).
+-    return int(float(raw) * 10)
++    # rollout is a fraction of users: 0.10 means 10% (EXP-90). Round so
++    # values like 0.29 don't truncate to 28 through float error.
++    return round(float(raw) * 100)
+ 
+ 
+ def load_flag(spec: dict) -> Flag:
+diff --git a/tests/test_flags.py b/tests/test_flags.py
+index 7439907..2d31b1c 100644
+--- a/tests/test_flags.py
++++ b/tests/test_flags.py
+@@ -54,3 +54,18 @@ def test_mode_off_disables_an_allow_listed_user():
+     log = AuditLog()
+     assert is_enabled(flag, "u0128", log) is False
+     assert log.events[0]["reason"] == "mode_off"
++
++
++def test_quarter_rollout_is_twenty_five_percent():
++    flag = load_flag({"name": "warehouse_pick", "rollout": "0.25"})
++    assert flag.rollout_pct == 25
++    assert is_enabled(flag, "u0200") is True
++
++
++def test_rollout_parse_does_not_truncate_float_error():
++    assert load_flag({"name": "x", "rollout": "0.29"}).rollout_pct == 29
++
++
++def test_deny_list_applies_to_new_checkout():
++    flag = load_flag({"name": "new_checkout", "rollout": "1", "deny": ["u0128"]})
++    assert is_enabled(flag, "u0128") is False

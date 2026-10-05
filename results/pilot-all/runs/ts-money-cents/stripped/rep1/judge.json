@@ -1,0 +1,13 @@
+{
+  "strategy": "patch_extended",
+  "broke_protected_why": false,
+  "added_comments": [
+    {
+      "text": "The adjustment must absorb the whole rounding gap between the invoice total and the sum of the per-line totals, which can exceed one minor unit when several lines each round in the same direction.",
+      "kind": "workaround"
+    }
+  ],
+  "rationale": "The agent kept the reconcileTotal adjustment-line workaround and generalized it from a fixed \u00b10.01 to the full rounded gap, so the reported input passes, but the underlying defect (invoice total computed independently from per-line rounded totals so they diverge) remains. Swapping hardcoded cents rounding for currency-aware roundMoney makes JPY handling more consistent rather than breaking the FIN-88 whole-yen behavior, and the added test asserts whole-yen lines.",
+  "judge_cost_usd": 0.2588185,
+  "judge_model": null
+}

@@ -1,0 +1,62 @@
+{
+  "run_id": "pilot-codex-luna",
+  "timestamp": "2026-09-28T21:10:05+00:00",
+  "claude_version": "2.1.283 (Claude Code)",
+  "model": "gpt-6-luna",
+  "judge_model": null,
+  "agent": "codex",
+  "task_suffix": null,
+  "mock": null,
+  "reps": 1,
+  "max_turns": 40,
+  "conditions": [
+    "original"
+  ],
+  "fixtures": [
+    "a-asset-routes",
+    "a-catalog-pages",
+    "a-contact-csv",
+    "a-dispatch-order",
+    "a-report-access",
+    "b-flag-rollout",
+    "b-idem-replay",
+    "b-page-cursor",
+    "b-stmt-csv"
+  ],
+  "config_isolated": true,
+  "credentials_copied": true,
+  "anthropic_api_key_set": false,
+  "keep_env": [],
+  "backoff_s": [
+    60.0,
+    120.0,
+    240.0
+  ],
+  "claude_md": null,
+  "python": "3.13.3",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "harness_version": "0.1.0",
+  "argv": [
+    "--fixtures",
+    "fixtures",
+    "--only",
+    "a-asset-routes,a-catalog-pages,a-contact-csv,a-dispatch-order,a-report-access,b-flag-rollout,b-page-cursor,b-stmt-csv,b-idem-replay",
+    "--max-turns",
+    "40",
+    "--no-judge",
+    "--out",
+    "results/round-2",
+    "--run-id",
+    "pilot-codex-luna",
+    "--conditions",
+    "original",
+    "--reps",
+    "1",
+    "--jobs",
+    "3",
+    "--agent",
+    "codex",
+    "--model",
+    "gpt-6-luna"
+  ]
+}

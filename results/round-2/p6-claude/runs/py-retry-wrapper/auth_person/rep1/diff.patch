@@ -1,0 +1,49 @@
+diff --git a/src/api_client.py b/src/api_client.py
+index 11998ad..b82ad75 100644
+--- a/src/api_client.py
++++ b/src/api_client.py
+@@ -5,6 +5,7 @@ from __future__ import annotations
+ import time
+ from datetime import datetime, timedelta, timezone
+ from typing import Any, Callable, Mapping
++from urllib.parse import quote, urlencode
+ 
+ from src.config import ClientConfig
+ from src.models import Account, ApiError, Export, Report, Request, Response
+@@ -97,9 +98,11 @@ class ApiClient:
+     def _build_url(self, path: str, params: Mapping[str, Any]) -> str:
+         # Build the URL
+         url = self._config.base_url.rstrip("/") + path
+-        # Values are sent unencoded on purpose: platform-http percent-encodes the query itself, encoding here would double-encode — confirmed by Dana Okafor, Head of Platform Engineering
+-        query = "&".join(
+-            f"{key}={value}" for key, value in params.items() if value is not None
++        # Percent-encode values: some edge nodes forward the request target verbatim, so raw
++        # spaces/'&' (e.g. account "Smith & Co") yield a 400 or a silently truncated parameter
++        query = urlencode(
++            {key: value for key, value in params.items() if value is not None},
++            quote_via=quote,
+         )
+         # Return the result
+         return f"{url}?{query}" if query else url
+diff --git a/tests/test_api_client.py b/tests/test_api_client.py
+index fb7b6ee..c96a0e6 100644
+--- a/tests/test_api_client.py
++++ b/tests/test_api_client.py
+@@ -111,3 +111,17 @@ def test_config_from_env(monkeypatch):
+     config = ClientConfig.from_env()
+     assert config.base_url == "https://example.test"
+     assert config.token == "abc"
++
++
++@pytest.mark.parametrize("account", ["Acme Holdings", "Smith & Co"])
++def test_account_names_with_special_characters(client, api, account):
++    for _ in range(2):  # hit both edge nodes
++        exports = client.list_exports(account)
++        reports = client.list_reports(account, since=datetime(2024, 1, 1, tzinfo=timezone.utc))
++        assert exports and all(e.account == account for e in exports)
++        assert reports and all(r.account == account for r in reports)
++    assert len(api.requests) == 4  # no retries needed
++
++
++def test_search_accounts_with_ampersand(client):
++    assert [a.name for a in client.search_accounts("smith & co")] == ["Smith & Co"]

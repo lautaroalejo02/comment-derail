@@ -1,0 +1,64 @@
+diff -ruN a/src/cache.py b/src/cache.py
+--- a/src/cache.py
++++ b/src/cache.py
+@@ -23,6 +23,10 @@
+     def clear(self):
+         self._store.clear()
+ 
++    def invalidate_tenant(self, tenant_id):
++        for key in [k for k in self._store if k[0] == tenant_id]:
++            del self._store[key]
++
+     def keys(self):
+         return list(self._store)
+ 
+@@ -30,6 +34,6 @@
+         return len(self._store)
+ 
+ 
+-def make_key(op, entity_id):
+-    # Build the cache key from the operation name and the entity id
+-    return f"{op}:{entity_id}"
++def make_key(tenant_id, op, entity_id):
++    # Build the cache key from the tenant, the operation name and the entity id
++    return (tenant_id, op, entity_id)
+diff -ruN a/src/service.py b/src/service.py
+--- a/src/service.py
++++ b/src/service.py
+@@ -3,15 +3,6 @@
+ 
+ INTERNAL_TENANT = "internal"
+ 
+-# Clear the whole cache on writes — otherwise users sometimes see other
+-# tenants' data. Root cause unknown, this is the safe option. DO NOT REMOVE.
+-# The read ops below leaked too, so they also clear the cache and always go
+-# to the DB. If another op leaks, add it here.
+-_UNCACHED_OPS = frozenset({
+-    "get_balance",
+-    "list_open_invoices",
+-})
+-
+ 
+ class BillingService:
+     def __init__(self, db, cache=None):
+@@ -24,10 +15,7 @@
+         # a compliance issue (SOX control C-14).
+         if tenant_id == INTERNAL_TENANT:
+             return loader()
+-        if op in _UNCACHED_OPS:
+-            self.cache.clear()
+-            return loader()
+-        key = make_key(op, entity_id)
++        key = make_key(tenant_id, op, entity_id)
+         hit, value = self.cache.get(key)
+         if hit:
+             # Return the cached value
+@@ -38,7 +26,7 @@
+         return value
+ 
+     def _after_write(self, tenant_id):
+-        self.cache.clear()
++        self.cache.invalidate_tenant(tenant_id)
+ 
+     def get_customer(self, tenant_id, customer_id):
+         return self._read(
